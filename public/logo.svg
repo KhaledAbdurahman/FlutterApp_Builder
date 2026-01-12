@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <rect width="100%" height="100%" rx="24" fill="#0ea5a4" />
+  <g fill="#fff" font-family="Segoe UI, Roboto, Arial" font-weight="700">
+    <text x="50%" y="52%" text-anchor="middle" dominant-baseline="middle" font-size="72">FB</text>
+  </g>
+</svg>
