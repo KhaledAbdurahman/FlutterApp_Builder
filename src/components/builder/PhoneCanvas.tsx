@@ -341,12 +341,7 @@ export const PhoneCanvas = () => {
           >
             {/* Status Bar */}
             <div className="h-11 bg-gray-900 flex items-center justify-between px-6 text-white text-xs">
-              <span>9:41</span>
-              <div className="flex items-center gap-1">
-                <span>📶</span>
-                <span>📡</span>
-                <span>🔋</span>
-              </div>
+              <span className="ml-auto text-red-400">This is a demo app</span>
             </div>
             
             {/* Content */}
