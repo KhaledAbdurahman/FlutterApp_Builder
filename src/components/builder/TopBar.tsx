@@ -162,7 +162,7 @@ export const TopBar = () => {
           <div className="w-25 h-10 rounded-lg gradient-primary flex items-center justify-center">
             {/* <Smartphone className="w-4 h-4 text-primary-foreground" /> */}
             <img
-              src="/public/Builder.png"
+              src="/Builder.png"
               alt="Flutter Icon"
               className="w-25 h-10 text-primary-foreground"
             />
