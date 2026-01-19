@@ -15,6 +15,7 @@ A visual drag-and-drop Flutter app builder built with React and TypeScript. Desi
 - **Project Management** - Save, load, and manage multiple projects
 - **Flutter Code Generation** - Export your designs as ready-to-run Flutter projects (ZIP)
 - **Generation Logs** - Track build progress and debug issues
+- **Dark & Light Mode** - Allow the user to toggle between dark and light mode
 
 ## 📋 Prerequisites
 
@@ -78,6 +79,9 @@ The frontend expects the following API endpoints at `http://localhost:8000/api`:
 | `/projects/{id}/download/`  | GET    | Download generated ZIP        |
 | `/projects/{id}/logs/`      | GET    | Get generation logs           |
 | `/generate/quick_generate/` | POST   | Quick generate without saving |
+| `/auth/register/`           | POST   | Assign new user               |
+| `/auth/login/`              | POST   | Login an existing user        |
+| `/auth/logout/`             | POST   | Sighn out the Website         |
 
 ### Backend Configuration
 
@@ -221,7 +225,7 @@ Always use semantic tokens instead of hardcoded colors:
 | `@dnd-kit/core`         | ^6.3.1    | Drag and drop functionality |
 | `@tanstack/react-query` | ^5.83.0   | Server state management     |
 | `framer-motion`         | ^12.24.12 | Animations                  |
-| `react-router-dom`      | ^6.30.1   | Client-side routing         |
+| `react-router-dom`      | ^7.12.0   | Client-side routing         |
 | `uuid`                  | ^13.0.0   | Unique ID generation        |
 | `tailwindcss`           | ^3.4      | Utility-first CSS           |
 
