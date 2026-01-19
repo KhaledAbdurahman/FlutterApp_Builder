@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import {
   Smartphone,
   Zap,
@@ -76,13 +77,11 @@ export default function Landing() {
             <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
               <Smartphone className="w-5 h-5 text-primary-foreground" />
             </div>
-            <span className="text-xl font-bold text-gradient">
-              FlutterForge
-            </span>
+            <span className="text-xl font-bold text-gradient">AppBuilder</span>
           </Link>
 
           <div className="flex items-center gap-4">
-            {/* ThemeToggle */}
+            <ThemeToggle />
             <Link to="/auth">
               <Button variant="ghost" size="sm">
                 Sign In
@@ -174,7 +173,7 @@ export default function Landing() {
                 <div className="w-3 h-3 rounded-full bg-success/60" />
               </div>
               <span className="text-sm text-muted-foreground ml-4">
-                FlutterForge Builder
+                AppBuilder Builder
               </span>
             </div>
             <div className="aspect-[16/9] bg-gradient-to-br from-muted to-background rounded-b-xl flex items-center justify-center">
@@ -291,7 +290,7 @@ export default function Landing() {
               </h2>
               <p className="text-lg text-muted-foreground mb-8 max-w-xl mx-auto">
                 Join thousands of developers who are building Flutter apps
-                faster with FlutterForge.
+                faster with AppBuilder.
               </p>
               <Link to="/auth?mode=register">
                 <Button
@@ -314,10 +313,10 @@ export default function Landing() {
             <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
               <Smartphone className="w-4 h-4 text-primary-foreground" />
             </div>
-            <span className="font-semibold text-gradient">FlutterForge</span>
+            <span className="font-semibold text-gradient">AppBuilder</span>
           </div>
           <p className="text-sm text-muted-foreground">
-            © 2026 FlutterForge. Built with ❤️ for Flutter developers.
+            © 2026 AppBuilder. Built with ❤️ for Flutter developers.
           </p>
           <div className="flex items-center gap-6">
             <a

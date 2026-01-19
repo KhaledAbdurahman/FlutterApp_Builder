@@ -36,6 +36,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { ProjectManager } from "./ProjectManager";
 import { GenerationLogs } from "./GenerationLogs";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import {
   quickGenerate,
   generateFromSaved,
@@ -250,7 +251,7 @@ export const TopBar = () => {
         <span className="text-sm text-muted-foreground">
           Hi, {user?.username}
         </span>
-        {/* ThemeToggle */}
+        <ThemeToggle />
         <Button
           variant="ghost"
           size="sm"
