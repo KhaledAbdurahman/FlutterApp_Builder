@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   Play,
@@ -12,7 +13,7 @@ import {
   Loader2,
   FolderOpen,
   FileText,
-  Save,
+  LogOut,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,6 +32,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { useBuilderStore } from "@/store/builderStore";
+import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { ProjectManager } from "./ProjectManager";
 import { GenerationLogs } from "./GenerationLogs";
@@ -42,6 +44,8 @@ import {
 } from "@/lib/api";
 
 export const TopBar = () => {
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
   const {
     project,
     activeScreenId,
@@ -138,12 +142,12 @@ export const TopBar = () => {
         toast.error(
           "Cannot connect to backend. This could be a CORS issue or the server is not running. " +
             "Ensure Django has CORS headers enabled for this origin.",
-          { duration: 6000 }
+          { duration: 6000 },
         );
       } else {
         toast.error(
           error instanceof Error ? error.message : "Failed to generate app.",
-          { duration: 5000 }
+          { duration: 5000 },
         );
       }
     } finally {
@@ -159,13 +163,8 @@ export const TopBar = () => {
     >
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
-          <div className="w-25 h-10 rounded-lg gradient-primary flex items-center justify-center">
-            {/* <Smartphone className="w-4 h-4 text-primary-foreground" /> */}
-            <img
-              src="/Builder.png"
-              alt="Flutter Icon"
-              className="w-25 h-10 text-primary-foreground"
-            />
+          <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
+            <Smartphone className="w-4 h-4 text-primary-foreground" />
           </div>
           <span className="font-semibold text-lg">{project.app_name}</span>
         </div>
@@ -247,7 +246,25 @@ export const TopBar = () => {
         </DropdownMenu>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-3">
+        <span className="text-sm text-muted-foreground">
+          Hi, {user?.username}
+        </span>
+        {/* ThemeToggle */}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={async () => {
+            await logout();
+            navigate("/");
+            toast.success("Logged out");
+          }}
+          className="gap-2"
+        >
+          <LogOut className="w-4 h-4" />
+          Logout
+        </Button>
+        <div className="h-6 w-px bg-border" />
         <Button
           variant="ghost"
           size="sm"

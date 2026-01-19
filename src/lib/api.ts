@@ -1,5 +1,7 @@
 // API service for Django backend
-const API_BASE_URL = 'http://localhost:8000/api';
+import { getStoredToken } from "./auth";
+
+const API_BASE_URL = "http://localhost:8000/api";
 
 export interface ProjectJsonData {
   app_name: string;
@@ -30,34 +32,38 @@ export interface ApiError {
 }
 
 export interface GenerateSavedProjectResponse {
-  status: 'success' | 'error';
+  status: "success" | "error";
   message: string;
   download_url?: string;
 }
 
-// Helper function for API calls
+// Helper function for API calls with authentication
 async function apiCall<T>(
   endpoint: string,
   options: RequestInit = {},
-  expectBlob: boolean = false
+  expectBlob: boolean = false,
 ): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`;
+  const token = getStoredToken();
 
   const response = await fetch(url, {
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Token ${token}` } : {}),
       ...options.headers,
     },
     ...options,
   });
 
   if (!response.ok) {
-    const errorText = await response.text().catch(() => '');
-    throw new Error(`Server error (${response.status}): ${errorText || 'Unknown error'}`);
+    const errorText = await response.text().catch(() => "");
+    throw new Error(
+      `Server error (${response.status}): ${errorText || "Unknown error"}`,
+    );
   }
 
-  const contentType = response.headers.get('content-type') || '';
-  const contentDisposition = response.headers.get('content-disposition') || '';
+  const contentType = response.headers.get("content-type") || "";
+  const contentDisposition = response.headers.get("content-disposition") || "";
 
   // Always read once as ArrayBuffer so we can safely detect ZIP vs JSON
   const arrayBuffer = await response.arrayBuffer();
@@ -66,18 +72,20 @@ async function apiCall<T>(
 
   const shouldTreatAsBlob =
     expectBlob ||
-    contentType.includes('application/zip') ||
-    contentType.includes('application/octet-stream') ||
-    contentType.includes('application/x-zip') ||
-    contentDisposition.toLowerCase().includes('attachment');
+    contentType.includes("application/zip") ||
+    contentType.includes("application/octet-stream") ||
+    contentType.includes("application/x-zip") ||
+    contentDisposition.toLowerCase().includes("attachment");
 
   if (shouldTreatAsBlob) {
     if (arrayBuffer.byteLength === 0) {
-      throw new Error('Expected a file download but the response was empty.');
+      throw new Error("Expected a file download but the response was empty.");
     }
 
     if (isZip) {
-      return new Blob([arrayBuffer], { type: 'application/zip' }) as unknown as T;
+      return new Blob([arrayBuffer], {
+        type: "application/zip",
+      }) as unknown as T;
     }
 
     // Not a ZIP - most likely the backend returned JSON/text (e.g. generation error)
@@ -85,19 +93,20 @@ async function apiCall<T>(
     let message = text;
     try {
       const json = JSON.parse(text) as any;
-      message = json?.message || json?.error || json?.detail || JSON.stringify(json);
+      message =
+        json?.message || json?.error || json?.detail || JSON.stringify(json);
     } catch {
       // keep raw text
     }
 
     throw new Error(
-      `Expected a ZIP file but received ${contentType || 'unknown content-type'}: ${String(message).slice(0, 300)}`
+      `Expected a ZIP file but received ${contentType || "unknown content-type"}: ${String(message).slice(0, 300)}`,
     );
   }
 
   // Non-blob response path
   if (isZip) {
-    return new Blob([arrayBuffer], { type: 'application/zip' }) as unknown as T;
+    return new Blob([arrayBuffer], { type: "application/zip" }) as unknown as T;
   }
 
   if (arrayBuffer.byteLength === 0) return {} as T;
@@ -113,18 +122,18 @@ export async function quickGenerate(payload: {
   json_data: { screens: unknown[] };
 }): Promise<Blob> {
   return apiCall<Blob>(
-    '/generate/quick_generate/',
+    "/generate/quick_generate/",
     {
-      method: 'POST',
+      method: "POST",
       body: JSON.stringify(payload),
     },
-    true // expectBlob
+    true, // expectBlob
   );
 }
 
 // List all saved projects
 export async function listProjects(): Promise<SavedProject[]> {
-  return apiCall<SavedProject[]>('/projects/');
+  return apiCall<SavedProject[]>("/projects/");
 }
 
 // Get a single project
@@ -138,8 +147,8 @@ export async function createProject(data: {
   description?: string;
   json_data: ProjectJsonData;
 }): Promise<SavedProject> {
-  return apiCall<SavedProject>('/projects/', {
-    method: 'POST',
+  return apiCall<SavedProject>("/projects/", {
+    method: "POST",
     body: JSON.stringify(data),
   });
 }
@@ -151,10 +160,10 @@ export async function updateProject(
     name?: string;
     description?: string;
     json_data?: ProjectJsonData;
-  }
+  },
 ): Promise<SavedProject> {
   return apiCall<SavedProject>(`/projects/${projectId}/`, {
-    method: 'PATCH',
+    method: "PATCH",
     body: JSON.stringify(data),
   });
 }
@@ -162,13 +171,18 @@ export async function updateProject(
 // Delete a project
 export async function deleteProject(projectId: number): Promise<void> {
   return apiCall<void>(`/projects/${projectId}/`, {
-    method: 'DELETE',
+    method: "DELETE",
   });
 }
 
 // Generate Flutter project from saved project (returns JSON with download_url)
-export async function generateFromSaved(projectId: number): Promise<GenerateSavedProjectResponse> {
-  return apiCall<GenerateSavedProjectResponse>(`/projects/${projectId}/generate/`, { method: 'POST' });
+export async function generateFromSaved(
+  projectId: number,
+): Promise<GenerateSavedProjectResponse> {
+  return apiCall<GenerateSavedProjectResponse>(
+    `/projects/${projectId}/generate/`,
+    { method: "POST" },
+  );
 }
 
 // Download generated project (returns ZIP)
@@ -177,14 +191,16 @@ export async function downloadProject(projectId: number): Promise<Blob> {
 }
 
 // View generation logs
-export async function getProjectLogs(projectId: number): Promise<GenerationLog[]> {
+export async function getProjectLogs(
+  projectId: number,
+): Promise<GenerationLog[]> {
   return apiCall<GenerationLog[]>(`/projects/${projectId}/logs/`);
 }
 
 // Helper to download blob as file
 export function downloadBlob(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
+  const a = document.createElement("a");
   a.href = url;
   a.download = filename;
   document.body.appendChild(a);
