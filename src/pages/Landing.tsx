@@ -42,7 +42,7 @@ const features = [
   },
   {
     icon: Box,
-    title: "50+ Widgets",
+    title: "20+ Widgets",
     description:
       "Access a comprehensive library of Flutter widgets ready to use.",
   },
@@ -74,10 +74,13 @@ export default function Landing() {
       <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
-              <Smartphone className="w-5 h-5 text-primary-foreground" />
+            <div className="w-25 h-10 rounded-xl bg-white flex items-center justify-center">
+              <img
+                src="/Builder.png"
+                alt="AppBuilder Logo"
+                className="w-25 h-12"
+              />
             </div>
-            <span className="text-xl font-bold text-gradient">AppBuilder</span>
           </Link>
 
           <div className="flex items-center gap-4">
@@ -310,10 +313,13 @@ export default function Landing() {
       <footer className="border-t border-border py-12 px-6">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
-              <Smartphone className="w-4 h-4 text-primary-foreground" />
+            <div className="w-25 h-10 rounded-xl bg-white flex items-center justify-center">
+              <img
+                src="/Builder.png"
+                alt="AppBuilder Logo"
+                className="w-25 h-10"
+              />
             </div>
-            <span className="font-semibold text-gradient">AppBuilder</span>
           </div>
           <p className="text-sm text-muted-foreground">
             © 2026 AppBuilder. Built with ❤️ for Flutter developers.
