@@ -6,7 +6,6 @@ import {
   Download,
   Settings,
   ChevronDown,
-  Smartphone,
   Plus,
   X,
   Check,
@@ -164,10 +163,14 @@ export const TopBar = () => {
     >
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
-            <Smartphone className="w-4 h-4 text-primary-foreground" />
+          <div className="w-30 h-10 rounded-xl flex items-center justify-center">
+            <img
+              src="/Builder.png"
+              alt="AppBuilder Logo"
+              className="w-30 h-14"
+            />
           </div>
-          <span className="font-semibold text-lg">{project.app_name}</span>
+          {/* <span className="font-semibold text-lg">{project.app_name}</span> */}
         </div>
 
         <div className="h-6 w-px bg-border" />
