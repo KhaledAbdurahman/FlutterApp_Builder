@@ -52,7 +52,7 @@ export default function Auth() {
 
   useEffect(() => {
     if (isAuthenticated) {
-      navigate("/builder");
+      navigate("/dashboard");
     }
   }, [isAuthenticated, navigate]);
 
@@ -72,7 +72,7 @@ export default function Auth() {
     try {
       await login(data.username, data.password);
       toast.success("Welcome back!");
-      navigate("/builder");
+      navigate("/dashboard");
     } catch (err: any) {
       const message = err.message || "Invalid credentials. Please try again.";
       setError(message);
@@ -88,7 +88,7 @@ export default function Auth() {
     try {
       await register(data.username, data.email, data.password, data.password2);
       toast.success("Account created successfully!");
-      navigate("/builder");
+      navigate("/dashboard");
     } catch (err: any) {
       const message = err.message || "Registration failed. Please try again.";
       setError(message);
