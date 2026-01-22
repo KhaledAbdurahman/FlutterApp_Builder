@@ -185,7 +185,7 @@ export default function Landing() {
                 <div className="w-3 h-3 rounded-full bg-success/60" />
               </div>
               <span className="text-sm text-muted-foreground ml-4">
-                AppBuilder Builder
+                AppBuilder
               </span>
             </div>
             <div className="aspect-[16/9] bg-gradient-to-br from-muted to-background rounded-b-xl flex items-center justify-center">
