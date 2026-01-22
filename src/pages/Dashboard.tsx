@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { listProjects, deleteProject, SavedProject } from "@/lib/api";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { UserProfileMenu } from "@/components/UserProfileMenu";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -16,7 +17,6 @@ import {
   Plus,
   FolderOpen,
   Trash2,
-  LogOut,
   Loader2,
   Smartphone,
   Calendar,
@@ -37,7 +37,6 @@ import { useBuilderStore } from "@/store/builderStore";
 import { Screen } from "@/types/flutter";
 
 export default function Dashboard() {
-  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [projects, setProjects] = useState<SavedProject[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -89,11 +88,6 @@ export default function Dashboard() {
     }
   };
 
-  const handleLogout = async () => {
-    await logout();
-    navigate("/");
-  };
-
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
       month: "short",
@@ -124,20 +118,9 @@ export default function Dashboard() {
             </Link>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <ThemeToggle />
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span>
-                Welcome,{" "}
-                <span className="text-foreground font-medium">
-                  {user?.username}
-                </span>
-              </span>
-            </div>
-            <Button variant="ghost" size="sm" onClick={handleLogout}>
-              <LogOut className="w-4 h-4 mr-2" />
-              Logout
-            </Button>
+            <UserProfileMenu />
           </div>
         </div>
       </header>

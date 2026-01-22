@@ -2,6 +2,8 @@ import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { UserProfileMenu } from "@/components/UserProfileMenu";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   Zap,
   Code2,
@@ -67,6 +69,8 @@ const itemVariants = {
 };
 
 export default function Landing() {
+  const { user } = useAuth();
+
   return (
     <div className="min-h-screen bg-background overflow-hidden">
       {/* Navbar */}
@@ -84,17 +88,23 @@ export default function Landing() {
 
           <div className="flex items-center gap-4">
             <ThemeToggle />
-            <Link to="/auth">
-              <Button variant="ghost" size="sm">
-                Sign In
-              </Button>
-            </Link>
-            <Link to="/auth?mode=register">
-              <Button size="sm" className="gradient-primary glow-primary">
-                Get Started
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </Button>
-            </Link>
+            {user ? (
+              <UserProfileMenu />
+            ) : (
+              <>
+                <Link to="/auth">
+                  <Button variant="ghost" size="sm">
+                    Sign In
+                  </Button>
+                </Link>
+                <Link to="/auth?mode=register">
+                  <Button size="sm" className="gradient-primary glow-primary">
+                    Get Started
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </nav>

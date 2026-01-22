@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   Play,
@@ -12,7 +11,6 @@ import {
   Loader2,
   FolderOpen,
   FileText,
-  LogOut,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,11 +29,11 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { useBuilderStore } from "@/store/builderStore";
-import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { ProjectManager } from "./ProjectManager";
 import { GenerationLogs } from "./GenerationLogs";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { UserProfileMenu } from "@/components/UserProfileMenu";
 import {
   quickGenerate,
   generateFromSaved,
@@ -44,8 +42,6 @@ import {
 } from "@/lib/api";
 
 export const TopBar = () => {
-  const navigate = useNavigate();
-  const { user, logout } = useAuth();
   const {
     project,
     activeScreenId,
@@ -251,23 +247,7 @@ export const TopBar = () => {
       </div>
 
       <div className="flex items-center gap-3">
-        <span className="text-sm text-muted-foreground">
-          Hi, {user?.username}
-        </span>
         <ThemeToggle />
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={async () => {
-            await logout();
-            navigate("/");
-            toast.success("Logged out");
-          }}
-          className="gap-2"
-        >
-          <LogOut className="w-4 h-4" />
-          Logout
-        </Button>
         <div className="h-6 w-px bg-border" />
         <Button
           variant="ghost"
@@ -278,7 +258,6 @@ export const TopBar = () => {
           <FolderOpen className="w-4 h-4" />
           Projects
         </Button>
-
         {serverProjectId && (
           <Button
             variant="ghost"
@@ -290,7 +269,6 @@ export const TopBar = () => {
             Logs
           </Button>
         )}
-
         <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
           <DialogTrigger asChild>
             <Button variant="ghost" size="icon">
@@ -324,7 +302,6 @@ export const TopBar = () => {
             </div>
           </DialogContent>
         </Dialog>
-
         <Button
           variant="outline"
           size="sm"
@@ -334,7 +311,6 @@ export const TopBar = () => {
           <Download className="w-4 h-4" />
           Export JSON
         </Button>
-
         <Button
           size="sm"
           className="gap-2 gradient-primary hover:opacity-90 text-primary-foreground border-0"
@@ -348,6 +324,7 @@ export const TopBar = () => {
           )}
           {isGenerating ? "Generating..." : "Generate App"}
         </Button>
+        <UserProfileMenu />
       </div>
 
       <ProjectManager
