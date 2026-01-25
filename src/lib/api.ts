@@ -37,6 +37,13 @@ export interface GenerateSavedProjectResponse {
   download_url?: string;
 }
 
+export interface ApkBuildResponse {
+  status: "success" | "error" | "building";
+  message: string;
+  build_id?: string;
+  download_url?: string;
+}
+
 // Helper function for API calls with authentication
 async function apiCall<T>(
   endpoint: string,
@@ -195,6 +202,36 @@ export async function getProjectLogs(
   projectId: number,
 ): Promise<GenerationLog[]> {
   return apiCall<GenerationLog[]>(`/projects/${projectId}/logs/`);
+}
+
+// Build APK from saved project
+export async function buildApkFromSaved(
+  projectId: number,
+): Promise<ApkBuildResponse> {
+  return apiCall<ApkBuildResponse>(`/projects/${projectId}/build_apk/`, {
+    method: "POST",
+  });
+}
+
+// Quick build APK (no database storage)
+export async function quickBuildApk(payload: {
+  app_name: string;
+  package_name: string;
+  json_data: { screens: unknown[] };
+}): Promise<Blob> {
+  return apiCall<Blob>(
+    "/generate/build_apk/",
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+    true, // expectBlob
+  );
+}
+
+// Download APK file
+export async function downloadApk(projectId: number): Promise<Blob> {
+  return apiCall<Blob>(`/projects/${projectId}/download_apk/`, {}, true);
 }
 
 // Helper to download blob as file

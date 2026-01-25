@@ -5,12 +5,14 @@ import {
   Download,
   Settings,
   ChevronDown,
+  Smartphone,
   Plus,
   X,
   Check,
   Loader2,
   FolderOpen,
   FileText,
+  Package,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,6 +41,9 @@ import {
   generateFromSaved,
   downloadProject,
   downloadBlob,
+  buildApkFromSaved,
+  quickBuildApk,
+  downloadApk,
 } from "@/lib/api";
 
 export const TopBar = () => {
@@ -60,6 +65,7 @@ export const TopBar = () => {
   const [tempProjectName, setTempProjectName] = useState(project.app_name);
   const [tempPackageName, setTempPackageName] = useState(project.package_name);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isBuildingApk, setIsBuildingApk] = useState(false);
   const [projectManagerOpen, setProjectManagerOpen] = useState(false);
   const [logsOpen, setLogsOpen] = useState(false);
 
@@ -148,6 +154,70 @@ export const TopBar = () => {
       }
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const handleBuildApk = async () => {
+    setIsBuildingApk(true);
+    try {
+      let blob: Blob;
+
+      if (serverProjectId) {
+        // Build APK from saved project
+        const result = await buildApkFromSaved(serverProjectId);
+
+        if (typeof result === "object" && result && "status" in result) {
+          const status = result.status;
+          const message = result.message;
+
+          if (status === "building") {
+            toast.info(
+              message || "APK build started. This may take a few minutes...",
+              { duration: 5000 },
+            );
+            // Poll or wait for completion - for now show message
+            setIsBuildingApk(false);
+            return;
+          }
+
+          if (status !== "success") {
+            throw new Error(message || "Failed to build APK");
+          }
+        }
+
+        // Download the APK
+        blob = await downloadApk(serverProjectId);
+      } else {
+        // Quick build APK without saving
+        const projectData = exportProject();
+        const apiPayload = {
+          app_name: projectData.app_name,
+          package_name: projectData.package_name,
+          json_data: {
+            screens: projectData.screens,
+          },
+        };
+        blob = await quickBuildApk(apiPayload);
+      }
+
+      downloadBlob(blob, `${project.app_name}.apk`);
+      toast.success("APK built and downloaded!");
+    } catch (error) {
+      console.error("APK build error:", error);
+
+      if (error instanceof TypeError && error.message === "Failed to fetch") {
+        toast.error(
+          "Cannot connect to backend. This could be a CORS issue or the server is not running.",
+          { duration: 6000 },
+        );
+      } else {
+        toast.error(
+          error instanceof Error ? error.message : "Failed to build APK.",
+          { duration: 5000 },
+        );
+      }
+    } finally {
+      setIsBuildingApk(false);
     }
   };
 
@@ -315,7 +385,7 @@ export const TopBar = () => {
           size="sm"
           className="gap-2 gradient-primary hover:opacity-90 text-primary-foreground border-0"
           onClick={handleGenerateApp}
-          disabled={isGenerating}
+          disabled={isGenerating || isBuildingApk}
         >
           {isGenerating ? (
             <Loader2 className="w-4 h-4 animate-spin" />
@@ -323,6 +393,20 @@ export const TopBar = () => {
             <Play className="w-4 h-4" />
           )}
           {isGenerating ? "Generating..." : "Generate App"}
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          className="gap-2"
+          onClick={handleBuildApk}
+          disabled={isGenerating || isBuildingApk}
+        >
+          {isBuildingApk ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <Package className="w-4 h-4" />
+          )}
+          {isBuildingApk ? "Building..." : "Build APK"}
         </Button>
         <UserProfileMenu />
       </div>
