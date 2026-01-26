@@ -175,7 +175,7 @@ export const useWidgetTreeDnD = ({ onCommit }: UseWidgetTreeDnDProps = {}) => {
     if (!sourceMeta || !targetMeta) return;
 
     const targetDef = getWidgetDefinition(targetMeta.widget.type);
-    const verb = targetDef?.childCardinality !== "none" ? "into" : "after";
+    const verb = targetDef?.canHaveChildren ? "into" : "after";
     showDndToast(
       `Drop ${getWidgetLabel(sourceMeta.widget)} ${verb} ${getWidgetLabel(targetMeta.widget)}`,
       1200,
@@ -331,32 +331,12 @@ export const useWidgetTreeDnD = ({ onCommit }: UseWidgetTreeDnDProps = {}) => {
 
     // HEURISTIC: Handle Nesting into Containers
     const targetDef = getWidgetDefinition(targetMeta.widget.type);
-    const canHaveChildren = targetDef?.childCardinality !== "none";
+    const canHaveChildren = targetDef?.canHaveChildren;
 
     // Check if target is a valid container that might be empty or explicitly targeted
     if (canHaveChildren) {
-      const isEmpty =
-        !targetMeta.widget.children || targetMeta.widget.children.length === 0;
-
-      // If it's empty, we MUST drop inside (otherwise we can't ever populate it via drag)
-      if (isEmpty) {
-        intent.action = "inside";
-      }
-      // If it's NOT empty, user might mean "Inside" or "Sibling".
-      // In basic Sortable lists, dropping "ON" an item usually means reorder relative to it.
-      // However, standard patterns for Tree DnD often treat dropping "ON" the Label as Nesting,
-      // and dropping "Between" items as Sibling.
-      // DndKit's 'over' doesn't distinguish nicely without specific collision detection setup.
-      //
-      // Compromise:
-      // We will stick to "Sibling" by default for non-empty containers to allow reordering.
-      // BUT, to allow nesting into populated containers, we'd need a specific gesture or collision zone.
-      // Given the reported bug ("no component can be inserted inside..."), fixing the EMPTY case is critical.
-      //
-      // If the user wants to append to a populated container, they usually drag to the last child or the parent itself?
-      // If they drag to Parent, it means "Sibling of Parent" usually in Sortable.
-      //
-      // Let's stick to fixing the EMPTY Block first.
+      // If dropping onto a container, we assume intent is to nest inside it
+      intent.action = "inside";
     }
 
     // Validation

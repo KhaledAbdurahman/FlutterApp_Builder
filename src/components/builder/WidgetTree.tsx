@@ -73,7 +73,7 @@ const SortableTreeNode = ({ widget, depth }: TreeNodeProps) => {
         initial={{ opacity: 0, x: -10 }}
         animate={{ opacity: 1, x: 0 }}
         className={cn(
-          "flex items-center gap-2 py-1.5 px-2 rounded-md cursor-pointer transition-colors text-sm group min-w-max",
+          "flex items-center gap-2 py-2 px-2 rounded-md cursor-pointer transition-colors text-sm group w-full min-w-max",
           isSelected
             ? "bg-primary/20 text-primary"
             : "hover:bg-muted text-foreground",
@@ -165,7 +165,7 @@ export const WidgetTree = () => {
   }, [screen]);
 
   return (
-    <div className="w-56 border-r border-border bg-card flex flex-col h-full overflow-hidden">
+    <div className="w-80 shrink-0 border-r border-border bg-card flex flex-col h-full overflow-hidden">
       <div className="p-4 border-b border-border flex items-center gap-2">
         <Layers className="w-4 h-4 text-muted-foreground" />
         <h2 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">
