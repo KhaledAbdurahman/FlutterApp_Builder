@@ -213,22 +213,6 @@ export async function buildApkFromSaved(
   });
 }
 
-// Quick build APK (no database storage)
-export async function quickBuildApk(payload: {
-  app_name: string;
-  package_name: string;
-  json_data: { screens: unknown[] };
-}): Promise<Blob> {
-  return apiCall<Blob>(
-    "/generate/build_apk/",
-    {
-      method: "POST",
-      body: JSON.stringify(payload),
-    },
-    true, // expectBlob
-  );
-}
-
 // Download APK file
 export async function downloadApk(projectId: number): Promise<Blob> {
   return apiCall<Blob>(`/projects/${projectId}/download_apk/`, {}, true);

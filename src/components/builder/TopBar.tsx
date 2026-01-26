@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import {
   Play,
@@ -37,12 +37,9 @@ import { GenerationLogs } from "./GenerationLogs";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { UserProfileMenu } from "@/components/UserProfileMenu";
 import {
-  quickGenerate,
   generateFromSaved,
-  downloadProject,
   downloadBlob,
   buildApkFromSaved,
-  quickBuildApk,
   downloadApk,
 } from "@/lib/api";
 
@@ -68,8 +65,13 @@ export const TopBar = () => {
   const [isBuildingApk, setIsBuildingApk] = useState(false);
   const [projectManagerOpen, setProjectManagerOpen] = useState(false);
   const [logsOpen, setLogsOpen] = useState(false);
+  const [hasGeneratedProject, setHasGeneratedProject] = useState(false);
 
   const activeScreen = project.screens.find((s) => s.id === activeScreenId);
+
+  useEffect(() => {
+    setHasGeneratedProject(false);
+  }, [serverProjectId]);
 
   const handleAddScreen = () => {
     if (newScreenName.trim()) {
@@ -104,39 +106,24 @@ export const TopBar = () => {
   const handleGenerateApp = async () => {
     setIsGenerating(true);
     try {
-      let blob: Blob;
-
-      if (serverProjectId) {
-        // Generate from saved project (this endpoint returns JSON with a download URL)
-        const result = await generateFromSaved(serverProjectId);
-
-        if (typeof result === "object" && result && "status" in result) {
-          const status = (result as { status?: string; message?: string })
-            .status;
-          const message = (result as { status?: string; message?: string })
-            .message;
-          if (status && status !== "success") {
-            throw new Error(message || "Failed to generate project");
-          }
-        }
-
-        // Then download the generated zip
-        blob = await downloadProject(serverProjectId);
-      } else {
-        // Quick generate without saving (returns ZIP directly)
-        const projectData = exportProject();
-        const apiPayload = {
-          app_name: projectData.app_name,
-          package_name: projectData.package_name,
-          json_data: {
-            screens: projectData.screens,
-          },
-        };
-        blob = await quickGenerate(apiPayload);
+      if (!serverProjectId) {
+        throw new Error("Please save the project before generating.");
       }
 
-      downloadBlob(blob, `${project.app_name}.zip`);
-      toast.success("Flutter app generated and downloaded!");
+      // Generate from saved project (no download here)
+      const result = await generateFromSaved(serverProjectId);
+
+      if (typeof result === "object" && result && "status" in result) {
+        const status = (result as { status?: string; message?: string }).status;
+        const message = (result as { status?: string; message?: string })
+          .message;
+        if (status && status !== "success") {
+          throw new Error(message || "Failed to generate project");
+        }
+      }
+
+      setHasGeneratedProject(true);
+      toast.success("Flutter project generated. You can build APK now.");
     } catch (error) {
       console.error("Generation error:", error);
 
@@ -159,49 +146,61 @@ export const TopBar = () => {
 
   const handleBuildApk = async () => {
     setIsBuildingApk(true);
+    const toastId = "build-apk";
     try {
-      let blob: Blob;
-
-      if (serverProjectId) {
-        // Build APK from saved project
-        const result = await buildApkFromSaved(serverProjectId);
-
-        if (typeof result === "object" && result && "status" in result) {
-          const status = result.status;
-          const message = result.message;
-
-          if (status === "building") {
-            toast.info(
-              message || "APK build started. This may take a few minutes...",
-              { duration: 5000 },
-            );
-            // Poll or wait for completion - for now show message
-            setIsBuildingApk(false);
-            return;
-          }
-
-          if (status !== "success") {
-            throw new Error(message || "Failed to build APK");
-          }
-        }
-
-        // Download the APK
-        blob = await downloadApk(serverProjectId);
-      } else {
-        // Quick build APK without saving
-        const projectData = exportProject();
-        const apiPayload = {
-          app_name: projectData.app_name,
-          package_name: projectData.package_name,
-          json_data: {
-            screens: projectData.screens,
-          },
-        };
-        blob = await quickBuildApk(apiPayload);
+      if (!serverProjectId) {
+        throw new Error("Please save the project before building APK.");
       }
 
+      toast.loading("Generating Flutter project...", { id: toastId });
+
+      // Always generate before building
+      const generateResult = await generateFromSaved(serverProjectId);
+
+      if (
+        typeof generateResult === "object" &&
+        generateResult &&
+        "status" in generateResult
+      ) {
+        const status = (generateResult as { status?: string; message?: string })
+          .status;
+        const message = (
+          generateResult as { status?: string; message?: string }
+        ).message;
+        if (status && status !== "success") {
+          throw new Error(message || "Failed to generate project");
+        }
+      }
+
+      toast.loading("Building APK...", { id: toastId });
+
+      const result = await buildApkFromSaved(serverProjectId);
+
+      if (typeof result === "object" && result && "status" in result) {
+        const status = result.status;
+        const message = result.message;
+
+        if (status === "building") {
+          toast.info(
+            message || "APK build started. This may take a few minutes...",
+            { duration: 5000 },
+          );
+          // Poll or wait for completion - for now show message
+          toast.dismiss(toastId);
+          setIsBuildingApk(false);
+          return;
+        }
+
+        if (status !== "success") {
+          throw new Error(message || "Failed to build APK");
+        }
+      }
+
+      const blob = await downloadApk(serverProjectId);
+
       downloadBlob(blob, `${project.app_name}.apk`);
-      toast.success("APK built and downloaded!");
+      setHasGeneratedProject(true);
+      toast.success("APK built and downloaded!", { id: toastId });
     } catch (error) {
       console.error("APK build error:", error);
 
@@ -217,6 +216,7 @@ export const TopBar = () => {
         );
       }
     } finally {
+      toast.dismiss(toastId);
       setIsBuildingApk(false);
     }
   };
