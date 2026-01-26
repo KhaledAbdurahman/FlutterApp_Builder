@@ -10,6 +10,56 @@ import {
 } from "./validateDrop";
 import { WidgetType, FlutterWidget } from "@/types/flutter";
 
+const RESERVED_SCAFFOLD_TYPES: WidgetType[] = [
+  "AppBar",
+  "Drawer",
+  "BottomNavigationBar",
+];
+
+const getScaffoldFromWidgets = (widgets: FlutterWidget[]) =>
+  widgets.find((w) => w.type === "Scaffold");
+
+const getScaffoldContext = (scaffold?: FlutterWidget) => {
+  const children = scaffold?.children || [];
+  return {
+    appBarExists: children.some((c) => c.type === "AppBar"),
+    drawerExists: children.some((c) => c.type === "Drawer"),
+    bottomNavExists: children.some((c) => c.type === "BottomNavigationBar"),
+  };
+};
+
+const getScaffoldBodyChild = (scaffold?: FlutterWidget) => {
+  const children = scaffold?.children || [];
+  return children.find((c) => !RESERVED_SCAFFOLD_TYPES.includes(c.type));
+};
+
+const getScaffoldSlotForType = (type: WidgetType) => {
+  if (type === "AppBar") return "appBar";
+  if (type === "Drawer") return "drawer";
+  if (type === "BottomNavigationBar") return "bottomNavigationBar";
+  return "body";
+};
+
+const showAccessibleToast = (
+  message: string,
+  variant: "info" | "error" = "info",
+) => {
+  const base =
+    "pointer-events-auto rounded-md border px-3 py-2 text-sm shadow-md bg-background text-foreground";
+  const tone =
+    variant === "error"
+      ? "border-destructive text-destructive"
+      : "border-border";
+  toast.custom(
+    () => (
+      <div role="status" aria-live="polite" className={`${base} ${tone}`}>
+        {message}
+      </div>
+    ),
+    { duration: 2000 },
+  );
+};
+
 export const useDnDHandlers = () => {
   const {
     addWidget,
@@ -17,10 +67,17 @@ export const useDnDHandlers = () => {
     getActiveScreen,
     getWidgetById,
     selectedWidgetId,
+    setScreenComponents,
+    setSelectedWidget,
   } = useBuilderStore();
 
   // Snapshot mechanism (unused for simple addWidget but kept for API compliance)
-  const snapshotRef = useRef<FlutterWidget[] | null>(null);
+  const snapshotRef = useRef<
+    Record<
+      string,
+      { components: FlutterWidget[]; selectedWidgetId: string | null }
+    >
+  >({});
 
   // Confirmation Modal State
   const [confirmationDialog, setConfirmationDialog] = useState<{
@@ -28,6 +85,7 @@ export const useDnDHandlers = () => {
     message: string;
     onConfirm: () => void;
     onCancel: () => void;
+    anchor?: { x: number; y: number };
   } | null>(null);
 
   // Helper to build context
@@ -57,23 +115,38 @@ export const useDnDHandlers = () => {
 
   const handleDragStart = (event: DragStartEvent) => {
     setIsDragging(true);
+    const dragId = event.active.id?.toString();
     const screen = getActiveScreen();
-    if (screen) {
+    if (screen && dragId) {
       // Deep clone for snapshot
-      snapshotRef.current = JSON.parse(JSON.stringify(screen.components));
+      snapshotRef.current[dragId] = {
+        components: JSON.parse(JSON.stringify(screen.components)),
+        selectedWidgetId,
+      };
     }
     // Pass event handling for UI updates handled by caller if needed
   };
 
   const handleDragCancel = () => {
     setIsDragging(false);
-    snapshotRef.current = null;
+    snapshotRef.current = {};
+  };
+
+  const restoreSnapshot = (dragId?: string) => {
+    if (!dragId) return;
+    const snapshot = snapshotRef.current[dragId];
+    if (!snapshot) return;
+    setScreenComponents(snapshot.components);
+    setSelectedWidget(snapshot.selectedWidgetId);
+    delete snapshotRef.current[dragId];
   };
 
   const attemptDrop = (
     source: DragItem,
     destination: DropTarget,
     commitAction: () => void,
+    dragId?: string,
+    anchorRect?: { top: number; left: number; width: number; height: number },
   ) => {
     const ctx = getValidationContext();
     const result = validateDrop(source, destination, ctx);
@@ -81,6 +154,12 @@ export const useDnDHandlers = () => {
     if (result.valid) {
       if (result.confidence === "low") {
         setIsDragging(false);
+        const anchor = anchorRect
+          ? {
+              x: anchorRect.left + anchorRect.width / 2,
+              y: anchorRect.top + anchorRect.height + 8,
+            }
+          : undefined;
         setConfirmationDialog({
           isOpen: true,
           message:
@@ -89,22 +168,23 @@ export const useDnDHandlers = () => {
           onConfirm: () => {
             commitAction();
             setConfirmationDialog(null);
-            snapshotRef.current = null;
+            if (dragId) delete snapshotRef.current[dragId];
+            // TODO: Record the user's decision for heuristics.
           },
           onCancel: () => {
-            toast.info("Placement cancelled.");
+            showAccessibleToast("Placement cancelled.", "info");
             setConfirmationDialog(null);
-            // If we had optimistically updated, revert here using snapshotRef.current
-            snapshotRef.current = null;
+            restoreSnapshot(dragId);
           },
+          anchor,
         });
       } else {
         commitAction();
-        snapshotRef.current = null;
+        if (dragId) delete snapshotRef.current[dragId];
       }
     } else {
-      toast.error(result.message || "Invalid drop operation.");
-      snapshotRef.current = null;
+      showAccessibleToast(result.message || "Invalid drop operation.", "error");
+      restoreSnapshot(dragId);
     }
   };
 
@@ -120,6 +200,7 @@ export const useDnDHandlers = () => {
 
     const activeData = active.data.current;
     const overData = over.data.current;
+    const dragId = active.id?.toString();
 
     if (!activeData) return;
 
@@ -130,9 +211,14 @@ export const useDnDHandlers = () => {
 
       let targetId: string | undefined = undefined;
       let targetType: WidgetType | "canvas" = "canvas";
+      let slot: DropTarget["slot"] = undefined;
 
       // Resolve Target
-      if (overData?.type === "widget") {
+      if (overData?.type === "scaffold-slot") {
+        targetId = overData.scaffoldId;
+        targetType = "Scaffold";
+        slot = overData.slot;
+      } else if (overData?.type === "widget") {
         targetId = overData.widgetId;
         const w = getWidgetById(targetId!);
         if (w) targetType = w.type;
@@ -147,14 +233,56 @@ export const useDnDHandlers = () => {
         }
       }
 
+      const screen = getActiveScreen();
+      const scaffold = screen
+        ? getScaffoldFromWidgets(screen.components)
+        : undefined;
+      const scaffoldContext = getScaffoldContext(scaffold);
+
+      const scaffoldBody = getScaffoldBodyChild(scaffold);
+
+      if (RESERVED_SCAFFOLD_TYPES.includes(widgetType) && scaffold) {
+        targetId = scaffold.id;
+        targetType = "Scaffold";
+        slot = getScaffoldSlotForType(widgetType);
+      } else if (targetType === "Scaffold" && !slot) {
+        if (scaffoldBody) {
+          targetId = scaffoldBody.id;
+          targetType = scaffoldBody.type;
+          slot = undefined;
+        } else {
+          slot = "body";
+        }
+      } else if (
+        overData?.type === "scaffold-slot" &&
+        !RESERVED_SCAFFOLD_TYPES.includes(widgetType)
+      ) {
+        if (scaffoldBody) {
+          targetId = scaffoldBody.id;
+          targetType = scaffoldBody.type;
+          slot = undefined;
+        } else {
+          slot = "body";
+        }
+      }
+
       const destination: DropTarget = {
         id: targetId || "root",
         type: targetType,
+        slot,
+        scaffoldContext,
       };
 
-      attemptDrop(source, destination, () => {
-        addWidget(widgetType, targetId);
-      });
+      attemptDrop(
+        source,
+        destination,
+        () => {
+          // TODO: Define expected behavior when dropping a reserved scaffold widget and no Scaffold exists.
+          addWidget(widgetType, targetId);
+        },
+        dragId,
+        over.rect,
+      );
     }
     // Case: Reordering could be added here
   };

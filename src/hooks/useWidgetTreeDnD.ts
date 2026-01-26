@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import React, { useState, useCallback, useRef } from "react";
 import {
   DragStartEvent,
   DragEndEvent,
@@ -65,6 +65,27 @@ const buildValidationContextLookup = (
 
 const DND_TOAST_ID = "widget-tree-dnd";
 
+const showAccessibleToast = (
+  message: string,
+  variant: "info" | "error" = "info",
+) => {
+  const base =
+    "pointer-events-auto rounded-md border px-3 py-2 text-sm shadow-md bg-background text-foreground";
+  const tone =
+    variant === "error"
+      ? "border-destructive text-destructive"
+      : "border-border";
+  toast.custom(
+    () =>
+      React.createElement(
+        "div",
+        { role: "status", "aria-live": "polite", className: `${base} ${tone}` },
+        message,
+      ),
+    { duration: 2000 },
+  );
+};
+
 const getWidgetLabel = (widget?: FlutterWidget | null) => {
   if (!widget) return "root";
   const text = typeof widget.props?.text === "string" ? widget.props.text : "";
@@ -89,7 +110,9 @@ export const useWidgetTreeDnD = ({ onCommit }: UseWidgetTreeDnDProps = {}) => {
     getActiveScreen,
     moveWidget,
     setIsDragging,
-    updateWidget, // used for reverting if we did optimistic updates (not implemented here for safety)
+    setScreenComponents,
+    setSelectedWidget,
+    selectedWidgetId,
   } = useBuilderStore();
 
   // Local state for confirmation
@@ -97,10 +120,12 @@ export const useWidgetTreeDnD = ({ onCommit }: UseWidgetTreeDnDProps = {}) => {
     isOpen: boolean;
     message: string;
     intent: TreeMoveIntent | null;
+    anchor?: { x: number; y: number };
   } | null>(null);
 
   const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
   const [overId, setOverId] = useState<UniqueIdentifier | null>(null);
+  const pendingDragIdRef = useRef<string | null>(null);
 
   // Sensors
   const sensors = useSensors(
@@ -128,7 +153,12 @@ export const useWidgetTreeDnD = ({ onCommit }: UseWidgetTreeDnDProps = {}) => {
   }, []);
 
   // Snapshot for undo
-  const snapshotRef = useRef<FlutterWidget[] | null>(null);
+  const snapshotRef = useRef<
+    Record<
+      string,
+      { components: FlutterWidget[]; selectedWidgetId: string | null }
+    >
+  >({});
 
   const activeScreen = getActiveScreen();
   const flattenedItems = activeScreen ? activeScreen.components : []; // This isn't flat, but handled recursively?
@@ -141,10 +171,14 @@ export const useWidgetTreeDnD = ({ onCommit }: UseWidgetTreeDnDProps = {}) => {
     const { active } = event;
     setActiveId(active.id);
     setIsDragging(true);
+    const dragId = active.id?.toString();
 
     // Snapshot
-    if (activeScreen) {
-      snapshotRef.current = JSON.parse(JSON.stringify(activeScreen.components));
+    if (activeScreen && dragId) {
+      snapshotRef.current[dragId] = {
+        components: JSON.parse(JSON.stringify(activeScreen.components)),
+        selectedWidgetId,
+      };
       const nodes = activeScreen.components;
       const sourceMeta = findWidgetWithMeta(nodes, active.id as string);
       if (sourceMeta) {
@@ -243,6 +277,7 @@ export const useWidgetTreeDnD = ({ onCommit }: UseWidgetTreeDnDProps = {}) => {
     setActiveId(null);
     setOverId(null);
     setIsDragging(false);
+    const dragId = active.id?.toString();
 
     if (!over) {
       dismissDndToast();
@@ -252,58 +287,6 @@ export const useWidgetTreeDnD = ({ onCommit }: UseWidgetTreeDnDProps = {}) => {
       dismissDndToast();
       return;
     }
-
-    // We assume the Dnd context provides us with a "projection"
-    // or we infer the intent from where we dropped.
-    // NOTE: Tree sortable usually provides expanded/collapsed state and depth.
-    // If using @dnd-kit/sortable-tree pattern, the event would contain specific projection data
-    // OR we have to calculate it.
-    //
-    // For this implementation, let's assume a simplified intent model:
-    // If dropped ON items -> Nest
-    // If dropped Between items -> Reorder
-    //
-    // However, basic Sortable context only gives "over".
-    // It doesn't distinguish "inside" vs "between" easily without detailed collision detection (like pointerY relative to rect).
-    //
-    // Given the constraints, let's build a heuristic:
-    // 1. Is 'over' a container? If yes, are we hovering the middle? -> Inside.
-    // 2. Are we hovering the edges? -> Sibling.
-    //
-    // Implementation Detail: Since the prompt is strict about behavior but open on "how",
-    // and standard SortableList is strict 1D, robust tree DnD usually requires the "SortableTree" projection logic.
-    // Check if we can infer "action" from `active.data` or `over.data` provided by `WidgetTree.tsx`.
-
-    // Assuming the UI component passes intent data or we default to "insert after".
-    // For a sidebar tree, dropping on "Folder" usually means inside, dropping on "File" means sibling.
-    // Let's rely on type compat:
-    // If Target is Container/CanHaveChildren -> Try Index 0 (Inside) or Index N?
-    //
-    // Refinement: The user wants "reorder among siblings, move into different parent, promote".
-    // This implies we need accurate depth detection.
-    //
-    // Let's assume for this Hook that we handle the "Reorder" logic provided by the standard `arrayMove`
-    // equivalents or look at the `projected` logic if we implemented a flattened tree.
-    //
-    // SIMPLIFICATION for this hook:
-    // We will assume the `WidgetTree` component sets `active.data.current` or `over.data.current` with specific intent info
-    // OR we check the nesting.
-
-    // Let's try to resolve the intent "naively" here if not provided:
-    // We'll treat dropping A over B as "Insert A after B".
-    // UNLESS B is a container and we held it there? No, standard sortable is reorder.
-
-    // To support nesting, typically one drags *on top* of a container node vs *between*.
-    // Let's assume we can get `dragDepth` or similar, or just validate "drag over target".
-
-    // FALLBACK STRATEGY:
-    // 1. Resolve Moved Widget (Source)
-    // 2. Resolve Target Widget (Over)
-    // 3. Determine if "Inside" or "Sibling".
-    //    If Target can accept children and is expanded? Or just purely based on id?
-    //    Let's check `validationRules.canAcceptChild`.
-    //    If target can accept children, we ask user/intent?
-    //    Usually, "center" drop = inside, "edge" drop = sibling.
 
     // Note: Since implementing full collision-based intent in this hook without the View details is hard,
     // we will rely on a helper `resolveIntent(active, over)`
@@ -343,43 +326,82 @@ export const useWidgetTreeDnD = ({ onCommit }: UseWidgetTreeDnDProps = {}) => {
     const ctx = buildValidationContextLookup(nodes);
     const { source, destination } = adaptTreeMoveToValidation(intent, ctx);
 
-    const result = validateDrop(source, destination, ctx);
+    const scaffoldTarget =
+      destination.type === "Scaffold"
+        ? findWidgetWithMeta(nodes, destination.id)?.widget
+        : null;
+    const scaffoldContext = scaffoldTarget
+      ? {
+          appBarExists:
+            scaffoldTarget.children?.some((c) => c.type === "AppBar") ?? false,
+          drawerExists:
+            scaffoldTarget.children?.some((c) => c.type === "Drawer") ?? false,
+          bottomNavExists:
+            scaffoldTarget.children?.some(
+              (c) => c.type === "BottomNavigationBar",
+            ) ?? false,
+        }
+      : undefined;
+
+    const result = validateDrop(
+      source,
+      { ...destination, scaffoldContext },
+      ctx,
+    );
 
     if (result.valid) {
       if (result.confidence === "low") {
+        const anchor = over.rect
+          ? {
+              x: over.rect.left + over.rect.width / 2,
+              y: over.rect.top + over.rect.height + 8,
+            }
+          : undefined;
+        pendingDragIdRef.current = dragId ?? null;
         setConfirmDialog({
           isOpen: true,
           message: result.message || "Unsure about this placement.",
           intent,
+          anchor,
         });
         // Don't commit yet
       } else {
         commitMove(intent);
+        if (dragId) delete snapshotRef.current[dragId];
       }
     } else {
-      toast.error(result.message || "Invalid move");
+      showAccessibleToast(result.message || "Invalid move", "error");
       dismissDndToast();
       // Revert (Snapshot restore)
-      restoreSnapshot();
+      restoreSnapshot(dragId);
     }
   };
 
-  const restoreSnapshot = () => {
-    // If we had local state optimistically updated, revert it.
-    // Since this hook currently relies on 'onCommit' to touch the store,
-    // the store hasn't changed yet (unless we added optimistic updates).
-    //
-    // If we implement optimistic updates in the sortable UI (visually),
+  const restoreSnapshot = (dragId?: string) => {
     // `dnd-kit` usually handles the revert animation if we just return without updating data.
-    // So we mainly need to ensure store is clean.
-    //
-    // However, the requirements say "atomically revert".
-    // Since we didn't mutate the store *until* commitMove, we are safe.
-    // If we DID mutate (optimistic), we'd use snapshotRef.current to setProject(...)
-    if (snapshotRef.current) {
-      // Force store reset just in case (if we added optimistic later)
-      // For now, no-op is fine as we only commit on valid.
+
+    if (!dragId) return;
+    const snapshot = snapshotRef.current[dragId];
+    if (!snapshot) return;
+    setScreenComponents(snapshot.components);
+    setSelectedWidget(snapshot.selectedWidgetId);
+    delete snapshotRef.current[dragId];
+  };
+
+  const cancelPendingMove = () => {
+    restoreSnapshot(pendingDragIdRef.current ?? undefined);
+    pendingDragIdRef.current = null;
+    setConfirmDialog(null);
+  };
+
+  const confirmPendingMove = (intent?: TreeMoveIntent | null) => {
+    if (!intent) return;
+    commitMove(intent);
+    if (pendingDragIdRef.current) {
+      delete snapshotRef.current[pendingDragIdRef.current];
     }
+    pendingDragIdRef.current = null;
+    setConfirmDialog(null);
   };
 
   return {
@@ -392,5 +414,7 @@ export const useWidgetTreeDnD = ({ onCommit }: UseWidgetTreeDnDProps = {}) => {
     confirmDialog,
     setConfirmDialog,
     commitMove,
+    cancelPendingMove,
+    confirmPendingMove,
   };
 };

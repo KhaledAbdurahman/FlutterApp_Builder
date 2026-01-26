@@ -23,6 +23,12 @@ export interface DragItem {
 export interface DropTarget {
   id: string; // Target widget ID
   type: WidgetType | "canvas";
+  slot?: "appBar" | "drawer" | "bottomNavigationBar" | "body";
+  scaffoldContext?: {
+    appBarExists: boolean;
+    drawerExists: boolean;
+    bottomNavExists: boolean;
+  };
 }
 
 export interface ValidationResult {
@@ -68,17 +74,138 @@ const findWidget = (
   return undefined;
 };
 
+const RESERVED_SCAFFOLD_TYPES: WidgetType[] = [
+  "AppBar",
+  "Drawer",
+  "BottomNavigationBar",
+];
+
+const findScaffoldById = (
+  widgets: FlutterWidget[],
+  id: string,
+): FlutterWidget | undefined => {
+  const found = findWidget(widgets, id);
+  if (found?.type === "Scaffold") return found;
+  return undefined;
+};
+
+const getScaffoldSlots = (scaffold?: FlutterWidget) => {
+  if (!scaffold?.children) {
+    return {
+      appBar: undefined,
+      drawer: undefined,
+      bottomNavigationBar: undefined,
+      body: undefined,
+    };
+  }
+
+  const appBar = scaffold.children.find((c) => c.type === "AppBar");
+  const drawer = scaffold.children.find((c) => c.type === "Drawer");
+  const bottomNavigationBar = scaffold.children.find(
+    (c) => c.type === "BottomNavigationBar",
+  );
+  const body = scaffold.children.find(
+    (c) => !RESERVED_SCAFFOLD_TYPES.includes(c.type),
+  );
+
+  return { appBar, drawer, bottomNavigationBar, body };
+};
+
 export const validateDrop = (
   source: DragItem,
   destination: DropTarget,
   ctx: ValidationContext,
 ): ValidationResult => {
-  // 1. Basic Type Checks
+  // Scaffold slot validation (reserved mounting)
+  if (destination.slot) {
+    const scaffold = findScaffoldById(ctx.widgets, destination.id);
+    const slots = getScaffoldSlots(scaffold);
+    const scaffoldContext = destination.scaffoldContext || {
+      appBarExists: !!slots.appBar,
+      drawerExists: !!slots.drawer,
+      bottomNavExists: !!slots.bottomNavigationBar,
+    };
+
+    if (destination.slot === "appBar") {
+      if (source.type !== "AppBar") {
+        return {
+          valid: false,
+          confidence: "high",
+          message: "Only AppBar can be placed in the appBar slot.",
+        };
+      }
+      if (scaffoldContext.appBarExists && slots.appBar?.id !== source.id) {
+        return {
+          valid: false,
+          confidence: "high",
+          message: "Scaffold already has an AppBar.",
+        };
+      }
+      return { valid: true, confidence: "high" };
+    }
+
+    if (destination.slot === "drawer") {
+      if (source.type !== "Drawer") {
+        return {
+          valid: false,
+          confidence: "high",
+          message: "Only Drawer can be placed in the drawer slot.",
+        };
+      }
+      if (scaffoldContext.drawerExists && slots.drawer?.id !== source.id) {
+        return {
+          valid: false,
+          confidence: "high",
+          message: "Scaffold already has a Drawer.",
+        };
+      }
+      return { valid: true, confidence: "high" };
+    }
+
+    if (destination.slot === "bottomNavigationBar") {
+      if (source.type !== "BottomNavigationBar") {
+        return {
+          valid: false,
+          confidence: "high",
+          message:
+            "Only BottomNavigationBar can be placed in the bottomNavigationBar slot.",
+        };
+      }
+      if (
+        scaffoldContext.bottomNavExists &&
+        slots.bottomNavigationBar?.id !== source.id
+      ) {
+        return {
+          valid: false,
+          confidence: "high",
+          message: "Scaffold already has a BottomNavigationBar.",
+        };
+      }
+      return { valid: true, confidence: "high" };
+    }
+
+    if (destination.slot === "body") {
+      if (RESERVED_SCAFFOLD_TYPES.includes(source.type)) {
+        return {
+          valid: false,
+          confidence: "high",
+          message:
+            "Scaffold reserved widgets cannot be placed in the body slot.",
+        };
+      }
+      if (slots.body && slots.body.id !== source.id) {
+        return {
+          valid: false,
+          confidence: "high",
+          message:
+            "Scaffold body already has a widget. Only one direct child is allowed.",
+        };
+      }
+      return { valid: true, confidence: "high" };
+    }
+  }
+
   if (destination.type === "canvas") {
-    // Dropping on root canvas
-    // Usually only Scaffold is allowed at root if it's high level, but
-    // the current app allows dropping anything on "canvas" which adds it to the list.
-    // However, if we drop "Expanded" or "Positioned" on root, that's invalid.
     if (REQUIRED_PARENTS[source.type]) {
       return {
         valid: false,
@@ -164,7 +291,7 @@ export const validateDrop = (
     if (explicitRule.result === "uncertain") {
       return {
         valid: true, // tentatively valid, but requires confirmation
-        confidence: "low",
+        confidence: "low", // TODO add a modal
         message: explicitRule.message,
       };
     }

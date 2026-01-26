@@ -17,16 +17,7 @@ import { cn } from "@/lib/utils";
 import * as LucideIcons from "lucide-react";
 import { ChevronRight, ChevronDown, Layers, GripVertical } from "lucide-react";
 import { toast } from "sonner";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
 
 interface TreeNodeProps {
   widget: FlutterWidget;
@@ -148,8 +139,8 @@ export const WidgetTree = () => {
     handleDragOver,
     handleDragEnd,
     confirmDialog,
-    setConfirmDialog,
-    commitMove,
+    cancelPendingMove,
+    confirmPendingMove,
   } = useWidgetTreeDnD();
 
   const allWidgetIds = useMemo(() => {
@@ -204,40 +195,58 @@ export const WidgetTree = () => {
         )}
       </div>
 
-      <AlertDialog
-        open={!!confirmDialog}
-        onOpenChange={(open) => !open && setConfirmDialog(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirm Placement</AlertDialogTitle>
-            <AlertDialogDescription>
-              {confirmDialog?.message}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel
-              onClick={() => {
-                setConfirmDialog(null);
-                toast.info("Move cancelled");
-                toast.dismiss("widget-tree-dnd");
-              }}
-            >
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                if (confirmDialog?.intent) {
-                  commitMove(confirmDialog.intent);
-                  setConfirmDialog(null);
-                }
-              }}
-            >
-              Confirm Move
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {confirmDialog && (
+        <div className="fixed inset-0 z-50 pointer-events-none">
+          <div
+            className="pointer-events-auto"
+            style={{
+              position: "absolute",
+              top: confirmDialog.anchor?.y ?? 24,
+              left: confirmDialog.anchor?.x ?? 24,
+              transform: "translate(-50%, 0)",
+            }}
+            role="dialog"
+            aria-live="polite"
+          >
+            <div className="rounded-md border bg-popover p-4 shadow-md w-72">
+              <p className="text-sm font-medium mb-1">Confirm Placement</p>
+              <p className="text-xs text-muted-foreground mb-3">
+                {confirmDialog.message}
+              </p>
+              <div className="flex items-center justify-end gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    cancelPendingMove();
+                    toast.custom(() => (
+                      <div
+                        role="status"
+                        aria-live="polite"
+                        className="pointer-events-auto rounded-md border px-3 py-2 text-sm shadow-md bg-background text-foreground"
+                      >
+                        Move cancelled
+                      </div>
+                    ));
+                    toast.dismiss("widget-tree-dnd");
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    confirmPendingMove(confirmDialog.intent);
+                    // TODO: Record the user's decision for heuristics.
+                  }}
+                >
+                  Confirm Move
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

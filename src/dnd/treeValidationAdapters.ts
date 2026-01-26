@@ -61,5 +61,17 @@ export const adaptTreeMoveToValidation = (
     }
   }
 
+  if (destination.type === "Scaffold") {
+    if (movedWidgetType === "AppBar") {
+      destination.slot = "appBar";
+    } else if (movedWidgetType === "Drawer") {
+      destination.slot = "drawer";
+    } else if (movedWidgetType === "BottomNavigationBar") {
+      destination.slot = "bottomNavigationBar";
+    } else {
+      destination.slot = "body";
+    }
+  }
+
   return { source, destination };
 };

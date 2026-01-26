@@ -16,16 +16,7 @@ import { WidgetType, getWidgetDefinition } from "@/types/flutter";
 import { useState } from "react";
 import * as LucideIcons from "lucide-react";
 import { useDnDHandlers } from "@/dnd/dndHandlers";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
 
 export const BuilderLayout = () => {
   const [activeType, setActiveType] = useState<WidgetType | null>(null);
@@ -94,27 +85,40 @@ export const BuilderLayout = () => {
         </DragOverlay>
       </DndContext>
 
-      <AlertDialog
-        open={!!confirmationDialog}
-        onOpenChange={(open) => !open && setConfirmationDialog(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirm Placement</AlertDialogTitle>
-            <AlertDialogDescription>
-              {confirmationDialog?.message}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={confirmationDialog?.onCancel}>
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction onClick={confirmationDialog?.onConfirm}>
-              Confirm Placement
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {confirmationDialog && (
+        <div className="fixed inset-0 z-50 pointer-events-none">
+          <div
+            className="pointer-events-auto"
+            style={{
+              position: "absolute",
+              top: confirmationDialog.anchor?.y ?? 24,
+              left: confirmationDialog.anchor?.x ?? 24,
+              transform: "translate(-50%, 0)",
+            }}
+            role="dialog"
+            aria-live="polite"
+          >
+            <div className="rounded-md border bg-popover p-4 shadow-md w-72">
+              <p className="text-sm font-medium mb-1">Confirm Placement</p>
+              <p className="text-xs text-muted-foreground mb-3">
+                {confirmationDialog.message}
+              </p>
+              <div className="flex items-center justify-end gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={confirmationDialog.onCancel}
+                >
+                  Cancel
+                </Button>
+                <Button size="sm" onClick={confirmationDialog.onConfirm}>
+                  Confirm Placement
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };
