@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   FileText,
   RefreshCw,
@@ -8,71 +8,100 @@ import {
   Info,
   AlertTriangle,
   CheckCircle,
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
+  Play,
+  Package,
+  Monitor,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from '@/components/ui/dialog';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Badge } from '@/components/ui/badge';
-import { getProjectLogs, GenerationLog } from '@/lib/api';
-import { useBuilderStore } from '@/store/builderStore';
-import { format } from 'date-fns';
+} from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
+import { getProjectLogs, GenerationLog } from "@/lib/api";
+import { useBuilderStore } from "@/store/builderStore";
+import { format, isValid } from "date-fns";
 
 interface GenerationLogsProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-const getLevelIcon = (level: string) => {
-  switch (level.toLowerCase()) {
-    case 'error':
+const getStatusIcon = (status?: string) => {
+  switch ((status || "info").toLowerCase()) {
+    case "error":
       return <AlertCircle className="w-4 h-4 text-destructive" />;
-    case 'warning':
+    case "warning":
       return <AlertTriangle className="w-4 h-4 text-amber-500" />;
-    case 'success':
+    case "success":
       return <CheckCircle className="w-4 h-4 text-emerald-500" />;
     default:
       return <Info className="w-4 h-4 text-blue-500" />;
   }
 };
 
-const getLevelBadge = (level: string) => {
-  switch (level.toLowerCase()) {
-    case 'error':
-      return <Badge variant="destructive">{level}</Badge>;
-    case 'warning':
-      return <Badge className="bg-amber-500">{level}</Badge>;
-    case 'success':
-      return <Badge className="bg-emerald-500">{level}</Badge>;
+const getStatusBadge = (status?: string) => {
+  const value = (status || "info").toLowerCase();
+  switch (value) {
+    case "error":
+      return <Badge variant="destructive">{value}</Badge>;
+    case "warning":
+      return <Badge className="bg-amber-500">{value}</Badge>;
+    case "success":
+      return <Badge className="bg-emerald-500">{value}</Badge>;
     default:
-      return <Badge variant="secondary">{level}</Badge>;
+      return <Badge variant="secondary">{value}</Badge>;
   }
+};
+
+const getStepIcon = (step?: string) => {
+  const normalized = (step || "").toLowerCase();
+  if (normalized.includes("start")) {
+    return <Play className="w-4 h-4 text-muted-foreground" />;
+  }
+  if (normalized.includes("build_apk")) {
+    return <Package className="w-4 h-4 text-muted-foreground" />;
+  }
+  if (normalized.includes("preview")) {
+    return <Monitor className="w-4 h-4 text-muted-foreground" />;
+  }
+  if (normalized.includes("generate")) {
+    return <FileText className="w-4 h-4 text-muted-foreground" />;
+  }
+  return <Info className="w-4 h-4 text-muted-foreground" />;
+};
+
+const formatTimestamp = (timestamp?: string) => {
+  if (!timestamp) return "Unknown time";
+  const date = new Date(timestamp);
+  if (!isValid(date)) return "Unknown time";
+  return format(date, "PPp");
 };
 
 export const GenerationLogs = ({ open, onOpenChange }: GenerationLogsProps) => {
   const { serverProjectId } = useBuilderStore();
-  
+
   const [logs, setLogs] = useState<GenerationLog[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchLogs = async () => {
     if (!serverProjectId) return;
-    
+
     setIsLoading(true);
     setError(null);
     try {
       const data = await getProjectLogs(serverProjectId);
-      setLogs(data);
+      setLogs(Array.isArray(data) ? data : []);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to load logs';
+      const message =
+        err instanceof Error ? err.message : "Failed to load logs";
       setError(message);
-      console.error('Failed to fetch logs:', err);
+      console.error("Failed to fetch logs:", err);
     } finally {
       setIsLoading(false);
     }
@@ -112,7 +141,9 @@ export const GenerationLogs = ({ open, onOpenChange }: GenerationLogsProps) => {
                 disabled={isLoading}
                 className="gap-2"
               >
-                <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+                <RefreshCw
+                  className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`}
+                />
                 Refresh
               </Button>
             </div>
@@ -130,29 +161,35 @@ export const GenerationLogs = ({ open, onOpenChange }: GenerationLogsProps) => {
                   <div className="flex items-center justify-center py-12">
                     <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
                   </div>
-                ) : logs.length === 0 ? (
+                ) : !Array.isArray(logs) || logs.length === 0 ? (
                   <div className="text-center py-12 text-muted-foreground">
                     <FileText className="w-12 h-12 mx-auto mb-2 opacity-50" />
                     <p>No generation logs yet</p>
-                    <p className="text-xs mt-1">Generate your app to see logs here</p>
+                    <p className="text-xs mt-1">
+                      Generate your app to see logs here
+                    </p>
                   </div>
                 ) : (
                   <div className="space-y-2">
                     {logs.map((log, index) => (
                       <motion.div
-                        key={log.id || index}
+                        key={`${log.step || "log"}-${log.timestamp || index}-${index}`}
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95 }}
                         className="p-3 border rounded-lg"
                       >
                         <div className="flex items-start gap-3">
-                          {getLevelIcon(log.level)}
+                          {getStatusIcon(log.status)}
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
-                              {getLevelBadge(log.level)}
+                              {getStatusBadge(log.status)}
+                              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                                {getStepIcon(log.step)}
+                                {log.step || "unknown_step"}
+                              </span>
                               <span className="text-xs text-muted-foreground">
-                                {format(new Date(log.timestamp), 'PPp')}
+                                {formatTimestamp(log.timestamp)}
                               </span>
                             </div>
                             <p className="text-sm">{log.message}</p>

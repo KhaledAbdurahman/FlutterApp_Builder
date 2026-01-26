@@ -19,11 +19,10 @@ export interface SavedProject {
 }
 
 export interface GenerationLog {
-  id: number;
-  project_id: number;
-  timestamp: string;
-  level: string;
+  step: string;
+  status: "info" | "success" | "error" | "warning";
   message: string;
+  timestamp: string;
 }
 
 export interface ApiError {
