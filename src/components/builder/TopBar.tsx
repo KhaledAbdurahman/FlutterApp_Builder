@@ -13,6 +13,7 @@ import {
   FolderOpen,
   FileText,
   Package,
+  Eye,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,6 +35,7 @@ import { useBuilderStore } from "@/store/builderStore";
 import { toast } from "sonner";
 import { ProjectManager } from "./ProjectManager";
 import { GenerationLogs } from "./GenerationLogs";
+import { LivePreview } from "./LivePreview";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { UserProfileMenu } from "@/components/UserProfileMenu";
 import {
@@ -44,6 +46,8 @@ import {
   buildApkFromSaved,
   quickBuildApk,
   downloadApk,
+  startPreview,
+  quickPreview,
 } from "@/lib/api";
 
 export const TopBar = () => {
@@ -66,6 +70,8 @@ export const TopBar = () => {
   const [tempPackageName, setTempPackageName] = useState(project.package_name);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isBuildingApk, setIsBuildingApk] = useState(false);
+  const [isStartingPreview, setIsStartingPreview] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [projectManagerOpen, setProjectManagerOpen] = useState(false);
   const [logsOpen, setLogsOpen] = useState(false);
 
@@ -221,6 +227,62 @@ export const TopBar = () => {
     }
   };
 
+  const handleStartPreview = async () => {
+    setIsStartingPreview(true);
+    try {
+      let result;
+
+      if (serverProjectId) {
+        // Start preview from saved project
+        result = await startPreview(serverProjectId);
+      } else {
+        // Quick preview without saving
+        const projectData = exportProject();
+        const apiPayload = {
+          app_name: projectData.app_name,
+          package_name: projectData.package_name,
+          json_data: {
+            screens: projectData.screens,
+          },
+        };
+        result = await quickPreview(apiPayload);
+      }
+
+      if (result.status === "error") {
+        throw new Error(result.message || "Failed to start preview");
+      }
+
+      if (result.preview_url) {
+        setPreviewUrl(result.preview_url);
+        toast.success("Live preview started!");
+      } else if (result.status === "starting") {
+        toast.info(result.message || "Preview is starting...", {
+          duration: 5000,
+        });
+      }
+    } catch (error) {
+      console.error("Preview error:", error);
+
+      if (error instanceof TypeError && error.message === "Failed to fetch") {
+        toast.error(
+          "Cannot connect to backend. Ensure the server is running and CORS is enabled.",
+          { duration: 6000 },
+        );
+      } else {
+        toast.error(
+          error instanceof Error ? error.message : "Failed to start preview.",
+          { duration: 5000 },
+        );
+      }
+    } finally {
+      setIsStartingPreview(false);
+    }
+  };
+
+  const handleClosePreview = () => {
+    setPreviewUrl(null);
+  };
+
   return (
     <motion.header
       initial={{ y: -20, opacity: 0 }}
@@ -315,7 +377,6 @@ export const TopBar = () => {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-
       <div className="flex items-center gap-3">
         <ThemeToggle />
         <div className="h-6 w-px bg-border" />
@@ -385,7 +446,7 @@ export const TopBar = () => {
           size="sm"
           className="gap-2 gradient-primary hover:opacity-90 text-primary-foreground border-0"
           onClick={handleGenerateApp}
-          disabled={isGenerating || isBuildingApk}
+          disabled={isGenerating || isBuildingApk || isStartingPreview}
         >
           {isGenerating ? (
             <Loader2 className="w-4 h-4 animate-spin" />
@@ -408,14 +469,30 @@ export const TopBar = () => {
           )}
           {isBuildingApk ? "Building..." : "Build APK"}
         </Button>
+        <Button
+          size="sm"
+          variant="secondary"
+          className="gap-2"
+          onClick={handleStartPreview}
+          disabled={isGenerating || isBuildingApk || isStartingPreview}
+        >
+          {isStartingPreview ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <Eye className="w-4 h-4" />
+          )}
+          {isStartingPreview ? "Starting..." : "Live Preview"}
+        </Button>
         <UserProfileMenu />
       </div>
-
       <ProjectManager
         open={projectManagerOpen}
         onOpenChange={setProjectManagerOpen}
       />
       <GenerationLogs open={logsOpen} onOpenChange={setLogsOpen} />
+      {previewUrl && (
+        <LivePreview previewUrl={previewUrl} onClose={handleClosePreview} />
+      )}
     </motion.header>
   );
 };

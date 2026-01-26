@@ -44,6 +44,20 @@ export interface ApkBuildResponse {
   download_url?: string;
 }
 
+export interface PreviewResponse {
+  status: "success" | "error" | "starting";
+  message: string;
+  preview_url?: string;
+  preview_id?: string;
+}
+
+export interface ActivePreview {
+  id: string;
+  project_id: number;
+  url: string;
+  started_at: string;
+}
+
 // Helper function for API calls with authentication
 async function apiCall<T>(
   endpoint: string,
@@ -232,6 +246,39 @@ export async function quickBuildApk(payload: {
 // Download APK file
 export async function downloadApk(projectId: number): Promise<Blob> {
   return apiCall<Blob>(`/projects/${projectId}/download_apk/`, {}, true);
+}
+
+// Start live preview for a saved project
+export async function startPreview(
+  projectId: number,
+): Promise<PreviewResponse> {
+  return apiCall<PreviewResponse>(`/projects/${projectId}/start_preview/`, {
+    method: "POST",
+  });
+}
+
+// Stop live preview for a saved project
+export async function stopPreview(projectId: number): Promise<PreviewResponse> {
+  return apiCall<PreviewResponse>(`/projects/${projectId}/stop_preview/`, {
+    method: "POST",
+  });
+}
+
+// Get all active previews
+export async function getActivePreviews(): Promise<ActivePreview[]> {
+  return apiCall<ActivePreview[]>("/projects/active_previews/");
+}
+
+// Quick preview without saving (returns preview URL)
+export async function quickPreview(payload: {
+  app_name: string;
+  package_name: string;
+  json_data: { screens: unknown[] };
+}): Promise<PreviewResponse> {
+  return apiCall<PreviewResponse>("/generate/quick_preview/", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
 }
 
 // Helper to download blob as file
