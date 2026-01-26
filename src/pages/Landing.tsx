@@ -15,6 +15,7 @@ import {
   Download,
   Github,
 } from "lucide-react";
+import BrandLogo from "@/components/BrandLogo";
 
 const features = [
   {
@@ -78,11 +79,7 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-3">
             <div className="w-25 h-10 rounded-xl bg-white flex items-center justify-center">
-              <img
-                src="/Builder.png"
-                alt="AppBuilder Logo"
-                className="w-25 h-12"
-              />
+              <BrandLogo bg_color="#080c16" />
             </div>
           </Link>
 
@@ -323,11 +320,7 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-3">
             <div className="w-25 h-10 rounded-xl bg-white flex items-center justify-center">
-              <img
-                src="/Builder.png"
-                alt="AppBuilder Logo"
-                className="w-25 h-10"
-              />
+              <BrandLogo bg_color="#080c16" />
             </div>
           </div>
           <p className="text-sm text-muted-foreground">

@@ -35,6 +35,7 @@ import {
 import { toast } from "sonner";
 import { useBuilderStore } from "@/store/builderStore";
 import { Screen } from "@/types/flutter";
+import BrandLogo from "@/components/BrandLogo";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -109,11 +110,7 @@ export default function Dashboard() {
           <div className="flex items-center gap-3">
             <Link to="/" className="flex items-center gap-3">
               <div className="w-25 h-10 rounded-xl bg-white flex items-center justify-center">
-                <img
-                  src="/Builder.png"
-                  alt="AppBuilder Logo"
-                  className="w-25 h-12"
-                />
+                <BrandLogo bg_color="#0a0f1c" />
               </div>
             </Link>
           </div>
