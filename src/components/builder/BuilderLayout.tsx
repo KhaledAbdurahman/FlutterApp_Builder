@@ -11,7 +11,7 @@ import { TopBar } from "./TopBar";
 import { WidgetPalette } from "./WidgetPalette";
 import { PhoneCanvas } from "./PhoneCanvas";
 import { PropertiesPanel } from "./PropertiesPanel";
-import { ComponentTree } from "./ComponentTree";
+import { WidgetTree } from "./WidgetTree";
 import { WidgetType, getWidgetDefinition } from "@/types/flutter";
 import { useState } from "react";
 import * as LucideIcons from "lucide-react";
@@ -72,7 +72,7 @@ export const BuilderLayout = () => {
           <TopBar />
           <div className="flex-1 flex overflow-hidden">
             <WidgetPalette />
-            <ComponentTree />
+            <WidgetTree />
             <PhoneCanvas />
             <PropertiesPanel />
           </div>
