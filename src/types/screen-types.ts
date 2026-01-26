@@ -52,7 +52,7 @@ export type ComponentPropsByType = {
     height?: number;
   };
   Container: {
-    layout: { w: number; h: number };
+    layout: { w: number | "auto"; h: number | "auto" };
     backgroundColor: string;
     padding: number;
     margin: number;

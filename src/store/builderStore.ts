@@ -44,14 +44,47 @@ interface BuilderState {
   setServerProjectId: (id: number | null) => void;
 }
 
-const applyDefaultsToWidget = (widget: FlutterWidget): FlutterWidget => ({
-  ...widget,
-  props: resolveWidgetProps(widget.type, widget.props),
-  children: widget.children?.map(applyDefaultsToWidget),
-});
+const applyDefaultsToWidget = (widget: FlutterWidget): FlutterWidget =>
+  ({
+    ...widget,
+    props: resolveWidgetProps(widget.type, widget.props),
+    children: widget.children?.map(applyDefaultsToWidget),
+  }) as FlutterWidget;
 
 const applyDefaultsToWidgets = (widgets: FlutterWidget[]) =>
   widgets.map(applyDefaultsToWidget);
+
+const normalizeContainerLayoutValue = (value: unknown): number | "auto" => {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (value === "auto") return "auto";
+  return "auto";
+};
+
+const normalizeWidgetsForExport = (widgets: FlutterWidget[]): FlutterWidget[] =>
+  widgets.map((widget) => {
+    const children = widget.children
+      ? normalizeWidgetsForExport(widget.children)
+      : undefined;
+
+    if (widget.type !== "Container") {
+      return { ...widget, children } as FlutterWidget;
+    }
+
+    const layout = widget.props.layout;
+    const normalizedLayout = layout
+      ? {
+          ...layout,
+          w: normalizeContainerLayoutValue(layout.w),
+          h: normalizeContainerLayoutValue(layout.h),
+        }
+      : layout;
+
+    return {
+      ...widget,
+      props: { ...widget.props, layout: normalizedLayout },
+      children,
+    } as FlutterWidget;
+  });
 
 const createDefaultScreen = (): Screen => ({
   id: uuidv4(),
@@ -279,12 +312,12 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
 
   addWidget: (type, parentId) => {
     const definition = getWidgetDefinition(type);
-    const newWidget: FlutterWidget = {
+    const newWidget = {
       id: uuidv4(),
       type,
       props: resolveWidgetProps(type, definition?.defaultProps),
       children: definition?.canHaveChildren ? [] : undefined,
-    };
+    } as FlutterWidget;
 
     set((state) => {
       const screen = state.project.screens.find(
@@ -327,10 +360,11 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
       const newComponents = findAndUpdateWidget(
         screen.components,
         widgetId,
-        (widget) => ({
-          ...widget,
-          ...updates,
-        }),
+        (widget) =>
+          ({
+            ...widget,
+            ...updates,
+          }) as FlutterWidget,
       );
 
       return {
@@ -485,7 +519,7 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
         name: screen.name,
         route: screen.route,
         is_home: screen.is_home,
-        components: screen.components,
+        components: normalizeWidgetsForExport(screen.components),
       })),
     };
   },

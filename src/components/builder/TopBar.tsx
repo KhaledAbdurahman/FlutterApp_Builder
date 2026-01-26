@@ -38,6 +38,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { UserProfileMenu } from "@/components/UserProfileMenu";
 import {
   generateFromSaved,
+  downloadProject,
   downloadBlob,
   buildApkFromSaved,
   downloadApk,
@@ -122,8 +123,11 @@ export const TopBar = () => {
         }
       }
 
+      const blob = await downloadProject(serverProjectId);
+      downloadBlob(blob, `${project.app_name}.zip`);
+
       setHasGeneratedProject(true);
-      toast.success("Flutter project generated. You can build APK now.");
+      toast.success("Flutter app generated and downloaded!");
     } catch (error) {
       console.error("Generation error:", error);
 

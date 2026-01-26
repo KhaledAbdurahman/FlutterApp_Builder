@@ -461,8 +461,14 @@ const WidgetRenderer = ({
                   widget.props.borderColor || "#ccc"
                 }`
               : "none",
-            width: widget.props.layout?.w,
-            height: widget.props.layout?.h,
+            width:
+              widget.props.layout?.w === "auto"
+                ? "auto"
+                : widget.props.layout?.w,
+            height:
+              widget.props.layout?.h === "auto"
+                ? "auto"
+                : widget.props.layout?.h,
             display: "flex",
             justifyContent: alignmentToJustify(widget.props.alignment),
             alignItems: alignmentToAlign(widget.props.alignment),
