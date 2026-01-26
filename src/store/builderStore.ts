@@ -7,7 +7,8 @@ import {
   WidgetType,
   WidgetProps,
   getWidgetDefinition,
-} from "@/types/flutter";
+  resolveWidgetProps,
+} from "@/types/screen-types";
 import { SavedProject, ProjectJsonData } from "@/lib/api";
 
 interface BuilderState {
@@ -43,16 +44,25 @@ interface BuilderState {
   setServerProjectId: (id: number | null) => void;
 }
 
+const applyDefaultsToWidget = (widget: FlutterWidget): FlutterWidget => ({
+  ...widget,
+  props: resolveWidgetProps(widget.type, widget.props),
+  children: widget.children?.map(applyDefaultsToWidget),
+});
+
+const applyDefaultsToWidgets = (widgets: FlutterWidget[]) =>
+  widgets.map(applyDefaultsToWidget);
+
 const createDefaultScreen = (): Screen => ({
   id: uuidv4(),
   name: "Home",
   route: "/",
   is_home: true,
-  components: [
+  components: applyDefaultsToWidgets([
     {
       id: uuidv4(),
       type: "Scaffold",
-      props: {},
+      props: { backgroundColor: "#FFFFFF" },
       children: [
         {
           id: uuidv4(),
@@ -94,7 +104,7 @@ const createDefaultScreen = (): Screen => ({
         },
       ],
     },
-  ],
+  ]),
 });
 
 const initialProject: Project = {
@@ -202,14 +212,18 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
 
     // Ensure we have at least one screen
     const finalScreens = screens.length > 0 ? screens : [createDefaultScreen()];
+    const normalizedScreens = finalScreens.map((screen) => ({
+      ...screen,
+      components: applyDefaultsToWidgets(screen.components || []),
+    }));
 
     set({
       project: {
         app_name: jsonData.app_name || savedProject.name,
         package_name: jsonData.package_name || "com.example.app",
-        screens: finalScreens,
+        screens: normalizedScreens,
       },
-      activeScreenId: finalScreens[0].id,
+      activeScreenId: normalizedScreens[0].id,
       selectedWidgetId: null,
       serverProjectId: savedProject.id,
     });
@@ -268,7 +282,7 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
     const newWidget: FlutterWidget = {
       id: uuidv4(),
       type,
-      props: { ...definition?.defaultProps },
+      props: resolveWidgetProps(type, definition?.defaultProps),
       children: definition?.canHaveChildren ? [] : undefined,
     };
 
@@ -432,7 +446,9 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
       project: {
         ...state.project,
         screens: state.project.screens.map((s) =>
-          s.id === state.activeScreenId ? { ...s, components } : s,
+          s.id === state.activeScreenId
+            ? { ...s, components: applyDefaultsToWidgets(components) }
+            : s,
         ),
       },
     }));

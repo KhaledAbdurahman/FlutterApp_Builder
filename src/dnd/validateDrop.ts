@@ -2,7 +2,7 @@ import {
   FlutterWidget,
   WidgetType,
   getWidgetDefinition,
-} from "@/types/flutter";
+} from "@/types/screen-types";
 import {
   VALIDATION_RULES,
   REQUIRED_PARENTS,

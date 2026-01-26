@@ -1,5 +1,5 @@
 // Source of truth for drag-and-drop validation rules
-import { WidgetType, WIDGET_DEFINITIONS } from "@/types/flutter";
+import { WidgetType, WIDGET_DEFINITIONS } from "@/types/screen-types";
 
 export type ValidationRuleType = "allowed" | "forbidden" | "uncertain";
 
@@ -19,17 +19,8 @@ const isType = (type: WidgetType, target: WidgetType | WidgetType[]) => {
 
 // Layout widgets that are strict about their children
 const FLEX_CONTAINERS: WidgetType[] = ["Row", "Column"];
-const STACK_CONTAINERS: WidgetType[] = ["Stack"];
 
 export const VALIDATION_RULES: ValidationRule[] = [
-  // Rule: Positioned must be inside Stack
-  {
-    parentType: "Stack",
-    childType: "Positioned",
-    result: "allowed",
-  },
-  // We'll catch the inverse (Positioned inside non-Stack) in the dynamic validator using a "requiresParent" check
-
   // Rule: Expanded must be inside Row or Column
   {
     parentType: "Row",
@@ -80,19 +71,6 @@ export const VALIDATION_RULES: ValidationRule[] = [
     code: "BAD_UX",
   },
 
-  // Rule: ListTiles work best in ListViews or Columns
-  {
-    parentType: "ListView",
-    childType: "ListTile",
-    result: "allowed",
-  },
-  {
-    parentType: "Row",
-    childType: "ListTile",
-    result: "uncertain", // Works but layout might break
-    message: "ListTile in a Row can cause layout overflows.",
-  },
-
   // Rule: Container can generally accept most things, but warn about heavy layout widgets deep down?
   // No, Container is very flexible.
 
@@ -118,12 +96,11 @@ export const canAcceptChild = (parentType: WidgetType): boolean => {
 
 // Components that strictly require a specific parent
 export const REQUIRED_PARENTS: Partial<Record<WidgetType, WidgetType[]>> = {
-  Positioned: ["Stack"],
   Expanded: ["Row", "Column"], // Flex
   AppBar: ["Scaffold"],
   Drawer: ["Scaffold"],
   BottomNavigationBar: ["Scaffold"],
-  ListTile: ["ListView", "Column", "Container", "Card", "Drawer"], // Usually lists or vertical layouts
+  ListTile: ["Drawer"],
 };
 
 // Components that strictly cannot be children (usually roots)

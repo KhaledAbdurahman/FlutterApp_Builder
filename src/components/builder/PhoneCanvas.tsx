@@ -1,6 +1,6 @@
 import { useDroppable } from "@dnd-kit/core";
 import { motion } from "framer-motion";
-import { FlutterWidget, WidgetType } from "@/types/flutter";
+import { FlutterWidget, WidgetType } from "@/types/screen-types";
 import { useBuilderStore } from "@/store/builderStore";
 import { cn } from "@/lib/utils";
 import * as LucideIcons from "lucide-react";
@@ -225,6 +225,10 @@ const WidgetRenderer = ({
                 style={{
                   height: appBar.props.height ?? 56,
                   backgroundColor: appBar.props.backgroundColor || "#6200EE",
+                  boxShadow:
+                    (appBar.props.elevation ?? 0) > 0
+                      ? `0 ${(appBar.props.elevation ?? 0) * 2}px ${(appBar.props.elevation ?? 0) * 4}px rgba(0,0,0,0.15)`
+                      : "none",
                 }}
               >
                 {drawer && (
@@ -238,6 +242,18 @@ const WidgetRenderer = ({
                     aria-label="Open navigation drawer"
                   >
                     <MenuIcon className="w-5 h-5 text-white" />
+                  </button>
+                )}
+                {!drawer && appBar.props.showBackButton && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                    }}
+                    className="flex items-center justify-center w-8 h-8 rounded hover:bg-white/20"
+                    aria-label="Back"
+                  >
+                    <LucideIcons.ArrowLeft className="w-5 h-5 text-white" />
                   </button>
                 )}
                 <div
@@ -414,8 +430,15 @@ const WidgetRenderer = ({
           style={{
             height: widget.props.height ?? 56,
             backgroundColor: widget.props.backgroundColor || "#6200EE",
+            boxShadow:
+              (widget.props.elevation ?? 0) > 0
+                ? `0 ${(widget.props.elevation ?? 0) * 2}px ${(widget.props.elevation ?? 0) * 4}px rgba(0,0,0,0.15)`
+                : "none",
           }}
         >
+          {widget.props.showBackButton && (
+            <LucideIcons.ArrowLeft className="w-5 h-5 text-white mr-2" />
+          )}
           <span className="text-white font-medium text-lg">
             {widget.props.title || "App Bar"}
           </span>
@@ -433,7 +456,16 @@ const WidgetRenderer = ({
             padding: widget.props.padding || 0,
             margin: widget.props.margin || 0,
             borderRadius: widget.props.borderRadius || 0,
-            border: widget.props.border ? "1px solid #ccc" : "none",
+            border: widget.props.border
+              ? `${widget.props.borderWidth ?? 1}px solid ${
+                  widget.props.borderColor || "#ccc"
+                }`
+              : "none",
+            width: widget.props.layout?.w,
+            height: widget.props.layout?.h,
+            display: "flex",
+            justifyContent: alignmentToJustify(widget.props.alignment),
+            alignItems: alignmentToAlign(widget.props.alignment),
           }}
         >
           {renderChildren()}
@@ -469,6 +501,7 @@ const WidgetRenderer = ({
           style={{
             justifyContent: alignmentToFlex(widget.props.mainAxisAlignment),
             alignItems: alignmentToFlex(widget.props.crossAxisAlignment),
+            width: widget.props.mainAxisSize === "max" ? "100%" : "auto",
           }}
         >
           {renderChildren()}
@@ -491,21 +524,8 @@ const WidgetRenderer = ({
           style={{
             justifyContent: alignmentToFlex(widget.props.mainAxisAlignment),
             alignItems: alignmentToFlex(widget.props.crossAxisAlignment),
+            width: widget.props.mainAxisSize === "max" ? "100%" : "auto",
           }}
-        >
-          {renderChildren()}
-          {(!widget.children || widget.children.length === 0) && (
-            <DropZoneIndicator />
-          )}
-        </div>
-      );
-
-    case "Stack":
-      return (
-        <div
-          ref={setNodeRef}
-          onClick={handleClick}
-          className={cn(baseClasses, "relative min-h-[60px]")}
         >
           {renderChildren()}
           {(!widget.children || widget.children.length === 0) && (
@@ -523,7 +543,16 @@ const WidgetRenderer = ({
             fontSize: widget.props.fontSize || 16,
             color: widget.props.color || "#000000",
             fontWeight: widget.props.fontWeight === "bold" ? 700 : 400,
-            textAlign: (widget.props.alignment as any) || "left",
+            textAlign: alignmentToTextAlign(widget.props.alignment),
+            fontStyle: widget.props.fontStyle || "normal",
+            letterSpacing: widget.props.letterSpacing ?? 0,
+            textDecoration: widget.props.decoration || "none",
+            display: widget.props.maxLines ? "-webkit-box" : "inline-block",
+            WebkitBoxOrient: widget.props.maxLines ? "vertical" : undefined,
+            WebkitLineClamp: widget.props.maxLines,
+            overflow: widget.props.maxLines ? "hidden" : undefined,
+            textOverflow:
+              widget.props.overflow === "ellipsis" ? "ellipsis" : undefined,
           }}
         >
           {widget.props.text || "Text"}
@@ -538,7 +567,15 @@ const WidgetRenderer = ({
             baseClasses,
             "px-6 py-2 rounded-md text-white font-medium",
           )}
-          style={{ backgroundColor: "#6200EE" }}
+          style={{
+            backgroundColor: widget.props.backgroundColor || "#6200EE",
+            color: widget.props.color || "#FFFFFF",
+            borderRadius: widget.props.borderRadius ?? 8,
+            boxShadow:
+              (widget.props.elevation ?? 0) > 0
+                ? `0 ${(widget.props.elevation ?? 0) * 2}px ${(widget.props.elevation ?? 0) * 4}px rgba(0,0,0,0.15)`
+                : "none",
+          }}
         >
           {widget.props.text || "Button"}
         </button>
@@ -548,12 +585,27 @@ const WidgetRenderer = ({
       return (
         <input
           onClick={handleClick}
-          type="text"
+          type={widget.props.obscureText ? "password" : "text"}
           placeholder={widget.props.hintText || "Enter text..."}
           className={cn(
             baseClasses,
             "border border-gray-300 rounded-md px-3 py-2 w-full",
           )}
+          style={{
+            border: widget.props.border === false ? "none" : undefined,
+          }}
+          aria-label={widget.props.labelText || widget.props.hintText}
+          inputMode={
+            widget.props.keyboardType === "number"
+              ? "numeric"
+              : widget.props.keyboardType === "email"
+                ? "email"
+                : widget.props.keyboardType === "phone"
+                  ? "tel"
+                  : widget.props.keyboardType === "url"
+                    ? "url"
+                    : "text"
+          }
           readOnly
         />
       );
@@ -608,6 +660,34 @@ const WidgetRenderer = ({
           </div>
         </div>
       );
+
+    case "ListTile": {
+      const IconComponent = resolveLucideIcon(widget.props.icon);
+      return (
+        <div
+          onClick={handleClick}
+          className={cn(
+            baseClasses,
+            "flex items-center gap-3 px-3 py-2 rounded-md hover:bg-muted",
+          )}
+        >
+          <div className="w-8 h-8 rounded-md bg-muted flex items-center justify-center">
+            <IconComponent className="w-4 h-4 text-muted-foreground" />
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-medium">
+              {widget.props.title || "List Item"}
+            </p>
+            {widget.props.actions?.route && (
+              <p className="text-xs text-muted-foreground">
+                {widget.props.actions.route}
+              </p>
+            )}
+          </div>
+          <LucideIcons.ChevronRight className="w-4 h-4 text-muted-foreground" />
+        </div>
+      );
+    }
     case "BottomNavigationBar":
       return (
         <div
@@ -656,7 +736,11 @@ const WidgetRenderer = ({
           src={widget.props.src || "https://via.placeholder.com/150"}
           alt="Widget"
           className={cn(baseClasses, "max-w-full h-auto")}
-          style={{ objectFit: (widget.props.fit as any) || "cover" }}
+          style={{
+            objectFit: (widget.props.fit as any) || "cover",
+            width: widget.props.width,
+            height: widget.props.height,
+          }}
         />
       );
 
@@ -678,7 +762,7 @@ const WidgetRenderer = ({
           ref={setNodeRef}
           onClick={handleClick}
           className={cn(baseClasses)}
-          style={{ padding: widget.props.padding || 16 }}
+          style={{ padding: widget.props.all || 16 }}
         >
           {renderChildren()}
           {(!widget.children || widget.children.length === 0) && (
@@ -694,6 +778,9 @@ const WidgetRenderer = ({
           onClick={handleClick}
           className={cn(baseClasses, "bg-white rounded-lg p-4 min-h-[60px]")}
           style={{
+            backgroundColor: widget.props.color || "#FFFFFF",
+            margin: widget.props.margin || 0,
+            borderRadius: widget.props.borderRadius ?? 12,
             boxShadow: `0 ${(widget.props.elevation || 2) * 2}px ${(widget.props.elevation || 2) * 4}px rgba(0,0,0,0.1)`,
           }}
         >
@@ -723,7 +810,11 @@ const WidgetRenderer = ({
       return (
         <div
           onClick={handleClick}
-          className={cn(baseClasses, "overflow-auto max-h-[200px]")}
+          className={cn(baseClasses, "overflow-auto")}
+          style={{
+            padding: widget.props.padding || 0,
+            maxHeight: widget.props.shrinkWrap ? "none" : "200px",
+          }}
         >
           {Array.from({ length: widget.props.itemCount || 5 }).map((_, i) => (
             <div key={i} className="p-3 border-b border-gray-200">
@@ -733,15 +824,31 @@ const WidgetRenderer = ({
         </div>
       );
 
-    default:
+    case "Positioned":
       return (
         <div
+          ref={setNodeRef}
           onClick={handleClick}
-          className={cn(baseClasses, "p-2 bg-gray-100 rounded")}
+          className={cn(baseClasses, "min-h-[40px]")}
+          style={{
+            position: "absolute",
+            top: widget.props.top,
+            left: widget.props.left,
+            right: widget.props.right,
+            bottom: widget.props.bottom,
+            width: widget.props.width,
+            height: widget.props.height,
+          }}
         >
-          {widget.type}
+          {renderChildren()}
+          {(!widget.children || widget.children.length === 0) && (
+            <DropZoneIndicator />
+          )}
         </div>
       );
+
+    default:
+      return null;
   }
 };
 
@@ -771,6 +878,62 @@ const alignmentToFlex = (alignment?: string): string => {
       return "baseline";
     default:
       return "flex-start";
+  }
+};
+
+const alignmentToJustify = (alignment?: string): string => {
+  switch (alignment) {
+    case "topLeft":
+    case "centerLeft":
+    case "bottomLeft":
+      return "flex-start";
+    case "topRight":
+    case "centerRight":
+    case "bottomRight":
+      return "flex-end";
+    case "topCenter":
+    case "center":
+    case "bottomCenter":
+      return "center";
+    default:
+      return "center";
+  }
+};
+
+const alignmentToAlign = (alignment?: string): string => {
+  switch (alignment) {
+    case "topLeft":
+    case "topCenter":
+    case "topRight":
+      return "flex-start";
+    case "bottomLeft":
+    case "bottomCenter":
+    case "bottomRight":
+      return "flex-end";
+    case "centerLeft":
+    case "center":
+    case "centerRight":
+      return "center";
+    default:
+      return "center";
+  }
+};
+
+const alignmentToTextAlign = (
+  alignment?: string,
+): "left" | "right" | "center" | "justify" => {
+  switch (alignment) {
+    case "right":
+    case "end":
+      return "right";
+    case "center":
+      return "center";
+    case "justify":
+      return "justify";
+    case "left":
+    case "start":
+    default:
+      return "left";
   }
 };
 

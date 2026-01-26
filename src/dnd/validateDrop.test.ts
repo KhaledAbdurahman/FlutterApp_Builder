@@ -5,7 +5,7 @@ import {
   DragItem,
   DropTarget,
 } from "./validateDrop";
-import { FlutterWidget } from "@/types/flutter";
+import { FlutterWidget } from "@/types/screen-types";
 
 // Mock data
 const mockWidgets: FlutterWidget[] = [
@@ -23,8 +23,8 @@ const mockWidgets: FlutterWidget[] = [
     ],
   },
   {
-    id: "stack-1",
-    type: "Stack",
+    id: "container-1",
+    type: "Container",
     props: {},
     children: [],
   },
@@ -74,7 +74,7 @@ describe("validateDrop", () => {
     const source: DragItem = { type: "Expanded" };
 
     // Invalid parent
-    const destInvalid: DropTarget = { id: "stack-1", type: "Stack" };
+    const destInvalid: DropTarget = { id: "container-1", type: "Container" };
     expect(validateDrop(source, destInvalid, mockContext).valid).toBe(false);
 
     // Valid parent
@@ -82,13 +82,13 @@ describe("validateDrop", () => {
     expect(validateDrop(source, destValid, mockContext).valid).toBe(true);
   });
 
-  it("should warn uncertain drops (ListTile in Row)", () => {
+  it("should forbid ListTile outside Drawer", () => {
     const source: DragItem = { type: "ListTile" };
-    const destination: DropTarget = { id: "row-1", type: "Row" };
+    const destination: DropTarget = { id: "col-1", type: "Column" };
 
     const result = validateDrop(source, destination, mockContext);
-    expect(result.valid).toBe(true);
-    expect(result.confidence).toBe("low");
+    expect(result.valid).toBe(false);
+    expect(result.message).toContain("ListTile must be placed inside Drawer");
   });
 
   it("should prevent circular dependency", () => {

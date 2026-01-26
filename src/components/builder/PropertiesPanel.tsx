@@ -13,12 +13,9 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { useBuilderStore } from "@/store/builderStore";
-import {
-  getWidgetDefinition,
-  ButtonAction,
-  BottomNavItem,
-} from "@/types/flutter";
+import { getWidgetDefinition, BottomNavItem } from "@/types/screen-types";
 import { toast } from "sonner";
+import { ActionBase } from "@/types/screen-types";
 
 export const PropertiesPanel = () => {
   const {
@@ -41,24 +38,27 @@ export const PropertiesPanel = () => {
   const screenRoutes = project.screens.map((s) => s.route);
 
   const addAction = () => {
-    if (!widget) return;
+    if (!widget || widget.type !== "Button") return;
     const currentActions = widget.props.actions || [];
-    const newAction: ButtonAction = {
+    const newAction: ActionBase = {
       type: "snackbar",
       message: "Action triggered!",
     };
     updateWidgetProps(widget.id, { actions: [...currentActions, newAction] });
   };
 
-  const updateAction = (index: number, updates: Partial<ButtonAction>) => {
-    if (!widget) return;
+  const updateAction = (index: number, updates: Partial<ActionBase>) => {
+    if (!widget || widget.type !== "Button") return;
     const currentActions = [...(widget.props.actions || [])];
-    currentActions[index] = { ...currentActions[index], ...updates };
+    currentActions[index] = {
+      ...(currentActions[index] as ActionBase),
+      ...(updates as ActionBase),
+    } as ActionBase;
     updateWidgetProps(widget.id, { actions: currentActions });
   };
 
   const removeAction = (index: number) => {
-    if (!widget) return;
+    if (!widget || widget.type !== "Button") return;
     const currentActions = [...(widget.props.actions || [])];
     currentActions.splice(index, 1);
     updateWidgetProps(widget.id, { actions: currentActions });
@@ -66,7 +66,7 @@ export const PropertiesPanel = () => {
 
   // BottomNavigationBar item helpers
   const addNavItem = () => {
-    if (!widget) return;
+    if (!widget || widget.type !== "BottomNavigationBar") return;
     const currentItems = widget.props.items || [];
     const newItem: BottomNavItem = {
       label: "New Tab",
@@ -77,14 +77,14 @@ export const PropertiesPanel = () => {
   };
 
   const updateNavItem = (index: number, updates: Partial<BottomNavItem>) => {
-    if (!widget) return;
+    if (!widget || widget.type !== "BottomNavigationBar") return;
     const currentItems = [...(widget.props.items || [])];
     currentItems[index] = { ...currentItems[index], ...updates };
     updateWidgetProps(widget.id, { items: currentItems });
   };
 
   const removeNavItem = (index: number) => {
-    if (!widget) return;
+    if (!widget || widget.type !== "BottomNavigationBar") return;
     const currentItems = [...(widget.props.items || [])];
     currentItems.splice(index, 1);
     updateWidgetProps(widget.id, { items: currentItems });
@@ -377,7 +377,7 @@ export const PropertiesPanel = () => {
                             value={action.type}
                             onValueChange={(v) =>
                               updateAction(index, {
-                                type: v as ButtonAction["type"],
+                                type: v as ActionBase["type"],
                               })
                             }
                           >
@@ -557,12 +557,15 @@ export const PropertiesPanel = () => {
                   <PropertyField label="Width">
                     <Input
                       type="number"
-                      value={widget.props.width || ""}
+                      value={widget.props.layout?.w || ""}
                       onChange={(e) =>
                         updateWidgetProps(widget.id, {
-                          width: e.target.value
-                            ? parseInt(e.target.value)
-                            : undefined,
+                          layout: {
+                            ...(widget.props.layout || { w: 100, h: 100 }),
+                            w: e.target.value
+                              ? parseInt(e.target.value)
+                              : undefined,
+                          },
                         })
                       }
                       placeholder="Auto"
@@ -571,12 +574,15 @@ export const PropertiesPanel = () => {
                   <PropertyField label="Height">
                     <Input
                       type="number"
-                      value={widget.props.height || ""}
+                      value={widget.props.layout?.h || ""}
                       onChange={(e) =>
                         updateWidgetProps(widget.id, {
-                          height: e.target.value
-                            ? parseInt(e.target.value)
-                            : undefined,
+                          layout: {
+                            ...(widget.props.layout || { w: 100, h: 100 }),
+                            h: e.target.value
+                              ? parseInt(e.target.value)
+                              : undefined,
+                          },
                         })
                       }
                       placeholder="Auto"
@@ -742,16 +748,6 @@ export const PropertiesPanel = () => {
                       </SelectContent>
                     </Select>
                   </PropertyField>
-                </div>
-              )}
-
-              {/* Stack Widget Props */}
-              {widget.type === "Stack" && (
-                <div className="space-y-4">
-                  <p className="text-xs text-muted-foreground">
-                    Stack arranges children on top of each other. Use Positioned
-                    widgets inside for absolute positioning.
-                  </p>
                 </div>
               )}
 
@@ -1063,10 +1059,10 @@ export const PropertiesPanel = () => {
                   <PropertyField label="Padding">
                     <Input
                       type="number"
-                      value={widget.props.padding || 8}
+                      value={widget.props.all || 8}
                       onChange={(e) =>
                         updateWidgetProps(widget.id, {
-                          padding: parseInt(e.target.value) || 8,
+                          all: parseInt(e.target.value) || 8,
                         })
                       }
                     />
@@ -1245,6 +1241,27 @@ export const PropertiesPanel = () => {
                       }
                       placeholder="e.g., home, settings, person"
                     />
+                  </PropertyField>
+                  <PropertyField label="Navigate To">
+                    <Select
+                      value={widget.props.actions?.route || ""}
+                      onValueChange={(v) =>
+                        updateWidgetProps(widget.id, {
+                          actions: { type: "navigate", route: v },
+                        })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select route" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {screenRoutes.map((route) => (
+                          <SelectItem key={route} value={route}>
+                            {route}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </PropertyField>
                 </div>
               )}

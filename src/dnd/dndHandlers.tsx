@@ -8,7 +8,7 @@ import {
   DragItem,
   DropTarget,
 } from "./validateDrop";
-import { WidgetType, FlutterWidget } from "@/types/flutter";
+import { WidgetType, FlutterWidget } from "@/types/screen-types";
 
 const RESERVED_SCAFFOLD_TYPES: WidgetType[] = [
   "AppBar",

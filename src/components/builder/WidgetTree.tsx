@@ -12,7 +12,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { useWidgetTreeDnD } from "@/hooks/useWidgetTreeDnD";
 import { useBuilderStore } from "@/store/builderStore";
-import { FlutterWidget, getWidgetDefinition } from "@/types/flutter";
+import { FlutterWidget, getWidgetDefinition } from "@/types/screen-types";
 import { cn } from "@/lib/utils";
 import * as LucideIcons from "lucide-react";
 import { ChevronRight, ChevronDown, Layers, GripVertical } from "lucide-react";

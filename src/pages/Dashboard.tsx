@@ -34,7 +34,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { useBuilderStore } from "@/store/builderStore";
-import { Screen } from "@/types/flutter";
+import { Screen } from "@/types/screen-types";
 import BrandLogo from "@/components/BrandLogo";
 
 export default function Dashboard() {

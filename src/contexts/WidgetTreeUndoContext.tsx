@@ -2,7 +2,7 @@
 // (Currently we use builderStore + local refs, but this file was requested)
 
 import React, { createContext, useContext, useRef } from "react";
-import { FlutterWidget } from "@/types/flutter";
+import { FlutterWidget } from "@/types/screen-types";
 
 interface WidgetTreeUndoContextType {
   saveSnapshot: (widgets: FlutterWidget[]) => void;

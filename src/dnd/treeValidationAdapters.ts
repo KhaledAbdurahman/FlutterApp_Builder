@@ -1,4 +1,4 @@
-import { WidgetType, FlutterWidget } from "@/types/flutter";
+import { WidgetType, FlutterWidget } from "@/types/screen-types";
 import {
   DragItem,
   DropTarget,

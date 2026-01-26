@@ -22,7 +22,7 @@ import {
   TreeMoveIntent,
   TreeMoveType,
 } from "@/dnd/treeValidationAdapters";
-import { FlutterWidget, getWidgetDefinition } from "@/types/flutter";
+import { FlutterWidget, getWidgetDefinition } from "@/types/screen-types";
 
 // --- Utility: Recursion helpers ---
 

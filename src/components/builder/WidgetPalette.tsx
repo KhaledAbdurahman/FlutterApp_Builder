@@ -5,7 +5,7 @@ import {
   WIDGET_DEFINITIONS,
   WidgetType,
   WidgetDefinition,
-} from "@/types/flutter";
+} from "@/types/screen-types";
 import { cn } from "@/lib/utils";
 
 interface DraggableWidgetProps {
