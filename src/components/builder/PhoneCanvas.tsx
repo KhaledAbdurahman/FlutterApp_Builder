@@ -4,7 +4,7 @@ import { FlutterWidget, WidgetType } from "@/types/screen-types";
 import { useBuilderStore } from "@/store/builderStore";
 import { cn } from "@/lib/utils";
 import * as LucideIcons from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 interface WidgetRendererProps {
   widget: FlutterWidget;
@@ -954,10 +954,6 @@ const alignmentToTextAlign = (
 export const PhoneCanvas = () => {
   const { getActiveScreen, setSelectedWidget, isDragging } = useBuilderStore();
   const screen = getActiveScreen();
-  const hasScaffold = useMemo(
-    () => !!screen?.components.some((widget) => widget.type === "Scaffold"),
-    [screen],
-  );
 
   const { setNodeRef, isOver } = useDroppable({
     id: "canvas-root",
@@ -969,7 +965,7 @@ export const PhoneCanvas = () => {
   };
 
   return (
-    <div className="flex-1 flex items-center justify-center p-8 bg-canvas overflow-auto">
+    <div className="flex-1 flex items-center justify-center p-8 bg-canvas overflow-hidden">
       <motion.div
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
@@ -977,7 +973,7 @@ export const PhoneCanvas = () => {
         className="relative"
       >
         {/* Phone Frame */}
-        <div className="relative w-[375px] h-[812px] rounded-[3rem] bg-gradient-to-b from-gray-800 to-gray-900 p-3 shadow-elevated">
+        <div className="relative w-[360px] h-[780px] rounded-[3rem] bg-gradient-to-b from-gray-800 to-gray-900 p-3 shadow-elevated">
           {/* Screen */}
           <div
             ref={setNodeRef}
@@ -993,12 +989,7 @@ export const PhoneCanvas = () => {
             </div>
 
             {/* Content */}
-            <div
-              className={cn(
-                "h-[calc(100%-2.75rem)]",
-                hasScaffold ? "overflow-hidden" : "overflow-auto",
-              )}
-            >
+            <div className={cn("h-[calc(100%-2.75rem)] overflow-y-auto")}>
               {screen?.components.map((widget) => (
                 <WidgetRenderer key={widget.id} widget={widget} />
               ))}

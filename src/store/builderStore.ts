@@ -30,7 +30,7 @@ interface BuilderState {
   addWidget: (type: WidgetType, parentId?: string) => void;
   updateWidget: (widgetId: string, updates: Partial<FlutterWidget>) => void;
   updateWidgetProps: (widgetId: string, props: Partial<WidgetProps>) => void;
-  deleteWidget: (widgetId: string) => void;
+  importProjectData: (data: ProjectJsonData) => void;
   moveWidget: (
     widgetId: string,
     newParentId: string | null,
@@ -251,6 +251,27 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
   setIsDragging: (isDragging) => set({ isDragging }),
 
   setServerProjectId: (id) => set({ serverProjectId: id }),
+
+  importProjectData: (data) => {
+    const screens = (data.screens as Screen[]) || [];
+    const finalScreens = screens.length > 0 ? screens : [createDefaultScreen()];
+    const normalizedScreens = finalScreens.map((screen) => ({
+      ...screen,
+      components: applyDefaultsToWidgets(screen.components || []),
+    }));
+
+    set({
+      project: {
+        app_name: data.app_name || "My App",
+        package_name: data.package_name || "com.example.app",
+        screens: normalizedScreens,
+      },
+      projectTitle: data.app_name || "My App",
+      activeScreenId: normalizedScreens[0].id,
+      selectedWidgetId: null,
+      serverProjectId: null,
+    });
+  },
 
   loadProject: (savedProject) => {
     const jsonData = savedProject.json_data;

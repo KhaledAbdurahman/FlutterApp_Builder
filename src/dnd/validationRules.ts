@@ -100,7 +100,7 @@ export const REQUIRED_PARENTS: Partial<Record<WidgetType, WidgetType[]>> = {
   AppBar: ["Scaffold"],
   Drawer: ["Scaffold"],
   BottomNavigationBar: ["Scaffold"],
-  ListTile: ["Drawer"],
+  ListTile: ["Drawer", "Column"],
 };
 
 // Components that strictly cannot be children (usually roots)
