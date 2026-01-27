@@ -1,7 +1,7 @@
 // Placeholder for a robust visual Tree Component
 // This component implements the recursive tree structure and integrates the DnD hook.
 
-import { useState, useMemo } from "react";
+import { useCallback, useMemo, useState, type KeyboardEvent } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { DndContext, DragOverlay, pointerWithin } from "@dnd-kit/core";
 import {
@@ -12,20 +12,47 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { useWidgetTreeDnD } from "@/hooks/useWidgetTreeDnD";
 import { useBuilderStore } from "@/store/builderStore";
-import { FlutterWidget, getWidgetDefinition } from "@/types/screen-types";
+import {
+  FlutterWidget,
+  getChildConfig,
+  getWidgetDefinition,
+} from "@/types/screen-types";
 import { cn } from "@/lib/utils";
 import * as LucideIcons from "lucide-react";
-import { ChevronRight, ChevronDown, Layers, GripVertical } from "lucide-react";
+import {
+  ChevronRight,
+  ChevronDown,
+  Layers,
+  GripVertical,
+  ArrowUp,
+  ArrowDown,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import {
+  REQUIRED_PARENTS,
+  ROOT_ONLY_WIDGETS,
+  VALIDATION_RULES,
+} from "@/dnd/validationRules";
 
 interface TreeNodeProps {
   widget: FlutterWidget;
   depth: number;
+  parentId: string | null;
+  index: number;
+  siblingCount: number;
+  onMove: (widgetId: string, parentId: string | null, index: number) => void;
 }
 
 // Draggable Node Component
-const SortableTreeNode = ({ widget, depth }: TreeNodeProps) => {
+const SortableTreeNode = ({
+  widget,
+  depth,
+  parentId,
+  index,
+  siblingCount,
+  onMove,
+}: TreeNodeProps) => {
   const {
     attributes,
     listeners,
@@ -39,7 +66,7 @@ const SortableTreeNode = ({ widget, depth }: TreeNodeProps) => {
   const style = {
     transform: CSS.Translate.toString(transform),
     transition,
-    paddingLeft: `${depth * 16 + 8}px`,
+    paddingLeft: `${depth * 16 + 28}px`,
   };
 
   const { selectedWidgetId, setSelectedWidget } = useBuilderStore();
@@ -69,7 +96,7 @@ const SortableTreeNode = ({ widget, depth }: TreeNodeProps) => {
         initial={{ opacity: 0, x: -10 }}
         animate={{ opacity: 1, x: 0 }}
         className={cn(
-          "flex items-center gap-2 py-2 px-2 rounded-md cursor-pointer transition-colors text-sm group w-full min-w-max",
+          "relative flex items-center gap-2 py-2 px-2 rounded-md cursor-pointer transition-colors text-sm group w-full min-w-max",
           isSelected
             ? "bg-primary/20 text-primary"
             : "hover:bg-muted text-foreground",
@@ -83,6 +110,9 @@ const SortableTreeNode = ({ widget, depth }: TreeNodeProps) => {
         }}
         {...listeners}
       >
+        <span className="absolute left-1 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">
+          {depth + 1}
+        </span>
         <GripVertical className="w-3 h-3 text-muted-foreground/60 group-hover:text-muted-foreground" />
         {hasChildren ? (
           <button
@@ -110,6 +140,36 @@ const SortableTreeNode = ({ widget, depth }: TreeNodeProps) => {
             "{widgetText}"
           </span>
         )}
+        {isSelected && (
+          <div className="ml-auto flex items-center gap-1">
+            <button
+              type="button"
+              className="p-1 rounded hover:bg-muted"
+              onClick={(event) => {
+                event.stopPropagation();
+                if (index > 0) onMove(widget.id, parentId, index - 1);
+              }}
+              aria-label="Move up"
+              disabled={index === 0}
+            >
+              <ArrowUp className="w-3 h-3" />
+            </button>
+            <button
+              type="button"
+              className="p-1 rounded hover:bg-muted"
+              onClick={(event) => {
+                event.stopPropagation();
+                if (index < siblingCount - 1) {
+                  onMove(widget.id, parentId, index + 1);
+                }
+              }}
+              aria-label="Move down"
+              disabled={index >= siblingCount - 1}
+            >
+              <ArrowDown className="w-3 h-3" />
+            </button>
+          </div>
+        )}
       </motion.div>
 
       <AnimatePresence>
@@ -120,11 +180,15 @@ const SortableTreeNode = ({ widget, depth }: TreeNodeProps) => {
             exit={{ height: 0, opacity: 0 }}
             className="flex flex-col"
           >
-            {widget.children!.map((child) => (
+            {widget.children!.map((child, childIndex) => (
               <SortableTreeNode
                 key={child.id}
                 widget={child}
                 depth={depth + 1}
+                parentId={widget.id}
+                index={childIndex}
+                siblingCount={widget.children!.length}
+                onMove={onMove}
               />
             ))}
           </motion.div>
@@ -135,8 +199,15 @@ const SortableTreeNode = ({ widget, depth }: TreeNodeProps) => {
 };
 
 export const WidgetTree = () => {
-  const { getActiveScreen } = useBuilderStore();
+  const { getActiveScreen, selectedWidgetId, moveWidget } = useBuilderStore();
   const screen = getActiveScreen();
+  const [nestDialog, setNestDialog] = useState<null | {
+    widgetId: string;
+    widgetLabel: string;
+    targetId: string;
+    targetLabel: string;
+    error?: string;
+  }>(null);
 
   const {
     sensors,
@@ -160,6 +231,209 @@ export const WidgetTree = () => {
     return ids;
   }, [screen]);
 
+  const findParentInfo = useCallback(
+    (
+      nodes: FlutterWidget[],
+      targetId: string,
+      parentId: string | null = null,
+    ): { parentId: string | null; index: number; length: number } | null => {
+      for (let i = 0; i < nodes.length; i += 1) {
+        const node = nodes[i];
+        if (node.id === targetId) {
+          return { parentId, index: i, length: nodes.length };
+        }
+        if (node.children) {
+          const found = findParentInfo(node.children, targetId, node.id);
+          if (found) return found;
+        }
+      }
+      return null;
+    },
+    [],
+  );
+
+  const findWidgetById = useCallback(
+    (nodes: FlutterWidget[], targetId: string): FlutterWidget | null => {
+      for (const node of nodes) {
+        if (node.id === targetId) return node;
+        if (node.children) {
+          const found = findWidgetById(node.children, targetId);
+          if (found) return found;
+        }
+      }
+      return null;
+    },
+    [],
+  );
+
+  const handleMove = useCallback(
+    (widgetId: string, parentId: string | null, nextIndex: number) => {
+      if (!screen) return;
+      const siblingCount = parentId
+        ? findWidgetById(screen.components, parentId)?.children?.length
+        : screen.components.length;
+      if (!siblingCount) return;
+      if (nextIndex < 0 || nextIndex > siblingCount) return;
+      moveWidget(widgetId, parentId, nextIndex);
+    },
+    [screen, findWidgetById, moveWidget],
+  );
+
+  const handleKeyDown = useCallback(
+    (event: KeyboardEvent<HTMLDivElement>) => {
+      if (!selectedWidgetId || !screen) return;
+      if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
+      const info = findParentInfo(screen.components, selectedWidgetId);
+      if (!info) return;
+      event.preventDefault();
+      const nextIndex =
+        event.key === "ArrowUp" ? info.index - 1 : info.index + 1;
+      if (event.ctrlKey) {
+        if (!info.parentId) return;
+        const parentInfo = findParentInfo(screen.components, info.parentId);
+        if (!parentInfo) return;
+        const targetIndex =
+          event.key === "ArrowUp" ? parentInfo.index : parentInfo.index + 1;
+        const selected = findWidgetById(screen.components, selectedWidgetId);
+        if (!selected) return;
+
+        let error: string | undefined;
+        const targetParentId = parentInfo.parentId;
+        const targetParent = targetParentId
+          ? findWidgetById(screen.components, targetParentId)
+          : null;
+
+        if (ROOT_ONLY_WIDGETS.includes(selected.type)) {
+          error = `${selected.type} can only be at the screen root.`;
+        }
+
+        const requiredParents = REQUIRED_PARENTS[selected.type];
+        if (
+          !error &&
+          requiredParents &&
+          (!targetParent || !requiredParents.includes(targetParent.type))
+        ) {
+          error = `${selected.type} must be inside ${requiredParents.join(" or ")}.`;
+        }
+
+        if (!error && targetParent) {
+          const targetConfig = getChildConfig(targetParent.type);
+          if (targetConfig?.mode === "none") {
+            error = `${targetParent.type} cannot contain children.`;
+          }
+          if (
+            !error &&
+            targetConfig?.mode === "single" &&
+            targetParent.children &&
+            targetParent.children.length > 0
+          ) {
+            error = `${targetParent.type} allows only one child and is already occupied.`;
+          }
+          if (
+            !error &&
+            targetConfig?.allowedChildren &&
+            !targetConfig.allowedChildren.includes(selected.type)
+          ) {
+            error = `${targetParent.type} does not allow ${selected.type} as a child.`;
+          }
+          if (!error) {
+            const forbiddenRule = VALIDATION_RULES.find(
+              (rule) =>
+                rule.parentType === targetParent.type &&
+                rule.childType === selected.type &&
+                rule.result === "forbidden",
+            );
+            if (forbiddenRule) {
+              error =
+                forbiddenRule.message ||
+                `${targetParent.type} cannot contain ${selected.type}.`;
+            }
+          }
+        }
+
+        if (error) {
+          toast.error(error);
+          return;
+        }
+
+        handleMove(selectedWidgetId, parentInfo.parentId, targetIndex);
+        return;
+      }
+      if (!event.shiftKey) {
+        handleMove(selectedWidgetId, info.parentId, nextIndex);
+        return;
+      }
+
+      const parentNode = info.parentId
+        ? findWidgetById(screen.components, info.parentId)
+        : null;
+      const siblings = parentNode
+        ? parentNode.children || []
+        : screen.components;
+      const target = siblings[nextIndex];
+      if (!target) return;
+
+      const selected = findWidgetById(screen.components, selectedWidgetId);
+      if (!selected) return;
+
+      let error: string | undefined;
+
+      if (ROOT_ONLY_WIDGETS.includes(selected.type)) {
+        error = `${selected.type} can only be at the screen root.`;
+      }
+
+      const requiredParents = REQUIRED_PARENTS[selected.type];
+      if (!error && requiredParents && !requiredParents.includes(target.type)) {
+        error = `${selected.type} must be inside ${requiredParents.join(" or ")}.`;
+      }
+
+      const targetConfig = getChildConfig(target.type);
+      if (!error && targetConfig?.mode === "none") {
+        error = `${target.type} cannot contain children.`;
+      }
+
+      if (
+        !error &&
+        targetConfig?.mode === "single" &&
+        target.children &&
+        target.children.length > 0
+      ) {
+        error = `${target.type} allows only one child and is already occupied.`;
+      }
+
+      if (
+        !error &&
+        targetConfig?.allowedChildren &&
+        !targetConfig.allowedChildren.includes(selected.type)
+      ) {
+        error = `${target.type} does not allow ${selected.type} as a child.`;
+      }
+
+      if (!error) {
+        const forbiddenRule = VALIDATION_RULES.find(
+          (rule) =>
+            rule.parentType === target.type &&
+            rule.childType === selected.type &&
+            rule.result === "forbidden",
+        );
+        if (forbiddenRule) {
+          error =
+            forbiddenRule.message ||
+            `${target.type} cannot contain ${selected.type}.`;
+        }
+      }
+
+      setNestDialog({
+        widgetId: selected.id,
+        widgetLabel: selected.type,
+        targetId: target.id,
+        targetLabel: target.type,
+        error,
+      });
+    },
+    [selectedWidgetId, screen, findParentInfo, findWidgetById, handleMove],
+  );
+
   return (
     <div className="w-80 shrink-0 border-r border-border bg-card flex flex-col h-full overflow-hidden">
       <div className="p-4 border-b border-border flex items-center gap-2">
@@ -169,7 +443,11 @@ export const WidgetTree = () => {
         </h2>
       </div>
 
-      <div className="flex-1 overflow-auto p-2 scrollbar-thin">
+      <div
+        className="flex-1 overflow-auto p-2 scrollbar-thin"
+        tabIndex={0}
+        onKeyDown={handleKeyDown}
+      >
         <DndContext
           sensors={sensors}
           collisionDetection={pointerWithin}
@@ -181,8 +459,16 @@ export const WidgetTree = () => {
             items={allWidgetIds}
             strategy={verticalListSortingStrategy}
           >
-            {screen?.components.map((widget) => (
-              <SortableTreeNode key={widget.id} widget={widget} depth={0} />
+            {screen?.components.map((widget, index) => (
+              <SortableTreeNode
+                key={widget.id}
+                widget={widget}
+                depth={0}
+                parentId={null}
+                index={index}
+                siblingCount={screen.components.length}
+                onMove={handleMove}
+              />
             ))}
           </SortableContext>
 
@@ -248,6 +534,43 @@ export const WidgetTree = () => {
                   Confirm Move
                 </Button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {nestDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40" />
+          <div className="relative z-10 rounded-md border bg-popover p-4 shadow-md w-80">
+            <p className="text-sm font-medium mb-1">Nest component</p>
+            <p className="text-xs text-muted-foreground mb-3">
+              Move {nestDialog.widgetLabel} inside {nestDialog.targetLabel}?
+            </p>
+            {nestDialog.error && (
+              <p className="text-xs text-destructive mb-3">
+                {nestDialog.error}
+              </p>
+            )}
+            <div className="flex items-center justify-end gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setNestDialog(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => {
+                  if (nestDialog.error) return;
+                  moveWidget(nestDialog.widgetId, nestDialog.targetId);
+                  setNestDialog(null);
+                }}
+                disabled={!!nestDialog.error}
+              >
+                Confirm
+              </Button>
             </div>
           </div>
         </div>

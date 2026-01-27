@@ -30,6 +30,7 @@ interface BuilderState {
   addWidget: (type: WidgetType, parentId?: string) => void;
   updateWidget: (widgetId: string, updates: Partial<FlutterWidget>) => void;
   updateWidgetProps: (widgetId: string, props: Partial<WidgetProps>) => void;
+  deleteWidget: (widgetId: string) => void;
   importProjectData: (data: ProjectJsonData) => void;
   moveWidget: (
     widgetId: string,
