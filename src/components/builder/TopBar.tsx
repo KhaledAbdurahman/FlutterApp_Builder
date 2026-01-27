@@ -110,6 +110,21 @@ const buildSchemaDocument = (): string => {
         type: "ComponentType",
         props: "Partial<ComponentPropsByType[ComponentType]>",
         children: "Component[] (optional)",
+        itemTemplate: "Component (ListView only, optional)",
+      },
+      null,
+      2,
+    ),
+    "",
+    "ListView itemTemplate example:",
+    JSON.stringify(
+      {
+        type: "ListView",
+        props: { itemCount: 1, shrinkWrap: false, padding: 0 },
+        itemTemplate: {
+          type: "Column",
+          children: ["Component"],
+        },
       },
       null,
       2,
@@ -154,6 +169,41 @@ const normalizeProps = (
   Object.keys(defaults).forEach((key) => {
     if (key in rawProps) cleaned[key] = rawProps[key];
   });
+
+  if (type === "Button") {
+    if ("textColor" in rawProps && !("color" in rawProps)) {
+      cleaned.color = rawProps.textColor;
+    }
+  }
+
+  if (type === "Padding") {
+    if ("padding" in rawProps && !("all" in rawProps)) {
+      cleaned.all = rawProps.padding;
+    }
+  }
+
+  if (type === "Container") {
+    const layoutRaw =
+      rawProps.layout && typeof rawProps.layout === "object"
+        ? (rawProps.layout as Record<string, unknown>)
+        : undefined;
+    const width = rawProps.width;
+    const height = rawProps.height;
+    if (layoutRaw || width !== undefined || height !== undefined) {
+      cleaned.layout = {
+        ...(layoutRaw || {}),
+        ...(typeof width === "number" ? { w: width } : {}),
+        ...(typeof height === "number" ? { h: height } : {}),
+      };
+    }
+  }
+
+  if (type === "Text") {
+    if (rawProps.fontWeight === "w600") {
+      cleaned.fontWeight = "bold";
+    }
+  }
+
   return cleaned;
 };
 
@@ -440,12 +490,27 @@ export const TopBar = () => {
         )
         .filter(Boolean) as FlutterWidget[];
 
+      let normalizedTemplate: FlutterWidget | undefined = undefined;
+      if (type === "ListView" && "itemTemplate" in input) {
+        const rawTemplate = (input as { itemTemplate?: unknown }).itemTemplate;
+        if (rawTemplate && typeof rawTemplate === "object") {
+          normalizedTemplate = normalizeWidget(
+            rawTemplate,
+            "ListView",
+            `${path}.itemTemplate`,
+          ) as FlutterWidget;
+        } else if (rawTemplate !== undefined) {
+          warnings.push(`${path}.itemTemplate must be an object; ignored.`);
+        }
+      }
+
       return {
         id,
         type,
         props: resolvedProps,
         children:
           normalizedChildren.length > 0 ? normalizedChildren : undefined,
+        itemTemplate: normalizedTemplate,
       } as FlutterWidget;
     };
 

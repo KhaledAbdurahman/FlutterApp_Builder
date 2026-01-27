@@ -1191,12 +1191,15 @@ export const PropertiesPanel = () => {
                   <PropertyField label="Item Count">
                     <Input
                       type="number"
-                      value={widget.props.itemCount || 10}
+                      value={widget.props.itemCount ?? ""}
                       onChange={(e) =>
                         updateWidgetProps(widget.id, {
-                          itemCount: parseInt(e.target.value) || 10,
+                          itemCount: e.target.value
+                            ? parseInt(e.target.value)
+                            : undefined,
                         })
                       }
+                      placeholder="Auto"
                     />
                   </PropertyField>
                   <PropertyField label="Shrink Wrap">

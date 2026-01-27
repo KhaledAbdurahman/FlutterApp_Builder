@@ -54,6 +54,10 @@ const applyDefaultsToWidget = (widget: FlutterWidget): FlutterWidget =>
     ...widget,
     props: resolveWidgetProps(widget.type, widget.props),
     children: widget.children?.map(applyDefaultsToWidget),
+    itemTemplate:
+      widget.type === "ListView" && widget.itemTemplate
+        ? applyDefaultsToWidget(widget.itemTemplate)
+        : widget.itemTemplate,
   }) as FlutterWidget;
 
 const applyDefaultsToWidgets = (widgets: FlutterWidget[]) =>
@@ -72,7 +76,11 @@ const normalizeWidgetsForExport = (widgets: FlutterWidget[]): FlutterWidget[] =>
       : undefined;
 
     if (widget.type !== "Container") {
-      return { ...widget, children } as FlutterWidget;
+      const itemTemplate =
+        widget.type === "ListView" && widget.itemTemplate
+          ? normalizeWidgetsForExport([widget.itemTemplate])[0]
+          : widget.itemTemplate;
+      return { ...widget, children, itemTemplate } as FlutterWidget;
     }
 
     const layout = widget.props.layout;

@@ -174,6 +174,7 @@ export type Components = {
     type: K;
     props: Partial<ComponentPropsByType[K]>;
     children?: Components[];
+    itemTemplate?: Components;
   };
 }[ComponentType];
 
@@ -249,7 +250,7 @@ export const DEFAULT_COMPONENT_PROPS: ComponentPropsByType = {
     crossAxisAlignment: "center",
     mainAxisSize: "max",
   },
-  ListView: { itemCount: 10, shrinkWrap: false, padding: 0 },
+  ListView: { itemCount: 0, shrinkWrap: false, padding: 0 },
   Positioned: {
     top: 0,
     left: 0,

@@ -820,14 +820,45 @@ const WidgetRenderer = ({
           className={cn(baseClasses, "overflow-auto")}
           style={{
             padding: widget.props.padding || 0,
-            maxHeight: widget.props.shrinkWrap ? "none" : "200px",
+            maxHeight: widget.props.shrinkWrap ? "200px" : "none",
           }}
         >
-          {Array.from({ length: widget.props.itemCount || 5 }).map((_, i) => (
-            <div key={i} className="p-3 border-b border-gray-200">
-              List Item {i + 1}
-            </div>
-          ))}
+          {(() => {
+            const templateCount = widget.itemTemplate
+              ? (widget.itemTemplate.children?.length ?? 1)
+              : (widget.children?.length ?? 0);
+            const explicitCount = widget.props.itemCount ?? 0;
+            const count = explicitCount > 0 ? explicitCount : templateCount;
+
+            if (widget.itemTemplate) {
+              return Array.from({ length: count }).map((_, i) => (
+                <WidgetRenderer
+                  key={`${widget.itemTemplate.id}-${i}`}
+                  widget={{
+                    ...widget.itemTemplate,
+                    id: `${widget.itemTemplate.id}-${i}`,
+                  }}
+                  depth={(depth ?? 0) + 1}
+                />
+              ));
+            }
+
+            if (widget.children && widget.children.length > 0) {
+              return widget.children.map((child) => (
+                <WidgetRenderer
+                  key={child.id}
+                  widget={child}
+                  depth={(depth ?? 0) + 1}
+                />
+              ));
+            }
+
+            return (
+              <div className="p-3 text-xs text-muted-foreground">
+                ListView is empty
+              </div>
+            );
+          })()}
         </div>
       );
 
