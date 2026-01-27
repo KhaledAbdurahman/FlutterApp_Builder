@@ -597,7 +597,7 @@ export const PropertiesPanel = () => {
                       onChange={(e) =>
                         updateWidgetProps(widget.id, {
                           layout: {
-                            ...(widget.props.layout || { w: 100, h: 100 }),
+                            ...(widget.props.layout || { w: 0, h: 0 }),
                             w: e.target.value
                               ? parseInt(e.target.value)
                               : undefined,
@@ -614,7 +614,7 @@ export const PropertiesPanel = () => {
                       onChange={(e) =>
                         updateWidgetProps(widget.id, {
                           layout: {
-                            ...(widget.props.layout || { w: 100, h: 100 }),
+                            ...(widget.props.layout || { w: 0, h: 0 }),
                             h: e.target.value
                               ? parseInt(e.target.value)
                               : undefined,

@@ -58,10 +58,10 @@ const applyDefaultsToWidget = (widget: FlutterWidget): FlutterWidget =>
 const applyDefaultsToWidgets = (widgets: FlutterWidget[]) =>
   widgets.map(applyDefaultsToWidget);
 
-const normalizeContainerLayoutValue = (value: unknown): number | "auto" => {
+const normalizeContainerLayoutValue = (value: unknown): number => {
   if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (value === "auto") return "auto";
-  return "auto";
+  if (value === "auto") return 0;
+  return 0;
 };
 
 const normalizeWidgetsForExport = (widgets: FlutterWidget[]): FlutterWidget[] =>
@@ -83,9 +83,16 @@ const normalizeWidgetsForExport = (widgets: FlutterWidget[]): FlutterWidget[] =>
         }
       : layout;
 
+    const shouldOmitLayout =
+      !normalizedLayout ||
+      (normalizedLayout.w === 0 && normalizedLayout.h === 0);
+    const { layout: _layout, ...restProps } = widget.props;
+
     return {
       ...widget,
-      props: { ...widget.props, layout: normalizedLayout },
+      props: shouldOmitLayout
+        ? restProps
+        : { ...restProps, layout: normalizedLayout },
       children,
     } as FlutterWidget;
   });

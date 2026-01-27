@@ -468,14 +468,8 @@ const WidgetRenderer = ({
                   widget.props.borderColor || "#ccc"
                 }`
               : "none",
-            width:
-              widget.props.layout?.w === "auto"
-                ? "auto"
-                : widget.props.layout?.w,
-            height:
-              widget.props.layout?.h === "auto"
-                ? "auto"
-                : widget.props.layout?.h,
+            width: resolveContainerLayoutValue(widget.props.layout?.w),
+            height: resolveContainerLayoutValue(widget.props.layout?.h),
             display: "flex",
             justifyContent: alignmentToJustify(widget.props.alignment),
             alignItems: alignmentToAlign(widget.props.alignment),
@@ -930,6 +924,13 @@ const alignmentToAlign = (alignment?: string): string => {
     default:
       return "center";
   }
+};
+
+const resolveContainerLayoutValue = (
+  value?: number,
+): number | "auto" | undefined => {
+  if (value == null || value === 0) return "auto";
+  return value;
 };
 
 const alignmentToTextAlign = (

@@ -53,7 +53,7 @@ export type ComponentPropsByType = {
     height?: number;
   };
   Container: {
-    layout: { w: number | "auto"; h: number | "auto" };
+    layout?: { w: number; h: number };
     backgroundColor: string;
     padding: number;
     margin: number;
@@ -229,7 +229,6 @@ export const DEFAULT_COMPONENT_PROPS: ComponentPropsByType = {
     color: "#FFFFFF",
   },
   Container: {
-    layout: { w: "auto", h: "auto" },
     backgroundColor: "transparent",
     padding: 16,
     margin: 0,
