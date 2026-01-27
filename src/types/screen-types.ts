@@ -229,6 +229,7 @@ export const DEFAULT_COMPONENT_PROPS: ComponentPropsByType = {
     color: "#FFFFFF",
   },
   Container: {
+    layout: { w: 0, h: 0 },
     backgroundColor: "transparent",
     padding: 16,
     margin: 0,
