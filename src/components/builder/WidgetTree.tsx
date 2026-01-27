@@ -53,6 +53,11 @@ const SortableTreeNode = ({ widget, depth }: TreeNodeProps) => {
   const [isExpanded, setIsExpanded] = useState(true);
   const hasChildren = widget.children && widget.children.length > 0;
 
+  const widgetText =
+    typeof widget.props === "object" && widget.props && "text" in widget.props
+      ? (widget.props as { text?: string }).text
+      : undefined;
+
   // Explicit "empty parent" indicator to help drop
   const isEmptyContainer =
     definition?.childConfig.mode !== "none" &&
@@ -100,9 +105,9 @@ const SortableTreeNode = ({ widget, depth }: TreeNodeProps) => {
 
         <IconComponent className="w-4 h-4 text-muted-foreground group-hover:text-foreground" />
         <span className="truncate">{widget.type}</span>
-        {widget.props.text && (
+        {widgetText && (
           <span className="text-xs text-muted-foreground truncate max-w-[80px] opacity-70">
-            "{widget.props.text}"
+            "{widgetText}"
           </span>
         )}
       </motion.div>

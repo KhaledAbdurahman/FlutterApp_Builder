@@ -8,7 +8,12 @@ import {
   DragItem,
   DropTarget,
 } from "./validateDrop";
-import { WidgetType, FlutterWidget } from "@/types/screen-types";
+import {
+  WidgetType,
+  FlutterWidget,
+  getChildConfig,
+} from "@/types/screen-types";
+import { countDirectChildren } from "./childCounts";
 
 const RESERVED_SCAFFOLD_TYPES: WidgetType[] = [
   "AppBar",
@@ -38,6 +43,61 @@ const getScaffoldSlotForType = (type: WidgetType) => {
   if (type === "Drawer") return "drawer";
   if (type === "BottomNavigationBar") return "bottomNavigationBar";
   return "body";
+};
+
+const findWidgetById = (
+  nodes: FlutterWidget[],
+  id: string,
+): FlutterWidget | null => {
+  for (const node of nodes) {
+    if (node.id === id) return node;
+    if (node.children) {
+      const found = findWidgetById(node.children, id);
+      if (found) return found;
+    }
+  }
+  return null;
+};
+
+const formatAllowedCount = (config?: {
+  mode: "none" | "single" | "multiple";
+  maxChildren?: number;
+}) => {
+  if (!config) return "0";
+  if (config.mode === "none") return "0";
+  if (config.mode === "single") return "1";
+  if (config.maxChildren) return `up to ${config.maxChildren}`;
+  return "unlimited";
+};
+
+const findAncestorMultiTarget = (
+  startId: string,
+  source: DragItem,
+  ctx: ValidationContext,
+): { id: string; type: WidgetType } | null => {
+  let currentId: string | null = startId;
+
+  while (currentId) {
+    const parent = ctx.getParent(currentId);
+    if (!parent) return null;
+    if (parent.type === "Scaffold") return null;
+
+    const config = getChildConfig(parent.type);
+    if (config?.mode === "multiple") {
+      const result = validateDrop(
+        source,
+        { id: parent.id, type: parent.type },
+        ctx,
+      );
+      if (result.valid) {
+        return { id: parent.id, type: parent.type };
+      }
+    }
+
+    currentId = parent.id;
+  }
+
+  return null;
 };
 
 const showAccessibleToast = (
@@ -263,6 +323,33 @@ export const useDnDHandlers = () => {
           slot = undefined;
         } else {
           slot = "body";
+        }
+      }
+
+      const ctx = getValidationContext();
+
+      if (targetId && targetType !== "canvas" && !slot) {
+        const targetWidget = findWidgetById(ctx.widgets, targetId);
+        const config = getChildConfig(targetType as WidgetType);
+        if (
+          targetWidget &&
+          config?.mode === "single" &&
+          countDirectChildren(targetWidget) >= 1
+        ) {
+          const fallback = findAncestorMultiTarget(targetId, source, ctx);
+          if (fallback) {
+            targetId = fallback.id;
+            targetType = fallback.type;
+          } else {
+            const currentCount = countDirectChildren(targetWidget);
+            const attemptedCount = currentCount + 1;
+            showAccessibleToast(
+              `${targetType} allows ${formatAllowedCount(config)} children. Current: ${currentCount}, attempted: ${attemptedCount}. No multi-child component found before Scaffold.`,
+              "error",
+            );
+            restoreSnapshot(dragId);
+            return;
+          }
         }
       }
 

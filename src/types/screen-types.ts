@@ -43,6 +43,7 @@ export type DrawerHeader = {
 export type ComponentPropsByType = {
   Scaffold: { backgroundColor: string };
   AppBar: {
+    color: string;
     title: string;
     backgroundColor: string;
     elevation: number;
@@ -225,6 +226,7 @@ export const DEFAULT_COMPONENT_PROPS: ComponentPropsByType = {
     showBackButton: false,
     automaticallyImplyLeading: true,
     height: 56,
+    color: "#FFFFFF",
   },
   Container: {
     layout: { w: "auto", h: "auto" },

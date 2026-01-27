@@ -198,8 +198,9 @@ const WidgetRenderer = ({
           onClick={handleClick}
           className={cn(
             baseClasses,
-            "flex flex-col h-full bg-white text-gray-900 relative",
+            "flex flex-col h-full text-gray-900 relative",
           )}
+          style={{ backgroundColor: widget.props.backgroundColor || "#FFFFFF" }}
         >
           {/* AppBar slot */}
           <div
@@ -262,7 +263,10 @@ const WidgetRenderer = ({
                     appBar.props.centerTitle ? "text-center" : "text-left",
                   )}
                 >
-                  <span className="text-white font-medium text-lg">
+                  <span
+                    className="font-medium text-lg"
+                    style={{ color: appBar.props.color || "#FFFFFF" }}
+                  >
                     {appBar.props.title || "App Bar"}
                   </span>
                 </div>
@@ -439,7 +443,10 @@ const WidgetRenderer = ({
           {widget.props.showBackButton && (
             <LucideIcons.ArrowLeft className="w-5 h-5 text-white mr-2" />
           )}
-          <span className="text-white font-medium text-lg">
+          <span
+            className="font-medium text-lg"
+            style={{ color: widget.props.color || "#FFFFFF" }}
+          >
             {widget.props.title || "App Bar"}
           </span>
         </div>

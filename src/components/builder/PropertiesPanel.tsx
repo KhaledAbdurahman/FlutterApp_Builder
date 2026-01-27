@@ -314,6 +314,30 @@ export const PropertiesPanel = () => {
                       className="h-10 p-1"
                     />
                   </PropertyField>
+                  <PropertyField label="Title Color">
+                    <Input
+                      type="color"
+                      value={widget.props.color || "#FFFFFF"}
+                      onChange={(e) =>
+                        updateWidgetProps(widget.id, {
+                          color: e.target.value,
+                        })
+                      }
+                      className="h-10 p-1"
+                    />
+                  </PropertyField>
+                  <PropertyField label="Title Color">
+                    <Input
+                      type="color"
+                      value={widget.props.color || "#FFFFFF"}
+                      onChange={(e) =>
+                        updateWidgetProps(widget.id, {
+                          color: e.target.value,
+                        })
+                      }
+                      className="h-10 p-1"
+                    />
+                  </PropertyField>
                   <PropertyField label="Text Color">
                     <Input
                       type="color"
@@ -474,6 +498,18 @@ export const PropertiesPanel = () => {
                       onChange={(e) =>
                         updateWidgetProps(widget.id, { title: e.target.value })
                       }
+                    />
+                  </PropertyField>
+                  <PropertyField label="Title Color">
+                    <Input
+                      type="color"
+                      value={widget.props.color || "#FFFFFF"}
+                      onChange={(e) =>
+                        updateWidgetProps(widget.id, {
+                          color: e.target.value,
+                        })
+                      }
+                      className="h-10 p-1"
                     />
                   </PropertyField>
                   <PropertyField label="Background Color">
