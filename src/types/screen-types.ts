@@ -197,12 +197,21 @@ export type WidgetProps = Partial<ComponentPropsByType[ComponentType]>;
 
 export type WidgetCategory = "layout" | "content" | "input" | "navigation";
 
+export type ChildCardinality = "none" | "single" | "multiple";
+
+export type ChildConfig = {
+  mode: ChildCardinality;
+  maxChildren?: number;
+  allowedChildren?: ComponentType[];
+};
+
 export type WidgetDefinition<K extends ComponentType = ComponentType> = {
   type: K;
   label: string;
   icon: string;
   category: WidgetCategory;
   canHaveChildren: boolean;
+  childConfig: ChildConfig;
   defaultProps: ComponentPropsByType[K];
 };
 
@@ -218,7 +227,7 @@ export const DEFAULT_COMPONENT_PROPS: ComponentPropsByType = {
     height: 56,
   },
   Container: {
-    layout: { w: NaN, h: NaN },
+    layout: { w: "auto", h: "auto" },
     backgroundColor: "transparent",
     padding: 16,
     margin: 0,
@@ -321,6 +330,7 @@ export const WIDGET_DEFINITIONS: WidgetDefinition[] = [
     icon: "Layout",
     category: "layout",
     canHaveChildren: true,
+    childConfig: { mode: "multiple", maxChildren: 4 },
     defaultProps: DEFAULT_COMPONENT_PROPS.Scaffold,
   },
   {
@@ -329,6 +339,7 @@ export const WIDGET_DEFINITIONS: WidgetDefinition[] = [
     icon: "PanelTop",
     category: "layout",
     canHaveChildren: false,
+    childConfig: { mode: "none" },
     defaultProps: DEFAULT_COMPONENT_PROPS.AppBar,
   },
   {
@@ -337,6 +348,7 @@ export const WIDGET_DEFINITIONS: WidgetDefinition[] = [
     icon: "Square",
     category: "layout",
     canHaveChildren: true,
+    childConfig: { mode: "multiple" },
     defaultProps: DEFAULT_COMPONENT_PROPS.Container,
   },
   {
@@ -345,6 +357,7 @@ export const WIDGET_DEFINITIONS: WidgetDefinition[] = [
     icon: "GalleryHorizontal",
     category: "layout",
     canHaveChildren: true,
+    childConfig: { mode: "multiple" },
     defaultProps: DEFAULT_COMPONENT_PROPS.Row,
   },
   {
@@ -353,6 +366,7 @@ export const WIDGET_DEFINITIONS: WidgetDefinition[] = [
     icon: "GalleryVertical",
     category: "layout",
     canHaveChildren: true,
+    childConfig: { mode: "multiple" },
     defaultProps: DEFAULT_COMPONENT_PROPS.Column,
   },
   {
@@ -361,6 +375,7 @@ export const WIDGET_DEFINITIONS: WidgetDefinition[] = [
     icon: "Move",
     category: "layout",
     canHaveChildren: true,
+    childConfig: { mode: "single" },
     defaultProps: DEFAULT_COMPONENT_PROPS.Positioned,
   },
   {
@@ -369,6 +384,7 @@ export const WIDGET_DEFINITIONS: WidgetDefinition[] = [
     icon: "AlignCenter",
     category: "layout",
     canHaveChildren: true,
+    childConfig: { mode: "single" },
     defaultProps: DEFAULT_COMPONENT_PROPS.Center,
   },
   {
@@ -377,6 +393,7 @@ export const WIDGET_DEFINITIONS: WidgetDefinition[] = [
     icon: "SpaceBetweenVertically",
     category: "layout",
     canHaveChildren: true,
+    childConfig: { mode: "single" },
     defaultProps: DEFAULT_COMPONENT_PROPS.Padding,
   },
   {
@@ -385,6 +402,7 @@ export const WIDGET_DEFINITIONS: WidgetDefinition[] = [
     icon: "RulerIcon",
     category: "layout",
     canHaveChildren: false,
+    childConfig: { mode: "none" },
     defaultProps: DEFAULT_COMPONENT_PROPS.SizedBox,
   },
   {
@@ -393,6 +411,7 @@ export const WIDGET_DEFINITIONS: WidgetDefinition[] = [
     icon: "Maximize",
     category: "layout",
     canHaveChildren: true,
+    childConfig: { mode: "single" },
     defaultProps: DEFAULT_COMPONENT_PROPS.Expanded,
   },
   {
@@ -401,6 +420,7 @@ export const WIDGET_DEFINITIONS: WidgetDefinition[] = [
     icon: "CreditCard",
     category: "layout",
     canHaveChildren: true,
+    childConfig: { mode: "single" },
     defaultProps: DEFAULT_COMPONENT_PROPS.Card,
   },
   {
@@ -408,7 +428,8 @@ export const WIDGET_DEFINITIONS: WidgetDefinition[] = [
     label: "List View",
     icon: "List",
     category: "layout",
-    canHaveChildren: false,
+    canHaveChildren: true,
+    childConfig: { mode: "multiple" },
     defaultProps: DEFAULT_COMPONENT_PROPS.ListView,
   },
   {
@@ -417,6 +438,7 @@ export const WIDGET_DEFINITIONS: WidgetDefinition[] = [
     icon: "Type",
     category: "content",
     canHaveChildren: false,
+    childConfig: { mode: "none" },
     defaultProps: DEFAULT_COMPONENT_PROPS.Text,
   },
   {
@@ -425,6 +447,7 @@ export const WIDGET_DEFINITIONS: WidgetDefinition[] = [
     icon: "Star",
     category: "content",
     canHaveChildren: false,
+    childConfig: { mode: "none" },
     defaultProps: DEFAULT_COMPONENT_PROPS.Icon,
   },
   {
@@ -433,6 +456,7 @@ export const WIDGET_DEFINITIONS: WidgetDefinition[] = [
     icon: "ImageIcon",
     category: "content",
     canHaveChildren: false,
+    childConfig: { mode: "none" },
     defaultProps: DEFAULT_COMPONENT_PROPS.Image,
   },
   {
@@ -441,6 +465,7 @@ export const WIDGET_DEFINITIONS: WidgetDefinition[] = [
     icon: "ListOrdered",
     category: "content",
     canHaveChildren: false,
+    childConfig: { mode: "none" },
     defaultProps: DEFAULT_COMPONENT_PROPS.ListTile,
   },
   {
@@ -449,6 +474,7 @@ export const WIDGET_DEFINITIONS: WidgetDefinition[] = [
     icon: "MousePointerClick",
     category: "input",
     canHaveChildren: false,
+    childConfig: { mode: "none" },
     defaultProps: DEFAULT_COMPONENT_PROPS.Button,
   },
   {
@@ -457,6 +483,7 @@ export const WIDGET_DEFINITIONS: WidgetDefinition[] = [
     icon: "FormInput",
     category: "input",
     canHaveChildren: false,
+    childConfig: { mode: "none" },
     defaultProps: DEFAULT_COMPONENT_PROPS.TextField,
   },
   {
@@ -465,6 +492,7 @@ export const WIDGET_DEFINITIONS: WidgetDefinition[] = [
     icon: "PanelBottom",
     category: "navigation",
     canHaveChildren: false,
+    childConfig: { mode: "none" },
     defaultProps: DEFAULT_COMPONENT_PROPS.BottomNavigationBar,
   },
   {
@@ -473,6 +501,11 @@ export const WIDGET_DEFINITIONS: WidgetDefinition[] = [
     icon: "Menu",
     category: "navigation",
     canHaveChildren: true,
+    childConfig: {
+      mode: "single",
+      allowedChildren: ["Column"],
+      maxChildren: 1,
+    },
     defaultProps: DEFAULT_COMPONENT_PROPS.Drawer,
   },
 ];
@@ -481,6 +514,12 @@ export const getWidgetDefinition = (
   type: ComponentType,
 ): WidgetDefinition | undefined => {
   return WIDGET_DEFINITIONS.find((w) => w.type === type);
+};
+
+export const getChildConfig = (
+  type: ComponentType,
+): ChildConfig | undefined => {
+  return getWidgetDefinition(type)?.childConfig;
 };
 
 export const resolveWidgetProps = <K extends ComponentType>(

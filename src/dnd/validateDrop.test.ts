@@ -64,7 +64,7 @@ describe("validateDrop", () => {
 
     const result = validateDrop(source, destination, mockContext);
     expect(result.valid).toBe(false);
-    // Button has canHaveChildren: false, so it hits capability check first
+    // Button has childConfig.mode = "none", so it hits capability check first
     expect(result.message).toContain(
       "Button does not accept children components",
     );

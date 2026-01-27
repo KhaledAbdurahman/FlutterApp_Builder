@@ -55,7 +55,7 @@ const SortableTreeNode = ({ widget, depth }: TreeNodeProps) => {
 
   // Explicit "empty parent" indicator to help drop
   const isEmptyContainer =
-    definition?.canHaveChildren &&
+    definition?.childConfig.mode !== "none" &&
     (!widget.children || widget.children.length === 0);
 
   return (

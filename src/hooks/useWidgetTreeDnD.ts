@@ -209,7 +209,7 @@ export const useWidgetTreeDnD = ({ onCommit }: UseWidgetTreeDnDProps = {}) => {
     if (!sourceMeta || !targetMeta) return;
 
     const targetDef = getWidgetDefinition(targetMeta.widget.type);
-    const verb = targetDef?.canHaveChildren ? "into" : "after";
+    const verb = targetDef?.childConfig.mode !== "none" ? "into" : "after";
     showDndToast(
       `Drop ${getWidgetLabel(sourceMeta.widget)} ${verb} ${getWidgetLabel(targetMeta.widget)}`,
       1200,
@@ -314,7 +314,7 @@ export const useWidgetTreeDnD = ({ onCommit }: UseWidgetTreeDnDProps = {}) => {
 
     // HEURISTIC: Handle Nesting into Containers
     const targetDef = getWidgetDefinition(targetMeta.widget.type);
-    const canHaveChildren = targetDef?.canHaveChildren;
+    const canHaveChildren = targetDef?.childConfig.mode !== "none";
 
     // Check if target is a valid container that might be empty or explicitly targeted
     if (canHaveChildren) {

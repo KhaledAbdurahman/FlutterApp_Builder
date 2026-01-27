@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import {
   Play,
@@ -13,6 +13,7 @@ import {
   FolderOpen,
   FileText,
   Package,
+  Save,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,11 +43,15 @@ import {
   downloadBlob,
   buildApkFromSaved,
   downloadApk,
+  updateProject,
+  ProjectJsonData,
 } from "@/lib/api";
 
 export const TopBar = () => {
   const {
     project,
+    projectTitle,
+    projectDescription,
     activeScreenId,
     setActiveScreen,
     addScreen,
@@ -67,12 +72,75 @@ export const TopBar = () => {
   const [projectManagerOpen, setProjectManagerOpen] = useState(false);
   const [logsOpen, setLogsOpen] = useState(false);
   const [hasGeneratedProject, setHasGeneratedProject] = useState(false);
+  const [isAutoSaving, setIsAutoSaving] = useState(false);
+  const [autoSaveState, setAutoSaveState] = useState<
+    "idle" | "saving" | "saved" | "error"
+  >("idle");
 
   const activeScreen = project.screens.find((s) => s.id === activeScreenId);
 
   useEffect(() => {
     setHasGeneratedProject(false);
   }, [serverProjectId]);
+
+  useEffect(() => {
+    if (autoSaveState !== "saved") return;
+    const timeoutId = window.setTimeout(() => {
+      setAutoSaveState("idle");
+    }, 2000);
+    return () => window.clearTimeout(timeoutId);
+  }, [autoSaveState]);
+
+  const performSave = useCallback(
+    async (showToast = false) => {
+      if (!serverProjectId || isAutoSaving) return;
+      setIsAutoSaving(true);
+      setAutoSaveState("saving");
+      try {
+        const exportData = exportProject();
+        const jsonData: ProjectJsonData = {
+          app_name: exportData.app_name,
+          package_name: exportData.package_name,
+          screens: exportData.screens,
+        };
+        const name = projectTitle.trim() || project.app_name;
+        await updateProject(serverProjectId, {
+          name,
+          description: projectDescription,
+          json_data: jsonData,
+        });
+        setAutoSaveState("saved");
+        if (showToast) {
+          toast.success("Project saved");
+        }
+      } catch (error) {
+        setAutoSaveState("error");
+        if (showToast) {
+          toast.error(
+            error instanceof Error ? error.message : "Failed to save project",
+          );
+        }
+      } finally {
+        setIsAutoSaving(false);
+      }
+    },
+    [
+      serverProjectId,
+      isAutoSaving,
+      exportProject,
+      projectTitle,
+      projectDescription,
+      project.app_name,
+    ],
+  );
+
+  useEffect(() => {
+    if (!serverProjectId) return;
+    const intervalId = window.setInterval(() => {
+      performSave(false);
+    }, 10000);
+    return () => window.clearInterval(intervalId);
+  }, [serverProjectId, performSave]);
 
   const handleAddScreen = () => {
     if (newScreenName.trim()) {
@@ -331,6 +399,24 @@ export const TopBar = () => {
         >
           <FolderOpen className="w-4 h-4" />
           Projects
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => performSave(true)}
+          className="gap-2"
+          disabled={!serverProjectId || isAutoSaving}
+        >
+          {isAutoSaving ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <Save className="w-4 h-4" />
+          )}
+          {isAutoSaving
+            ? "Saving..."
+            : autoSaveState === "saved"
+              ? "Saved"
+              : "Save"}
         </Button>
         {serverProjectId && (
           <Button

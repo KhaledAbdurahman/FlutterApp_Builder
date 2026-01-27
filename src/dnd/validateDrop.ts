@@ -2,6 +2,7 @@ import {
   FlutterWidget,
   WidgetType,
   getWidgetDefinition,
+  getChildConfig,
 } from "@/types/screen-types";
 import {
   VALIDATION_RULES,
@@ -9,6 +10,7 @@ import {
   ROOT_ONLY_WIDGETS,
   canAcceptChild,
 } from "./validationRules";
+import { countDirectChildren } from "./childCounts";
 
 export interface ValidationContext {
   widgets: FlutterWidget[]; // The current tree to check ancestry
@@ -72,6 +74,27 @@ const findWidget = (
     }
   }
   return undefined;
+};
+
+const formatAllowedCount = (config?: {
+  mode: "none" | "single" | "multiple";
+  maxChildren?: number;
+}) => {
+  if (!config) return "0";
+  if (config.mode === "none") return "0";
+  if (config.mode === "single") return "1";
+  if (config.maxChildren) return `up to ${config.maxChildren}`;
+  return "unlimited";
+};
+
+const getAllowedChildrenForTarget = (
+  targetType: WidgetType,
+  parentWidget?: FlutterWidget | null,
+) => {
+  if (targetType === "Column" && parentWidget?.type === "Drawer") {
+    return ["ListTile"] as WidgetType[];
+  }
+  return getChildConfig(targetType)?.allowedChildren;
 };
 
 const RESERVED_SCAFFOLD_TYPES: WidgetType[] = [
@@ -237,6 +260,57 @@ export const validateDrop = (
   }
 
   const targetType = destination.type as WidgetType;
+
+  const targetWidget = findWidget(ctx.widgets, destination.id);
+
+  if (targetWidget) {
+    const childConfig = getChildConfig(targetType);
+    const currentCount = countDirectChildren(targetWidget);
+    const alreadyChild =
+      !!source.id &&
+      !!targetWidget.children?.some((child) => child.id === source.id);
+    const attemptedCount = currentCount + (alreadyChild ? 0 : 1);
+
+    if (childConfig?.mode === "none" && attemptedCount > 0) {
+      return {
+        valid: false,
+        confidence: "high",
+        message: `${targetType} allows ${formatAllowedCount(childConfig)} children. Current: ${currentCount}, attempted: ${attemptedCount}.`,
+      };
+    }
+
+    if (childConfig?.mode === "single" && attemptedCount > 1) {
+      return {
+        valid: false,
+        confidence: "high",
+        message: `${targetType} allows ${formatAllowedCount(childConfig)} children. Current: ${currentCount}, attempted: ${attemptedCount}.`,
+      };
+    }
+
+    if (
+      childConfig?.mode === "multiple" &&
+      childConfig.maxChildren !== undefined &&
+      attemptedCount > childConfig.maxChildren
+    ) {
+      return {
+        valid: false,
+        confidence: "high",
+        message: `${targetType} allows ${formatAllowedCount(childConfig)} children. Current: ${currentCount}, attempted: ${attemptedCount}.`,
+      };
+    }
+
+    const allowedChildren = getAllowedChildrenForTarget(
+      targetType,
+      targetWidget,
+    );
+    if (allowedChildren && !allowedChildren.includes(source.type)) {
+      return {
+        valid: false,
+        confidence: "high",
+        message: `${targetType} allows only [${allowedChildren.join(", ")}] children. Current: ${currentCount}, attempted: ${attemptedCount}.`,
+      };
+    }
+  }
 
   // 3. Capability Check: Can the target accept children?
   if (!canAcceptChild(targetType)) {

@@ -13,6 +13,8 @@ import { SavedProject, ProjectJsonData } from "@/lib/api";
 
 interface BuilderState {
   project: Project;
+  projectTitle: string;
+  projectDescription: string;
   activeScreenId: string;
   selectedWidgetId: string | null;
   isDragging: boolean;
@@ -38,7 +40,9 @@ interface BuilderState {
   getActiveScreen: () => Screen | undefined;
   getWidgetById: (widgetId: string) => FlutterWidget | undefined;
   setProjectName: (name: string) => void;
+  setProjectTitle: (name: string) => void;
   setPackageName: (name: string) => void;
+  setProjectDescription: (description: string) => void;
   exportProject: () => Project;
   loadProject: (savedProject: SavedProject) => void;
   setServerProjectId: (id: number | null) => void;
@@ -225,6 +229,8 @@ const addWidgetToParent = (
 
 export const useBuilderStore = create<BuilderState>((set, get) => ({
   project: initialProject,
+  projectTitle: initialProject.app_name,
+  projectDescription: "",
   activeScreenId: initialProject.screens[0].id,
   selectedWidgetId: null,
   isDragging: false,
@@ -256,6 +262,8 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
         package_name: jsonData.package_name || "com.example.app",
         screens: normalizedScreens,
       },
+      projectTitle: savedProject.name || jsonData.app_name,
+      projectDescription: savedProject.description || "",
       activeScreenId: normalizedScreens[0].id,
       selectedWidgetId: null,
       serverProjectId: savedProject.id,
@@ -312,12 +320,24 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
 
   addWidget: (type, parentId) => {
     const definition = getWidgetDefinition(type);
+    const childMode = definition?.childConfig.mode;
     const newWidget = {
       id: uuidv4(),
       type,
       props: resolveWidgetProps(type, definition?.defaultProps),
-      children: definition?.canHaveChildren ? [] : undefined,
+      children: childMode && childMode !== "none" ? [] : undefined,
     } as FlutterWidget;
+
+    if (type === "Drawer") {
+      newWidget.children = [
+        {
+          id: uuidv4(),
+          type: "Column",
+          props: resolveWidgetProps("Column", undefined as any),
+          children: [],
+        } as FlutterWidget,
+      ];
+    }
 
     set((state) => {
       const screen = state.project.screens.find(
@@ -504,10 +524,15 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
       project: { ...state.project, app_name: name },
     })),
 
+  setProjectTitle: (name) => set({ projectTitle: name }),
+
   setPackageName: (name) =>
     set((state) => ({
       project: { ...state.project, package_name: name },
     })),
+
+  setProjectDescription: (description) =>
+    set({ projectDescription: description }),
 
   exportProject: () => {
     const state = get();

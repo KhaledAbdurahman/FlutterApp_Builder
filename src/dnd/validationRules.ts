@@ -84,14 +84,14 @@ export const VALIDATION_RULES: ValidationRule[] = [
   // Implicitly allowed:
   // - Center -> Any Child
   // - Padding -> Any Child
-  // - SizedBox -> No Child (canHaveChildren=false checks this)
-  // - Icon, Image, Text -> No Child (canHaveChildren=false checks this)
+  // - SizedBox -> No Child (childConfig.mode = "none" checks this)
+  // - Icon, Image, Text -> No Child (childConfig.mode = "none" checks this)
 ];
 
 // Definition-based checks
 export const canAcceptChild = (parentType: WidgetType): boolean => {
   const def = WIDGET_DEFINITIONS.find((w) => w.type === parentType);
-  return def?.canHaveChildren ?? false;
+  return def?.childConfig.mode !== "none";
 };
 
 // Components that strictly require a specific parent

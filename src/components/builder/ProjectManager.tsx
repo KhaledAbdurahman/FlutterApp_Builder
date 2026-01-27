@@ -59,16 +59,16 @@ export const ProjectManager = ({ open, onOpenChange }: ProjectManagerProps) => {
     loadProject,
     serverProjectId,
     setServerProjectId,
+    projectTitle,
+    setProjectTitle,
+    projectDescription,
+    setProjectDescription,
   } = useBuilderStore();
 
   const [projects, setProjects] = useState<SavedProject[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Save form state
-  const [projectName, setProjectName] = useState("");
-  const [projectDescription, setProjectDescription] = useState("");
 
   // Delete confirmation
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
@@ -94,8 +94,10 @@ export const ProjectManager = ({ open, onOpenChange }: ProjectManagerProps) => {
     let isActive = true;
 
     const fetchAndPrefill = async () => {
-      setProjectName(project.app_name);
-      setProjectDescription("");
+      setProjectTitle(projectTitle || project.app_name);
+      if (!serverProjectId) {
+        setProjectDescription(projectDescription || "");
+      }
       setIsLoading(true);
       setError(null);
       try {
@@ -104,7 +106,7 @@ export const ProjectManager = ({ open, onOpenChange }: ProjectManagerProps) => {
         setProjects(data);
         if (serverProjectId) {
           const current = data.find((p) => p.id === serverProjectId);
-          setProjectName(current?.name || project.app_name);
+          setProjectTitle(current?.name || project.app_name);
           setProjectDescription(current?.description || "");
         }
       } catch (err) {
@@ -122,10 +124,16 @@ export const ProjectManager = ({ open, onOpenChange }: ProjectManagerProps) => {
     return () => {
       isActive = false;
     };
-  }, [open, project.app_name, serverProjectId]);
+  }, [
+    open,
+    project.app_name,
+    serverProjectId,
+    setProjectTitle,
+    setProjectDescription,
+  ]);
 
   const handleSave = async () => {
-    if (!projectName.trim()) {
+    if (!projectTitle.trim()) {
       toast.error("Please enter a project name");
       return;
     }
@@ -145,7 +153,7 @@ export const ProjectManager = ({ open, onOpenChange }: ProjectManagerProps) => {
       if (serverProjectId) {
         // Update existing project
         savedProject = await updateProject(serverProjectId, {
-          name: projectName,
+          name: projectTitle,
           description: projectDescription,
           json_data: jsonData,
         });
@@ -153,7 +161,7 @@ export const ProjectManager = ({ open, onOpenChange }: ProjectManagerProps) => {
       } else {
         // Create new project
         savedProject = await createProject({
-          name: projectName,
+          name: projectTitle,
           description: projectDescription,
           json_data: jsonData,
         });
@@ -176,7 +184,7 @@ export const ProjectManager = ({ open, onOpenChange }: ProjectManagerProps) => {
     try {
       loadProject(savedProject);
       setServerProjectId(savedProject.id);
-      setProjectName(savedProject.name);
+      setProjectTitle(savedProject.name);
       setProjectDescription(savedProject.description || "");
       onOpenChange(false);
       toast.success(`Loaded "${savedProject.name}"`);
@@ -243,8 +251,8 @@ export const ProjectManager = ({ open, onOpenChange }: ProjectManagerProps) => {
               <div className="space-y-2">
                 <label className="text-sm font-medium">Project Name</label>
                 <Input
-                  value={projectName}
-                  onChange={(e) => setProjectName(e.target.value)}
+                  value={projectTitle}
+                  onChange={(e) => setProjectTitle(e.target.value)}
                   placeholder="My Flutter App"
                 />
               </div>
