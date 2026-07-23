@@ -435,6 +435,7 @@ As of this draft:
 
 - The current README still describes React 18, Tailwind, shadcn UI, Zustand, and
   React Router.
+- `package.json` has been moved to React 19.
 - `@/` absolute imports are already configured in `tsconfig.app.json`.
 - Current routing lives in `src/App.tsx` with `react-router-dom`.
 - Current API calls use `fetch` in `src/lib/api.ts`.
@@ -442,6 +443,8 @@ As of this draft:
 - Current styling is Tailwind plus global CSS.
 - `src/dnd/validateDrop.test.ts` already exists, so the project has at least one
   test surface started.
+- After the React 19 upgrade, `next-themes`, `react-day-picker`, and `vaul` were
+  updated to versions with React 19 peer compatibility.
 
 ## Open Decisions
 
