@@ -128,18 +128,18 @@ Examples:
 
 Naming should be clear and avoid abbreviations.
 
-| Category               | Convention           | Example                              |
-| ---------------------- | -------------------- | ------------------------------------ |
-| `const` primitives     | SCREAMING_SNAKE_CASE | `const MAX_TIMEOUT = 30000`          |
-| `const` objects        | PascalCase           | `const ChooseNotification = { ... }` |
-| Object props           | camelCase            | `{ title: "", notificationColor: "" }` |
-| Components  TSX/JSX    | PascalCase           | `function WorkspacePage()`           |
-| Functions              | camelCase            | `function getWorkspaceDetails()`     |
-| Variables (`let`)      | camelCase            | `let currentIndex = 0`               |
-| Parameters             | camelCase            | `(requestId: string)`                |
-| Types / Interfaces     | PascalCase           | `interface ApiRequest`               |
-| API interface fields   | snake_case           | `{ created_at: string }`             |
-| Classes                | PascalCase           | `class ExampleWorkFlow`              |
+| Category             | Convention           | Example                                |
+| -------------------- | -------------------- | -------------------------------------- |
+| `const` primitives   | SCREAMING_SNAKE_CASE | `const MAX_TIMEOUT = 30000`            |
+| `const` objects      | PascalCase           | `const ChooseNotification = { ... }`   |
+| Object props         | camelCase            | `{ title: "", notificationColor: "" }` |
+| Components TSX/JSX   | PascalCase           | `function WorkspacePage()`             |
+| Functions            | camelCase            | `function getWorkspaceDetails()`       |
+| Variables (`let`)    | camelCase            | `let currentIndex = 0`                 |
+| Parameters           | camelCase            | `(requestId: string)`                  |
+| Types / Interfaces   | PascalCase           | `interface ApiRequest`                 |
+| API interface fields | snake_case           | `{ created_at: string }`               |
+| Classes              | PascalCase           | `class ExampleWorkFlow`                |
 
 ## Enforcement
 
@@ -156,18 +156,18 @@ The scripts should be run by Husky.
 
 ## Target Tech Stack
 
-| Technology            | Purpose                |
-| --------------------- | ---------------------- |
-| React 19              | UI framework           |
-| TypeScript            | Type safety |
-| Vite                  | Build tool and dev server |
-| TanStack Router       | Code-based routing |
-| Mantine UI            | Prebuilt interface components |
-| Mantine Notifications | Toast and notification system |
-| Axios                 | HTTP client |
-| React Resizable Panels| Resizable builder layout |
-| CSS Modules           | Component and page scoped styling |
-| CSS variables         | Global tokens for colors, spacing, sizes, borders, and shadows |
+| Technology             | Purpose                                                        |
+| ---------------------- | -------------------------------------------------------------- |
+| React 19               | UI framework                                                   |
+| TypeScript             | Type safety                                                    |
+| Vite                   | Build tool and dev server                                      |
+| TanStack Router        | Code-based routing                                             |
+| Mantine UI             | Prebuilt interface components                                  |
+| Mantine Notifications  | Toast and notification system                                  |
+| Axios                  | HTTP client                                                    |
+| React Resizable Panels | Resizable builder layout                                       |
+| CSS Modules            | Component and page scoped styling                              |
+| CSS variables          | Global tokens for colors, spacing, sizes, borders, and shadows |
 
 ## Styling Direction
 
@@ -325,12 +325,7 @@ Draft shape:
 
 ```ts
 type NotificationPosition =
-  | "top-left"
-  | "top-right"
-  | "top-center"
-  | "bottom-left"
-  | "bottom-right"
-  | "bottom-center";
+  'top-left' | 'top-right' | 'top-center' | 'bottom-left' | 'bottom-right' | 'bottom-center';
 
 interface NotificationOptions {
   message: string;
@@ -342,34 +337,26 @@ interface LoadingNotificationOptions extends NotificationOptions {
   loadingMessage?: string;
 }
 
-const DEFAULT_POSITION: NotificationPosition = "bottom-right";
+const DEFAULT_POSITION: NotificationPosition = 'bottom-right';
 const DEFAULT_AUTO_CLOSE = 3000;
-const DEFAULT_LOADING_MESSAGE = "Please wait...";
+const DEFAULT_LOADING_MESSAGE = 'Please wait...';
 
 export const ChooseNotification = {
-  success({
-    message,
-    title = "Success",
-    position = DEFAULT_POSITION,
-  }: NotificationOptions): void {
+  success({ message, title = 'Success', position = DEFAULT_POSITION }: NotificationOptions): void {
     notifications.show({
       title,
       message,
-      color: "green",
+      color: 'green',
       position,
       autoClose: DEFAULT_AUTO_CLOSE,
     });
   },
 
-  failure({
-    message,
-    title = "Error",
-    position = DEFAULT_POSITION,
-  }: NotificationOptions): void {
+  failure({ message, title = 'Error', position = DEFAULT_POSITION }: NotificationOptions): void {
     notifications.show({
       title,
       message,
-      color: "red",
+      color: 'red',
       position,
       autoClose: DEFAULT_AUTO_CLOSE + 2000,
     });
@@ -420,14 +407,14 @@ Open testing concerns:
 9. Move shared API behavior into `src/api` and page-specific API calls into page
    folders.
 10. Replace shadcn/Radix notification usage with Mantine notification
-   controller.
+    controller.
 11. Replace Tailwind classes and shadcn UI components with Mantine UI,
-   CSS Modules, and CSS variables.
+    CSS Modules, and CSS variables.
 12. Refactor pages page by page, and refactor the editor section by section
-   after listing its sections.
+    after listing its sections.
 13. Add tests at the end of each page refactor.
 14. Update `README.md` only after the implemented project matches the future
-   architecture.
+    architecture.
 
 ## Current Repo Notes
 

@@ -88,7 +88,7 @@ The frontend expects the following API endpoints at `http://localhost:8000/api`:
 To change the backend URL, modify the `API_BASE_URL` in `src/lib/api.ts`:
 
 ```typescript
-const API_BASE_URL = "http://localhost:8000/api";
+const API_BASE_URL = 'http://localhost:8000/api';
 ```
 
 ## 📁 Project Structure
@@ -273,6 +273,7 @@ Always use semantic tokens instead of hardcoded colors:
 1. Extract the downloaded ZIP file
 2. Navigate to the extracted folder
 3. Run:
+
    ```bash
    flutter pub get
    flutter run
