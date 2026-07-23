@@ -1,14 +1,18 @@
 import { FlutterWidget } from "@/types/screen-types";
+import { getWidgetChildren } from "@/lib/widgetTreeUtils";
 
 export const countDirectChildren = (widget?: FlutterWidget | null): number => {
-  return widget?.children?.length ?? 0;
+  if (!widget) return 0;
+  return getWidgetChildren(widget).length;
 };
 
 export const countNestedDescendants = (
   widget?: FlutterWidget | null,
 ): number => {
-  if (!widget?.children || widget.children.length === 0) return 0;
-  return widget.children.reduce(
+  if (!widget) return 0;
+  const children = getWidgetChildren(widget);
+  if (children.length === 0) return 0;
+  return children.reduce(
     (total, child) => total + 1 + countNestedDescendants(child),
     0,
   );

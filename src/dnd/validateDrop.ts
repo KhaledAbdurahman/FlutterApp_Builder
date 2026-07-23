@@ -4,6 +4,7 @@ import {
   getWidgetDefinition,
   getChildConfig,
 } from "@/types/screen-types";
+import { getWidgetChildren } from "@/lib/widgetTreeUtils";
 import {
   VALIDATION_RULES,
   REQUIRED_PARENTS,
@@ -49,17 +50,19 @@ const isDescendant = (
   const source = findWidget(widgets, sourceId);
   if (!source) return false;
 
-  if (!source.children) return false;
+  const sourceChildren = getWidgetChildren(source);
+  if (sourceChildren.length === 0) return false;
 
   const traverse = (nodes: FlutterWidget[]): boolean => {
     for (const node of nodes) {
       if (node.id === targetId) return true;
-      if (node.children && traverse(node.children)) return true;
+      const children = getWidgetChildren(node);
+      if (children.length > 0 && traverse(children)) return true;
     }
     return false;
   };
 
-  return traverse(source.children);
+  return traverse(sourceChildren);
 };
 
 const findWidget = (
@@ -68,8 +71,9 @@ const findWidget = (
 ): FlutterWidget | undefined => {
   for (const w of widgets) {
     if (w.id === id) return w;
-    if (w.children) {
-      const found = findWidget(w.children, id);
+    const children = getWidgetChildren(w);
+    if (children.length > 0) {
+      const found = findWidget(children, id);
       if (found) return found;
     }
   }
@@ -268,7 +272,7 @@ export const validateDrop = (
     const currentCount = countDirectChildren(targetWidget);
     const alreadyChild =
       !!source.id &&
-      !!targetWidget.children?.some((child) => child.id === source.id);
+      !!getWidgetChildren(targetWidget).some((child) => child.id === source.id);
     const attemptedCount = currentCount + (alreadyChild ? 0 : 1);
 
     if (childConfig?.mode === "none" && attemptedCount > 0) {

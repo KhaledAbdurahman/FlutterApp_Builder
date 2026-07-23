@@ -3,7 +3,12 @@
 
 import { useCallback, useMemo, useState, type KeyboardEvent } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { DndContext, DragOverlay, pointerWithin } from "@dnd-kit/core";
+import {
+  DndContext,
+  DragOverlay,
+  pointerWithin,
+  useDroppable,
+} from "@dnd-kit/core";
 import {
   SortableContext,
   verticalListSortingStrategy,
@@ -17,6 +22,12 @@ import {
   getChildConfig,
   getWidgetDefinition,
 } from "@/types/screen-types";
+import {
+  VirtualTreeNode,
+  getTreeChildren,
+  getWidgetChildren,
+  isVirtualNode,
+} from "@/lib/widgetTreeUtils";
 import { cn } from "@/lib/utils";
 import * as LucideIcons from "lucide-react";
 import {
@@ -43,6 +54,51 @@ interface TreeNodeProps {
   siblingCount: number;
   onMove: (widgetId: string, parentId: string | null, index: number) => void;
 }
+
+interface SlotNodeProps {
+  slot: VirtualTreeNode;
+  depth: number;
+  parent: FlutterWidget;
+  onMove: (widgetId: string, parentId: string | null, index: number) => void;
+}
+
+const SlotTreeNode = ({ slot, depth, parent, onMove }: SlotNodeProps) => {
+  const { setNodeRef, isOver } = useDroppable({
+    id: slot.id,
+    data: { type: "slot", parentId: parent.id, slotKey: slot.slotKey },
+  });
+
+  return (
+    <div ref={setNodeRef} style={{ paddingLeft: `${depth * 16 + 28}px` }}>
+      <div
+        className={cn(
+          "relative flex items-center gap-2 py-2 px-2 rounded-md text-xs uppercase tracking-wide text-muted-foreground",
+          isOver && "bg-primary/10 ring-1 ring-primary/30",
+        )}
+      >
+        <span className="w-4" />
+        <span>itemTemplate</span>
+      </div>
+      {slot.child ? (
+        <SortableTreeNode
+          widget={slot.child}
+          depth={depth + 1}
+          parentId={parent.id}
+          index={0}
+          siblingCount={1}
+          onMove={onMove}
+        />
+      ) : (
+        <div
+          className="text-xs text-muted-foreground/70 italic"
+          style={{ paddingLeft: `${(depth + 1) * 16 + 28}px` }}
+        >
+          Empty
+        </div>
+      )}
+    </div>
+  );
+};
 
 // Draggable Node Component
 const SortableTreeNode = ({
@@ -78,7 +134,8 @@ const SortableTreeNode = ({
     : LucideIcons.Box;
 
   const [isExpanded, setIsExpanded] = useState(true);
-  const hasChildren = widget.children && widget.children.length > 0;
+  const childNodes = getTreeChildren(widget);
+  const hasChildren = childNodes.length > 0;
 
   const widgetText =
     typeof widget.props === "object" && widget.props && "text" in widget.props
@@ -88,7 +145,7 @@ const SortableTreeNode = ({
   // Explicit "empty parent" indicator to help drop
   const isEmptyContainer =
     definition?.childConfig.mode !== "none" &&
-    (!widget.children || widget.children.length === 0);
+    getWidgetChildren(widget).length === 0;
 
   return (
     <div ref={setNodeRef} style={style} {...attributes}>
@@ -180,17 +237,35 @@ const SortableTreeNode = ({
             exit={{ height: 0, opacity: 0 }}
             className="flex flex-col"
           >
-            {widget.children!.map((child, childIndex) => (
-              <SortableTreeNode
-                key={child.id}
-                widget={child}
-                depth={depth + 1}
-                parentId={widget.id}
-                index={childIndex}
-                siblingCount={widget.children!.length}
-                onMove={onMove}
-              />
-            ))}
+            {(() => {
+              const actualChildren = childNodes.filter(
+                (node): node is FlutterWidget => !isVirtualNode(node),
+              );
+
+              return childNodes.map((child) =>
+                isVirtualNode(child) ? (
+                  <SlotTreeNode
+                    key={child.id}
+                    slot={child}
+                    depth={depth + 1}
+                    parent={widget}
+                    onMove={onMove}
+                  />
+                ) : (
+                  <SortableTreeNode
+                    key={child.id}
+                    widget={child}
+                    depth={depth + 1}
+                    parentId={widget.id}
+                    index={actualChildren.findIndex(
+                      (node) => node.id === child.id,
+                    )}
+                    siblingCount={actualChildren.length}
+                    onMove={onMove}
+                  />
+                ),
+              );
+            })()}
           </motion.div>
         )}
       </AnimatePresence>
@@ -224,7 +299,8 @@ export const WidgetTree = () => {
     const traverse = (nodes: FlutterWidget[]) => {
       nodes.forEach((n) => {
         ids.push(n.id);
-        if (n.children) traverse(n.children);
+        const children = getWidgetChildren(n);
+        if (children.length > 0) traverse(children);
       });
     };
     if (screen) traverse(screen.components);
@@ -242,8 +318,9 @@ export const WidgetTree = () => {
         if (node.id === targetId) {
           return { parentId, index: i, length: nodes.length };
         }
-        if (node.children) {
-          const found = findParentInfo(node.children, targetId, node.id);
+        const children = getWidgetChildren(node);
+        if (children.length > 0) {
+          const found = findParentInfo(children, targetId, node.id);
           if (found) return found;
         }
       }
@@ -256,8 +333,9 @@ export const WidgetTree = () => {
     (nodes: FlutterWidget[], targetId: string): FlutterWidget | null => {
       for (const node of nodes) {
         if (node.id === targetId) return node;
-        if (node.children) {
-          const found = findWidgetById(node.children, targetId);
+        const children = getWidgetChildren(node);
+        if (children.length > 0) {
+          const found = findWidgetById(children, targetId);
           if (found) return found;
         }
       }
@@ -269,8 +347,11 @@ export const WidgetTree = () => {
   const handleMove = useCallback(
     (widgetId: string, parentId: string | null, nextIndex: number) => {
       if (!screen) return;
-      const siblingCount = parentId
-        ? findWidgetById(screen.components, parentId)?.children?.length
+      const parentWidget = parentId
+        ? findWidgetById(screen.components, parentId)
+        : null;
+      const siblingCount = parentWidget
+        ? getWidgetChildren(parentWidget).length
         : screen.components.length;
       if (!siblingCount) return;
       if (nextIndex < 0 || nextIndex > siblingCount) return;
@@ -324,8 +405,7 @@ export const WidgetTree = () => {
           if (
             !error &&
             targetConfig?.mode === "single" &&
-            targetParent.children &&
-            targetParent.children.length > 0
+            getWidgetChildren(targetParent).length > 0
           ) {
             error = `${targetParent.type} allows only one child and is already occupied.`;
           }
@@ -395,8 +475,7 @@ export const WidgetTree = () => {
       if (
         !error &&
         targetConfig?.mode === "single" &&
-        target.children &&
-        target.children.length > 0
+        getWidgetChildren(target).length > 0
       ) {
         error = `${target.type} allows only one child and is already occupied.`;
       }

@@ -9,6 +9,7 @@ import {
   getWidgetDefinition,
   resolveWidgetProps,
 } from "@/types/screen-types";
+import { getChildSlots, getWidgetChildren } from "@/lib/widgetTreeUtils";
 import { SavedProject, ProjectJsonData } from "@/lib/api";
 
 interface BuilderState {
@@ -172,8 +173,9 @@ const findWidgetById = (
 ): FlutterWidget | undefined => {
   for (const widget of widgets) {
     if (widget.id === id) return widget;
-    if (widget.children) {
-      const found = findWidgetById(widget.children, id);
+    const children = getWidgetChildren(widget);
+    if (children.length > 0) {
+      const found = findWidgetById(children, id);
       if (found) return found;
     }
   }
@@ -189,10 +191,20 @@ const findAndUpdateWidget = (
     if (widget.id === id) {
       return updater(widget);
     }
-    if (widget.children) {
+    const updatedChildren = widget.children
+      ? findAndUpdateWidget(widget.children, id, updater)
+      : widget.children;
+    const updatedTemplate = widget.itemTemplate
+      ? findAndUpdateWidget([widget.itemTemplate], id, updater)[0]
+      : widget.itemTemplate;
+    if (
+      updatedChildren !== widget.children ||
+      updatedTemplate !== widget.itemTemplate
+    ) {
       return {
         ...widget,
-        children: findAndUpdateWidget(widget.children, id, updater),
+        children: updatedChildren,
+        itemTemplate: updatedTemplate,
       };
     }
     return widget;
@@ -210,6 +222,11 @@ const removeWidgetById = (
       children: widget.children
         ? removeWidgetById(widget.children, id)
         : undefined,
+      itemTemplate: widget.itemTemplate
+        ? widget.itemTemplate.id === id
+          ? undefined
+          : removeWidgetById([widget.itemTemplate], id)[0]
+        : widget.itemTemplate,
     }));
 };
 
@@ -221,6 +238,16 @@ const addWidgetToParent = (
 ): FlutterWidget[] => {
   return widgets.map((widget) => {
     if (widget.id === parentId) {
+      const slots = getChildSlots(widget.type);
+      const hasItemTemplateSlot = slots.some(
+        (slot) => slot.key === "itemTemplate",
+      );
+      const hasChildrenSlot = slots.some((slot) => slot.key === "children");
+
+      if (hasItemTemplateSlot && !hasChildrenSlot) {
+        return { ...widget, itemTemplate: newWidget };
+      }
+
       const children = widget.children || [];
       const newChildren =
         index !== undefined
@@ -228,15 +255,20 @@ const addWidgetToParent = (
           : [...children, newWidget];
       return { ...widget, children: newChildren };
     }
-    if (widget.children) {
+    const updatedChildren = widget.children
+      ? addWidgetToParent(widget.children, parentId, newWidget, index)
+      : widget.children;
+    const updatedTemplate = widget.itemTemplate
+      ? addWidgetToParent([widget.itemTemplate], parentId, newWidget, index)[0]
+      : widget.itemTemplate;
+    if (
+      updatedChildren !== widget.children ||
+      updatedTemplate !== widget.itemTemplate
+    ) {
       return {
         ...widget,
-        children: addWidgetToParent(
-          widget.children,
-          parentId,
-          newWidget,
-          index,
-        ),
+        children: updatedChildren,
+        itemTemplate: updatedTemplate,
       };
     }
     return widget;
@@ -358,11 +390,14 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
   addWidget: (type, parentId) => {
     const definition = getWidgetDefinition(type);
     const childMode = definition?.childConfig.mode;
+    const childSlots = getChildSlots(type);
+    const hasChildrenSlot = childSlots.some((slot) => slot.key === "children");
     const newWidget = {
       id: uuidv4(),
       type,
       props: resolveWidgetProps(type, definition?.defaultProps),
-      children: childMode && childMode !== "none" ? [] : undefined,
+      children:
+        childMode && childMode !== "none" && hasChildrenSlot ? [] : undefined,
     } as FlutterWidget;
 
     if (type === "Drawer") {

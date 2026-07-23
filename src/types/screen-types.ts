@@ -201,6 +201,15 @@ export type WidgetCategory = "layout" | "content" | "input" | "navigation";
 
 export type ChildCardinality = "none" | "single" | "multiple";
 
+export type ChildSlotKey = "children" | "itemTemplate";
+
+export type ChildSlotMode = "single" | "multiple";
+
+export interface ChildSlot {
+  key: ChildSlotKey;
+  mode: ChildSlotMode;
+}
+
 export type ChildConfig = {
   mode: ChildCardinality;
   maxChildren?: number;
@@ -214,6 +223,7 @@ export type WidgetDefinition<K extends ComponentType = ComponentType> = {
   category: WidgetCategory;
   canHaveChildren: boolean;
   childConfig: ChildConfig;
+  childSlots?: ChildSlot[];
   defaultProps: ComponentPropsByType[K];
 };
 
@@ -432,7 +442,8 @@ export const WIDGET_DEFINITIONS: WidgetDefinition[] = [
     icon: "List",
     category: "layout",
     canHaveChildren: true,
-    childConfig: { mode: "multiple" },
+    childConfig: { mode: "single" },
+    childSlots: [{ key: "itemTemplate", mode: "single" }],
     defaultProps: DEFAULT_COMPONENT_PROPS.ListView,
   },
   {

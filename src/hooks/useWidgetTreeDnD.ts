@@ -23,6 +23,7 @@ import {
   TreeMoveType,
 } from "@/dnd/treeValidationAdapters";
 import { FlutterWidget, getWidgetDefinition } from "@/types/screen-types";
+import { getWidgetChildren } from "@/lib/widgetTreeUtils";
 
 // --- Utility: Recursion helpers ---
 
@@ -36,8 +37,9 @@ const findWidgetWithMeta = (
     if (nodes[i].id === id) {
       return { widget: nodes[i], parentId, index: i };
     }
-    if (nodes[i].children) {
-      const found = findWidgetWithMeta(nodes[i].children!, id, nodes[i].id);
+    const children = getWidgetChildren(nodes[i]);
+    if (children.length > 0) {
+      const found = findWidgetWithMeta(children, id, nodes[i].id);
       if (found) return found;
     }
   }
@@ -205,8 +207,24 @@ export const useWidgetTreeDnD = ({ onCommit }: UseWidgetTreeDnDProps = {}) => {
     const nodes = screen.components;
 
     const sourceMeta = findWidgetWithMeta(nodes, active.id as string);
+    const overData = over.data.current as
+      | { type?: string; parentId?: string }
+      | undefined;
+
+    if (!sourceMeta) return;
+
+    if (overData?.type === "slot" && overData.parentId) {
+      const parentMeta = findWidgetWithMeta(nodes, overData.parentId);
+      if (!parentMeta) return;
+      showDndToast(
+        `Drop ${getWidgetLabel(sourceMeta.widget)} into itemTemplate of ${getWidgetLabel(parentMeta.widget)}`,
+        1200,
+      );
+      return;
+    }
+
     const targetMeta = findWidgetWithMeta(nodes, over.id as string);
-    if (!sourceMeta || !targetMeta) return;
+    if (!targetMeta) return;
 
     const targetDef = getWidgetDefinition(targetMeta.widget.type);
     const verb = targetDef?.childConfig.mode !== "none" ? "into" : "after";
@@ -293,13 +311,19 @@ export const useWidgetTreeDnD = ({ onCommit }: UseWidgetTreeDnDProps = {}) => {
 
     const sourceId = active.id as string;
     const targetId = over.id as string;
+    const overData = over.data.current as
+      | { type?: string; parentId?: string }
+      | undefined;
 
     const screen = getActiveScreen();
     if (!screen) return;
     const nodes = screen.components;
 
     const sourceMeta = findWidgetWithMeta(nodes, sourceId);
-    const targetMeta = findWidgetWithMeta(nodes, targetId);
+    const targetMeta =
+      overData?.type === "slot" && overData.parentId
+        ? findWidgetWithMeta(nodes, overData.parentId)
+        : findWidgetWithMeta(nodes, targetId);
 
     if (!sourceMeta || !targetMeta) return;
 
@@ -307,7 +331,7 @@ export const useWidgetTreeDnD = ({ onCommit }: UseWidgetTreeDnDProps = {}) => {
     let intent: TreeMoveIntent = {
       movedWidgetId: sourceId,
       movedWidgetType: sourceMeta.widget.type,
-      targetWidgetId: targetId,
+      targetWidgetId: targetMeta.widget.id,
       targetWidgetType: targetMeta.widget.type,
       action: "after", // Default to reorder/sibling
     };
@@ -319,6 +343,10 @@ export const useWidgetTreeDnD = ({ onCommit }: UseWidgetTreeDnDProps = {}) => {
     // Check if target is a valid container that might be empty or explicitly targeted
     if (canHaveChildren) {
       // If dropping onto a container, we assume intent is to nest inside it
+      intent.action = "inside";
+    }
+
+    if (overData?.type === "slot") {
       intent.action = "inside";
     }
 

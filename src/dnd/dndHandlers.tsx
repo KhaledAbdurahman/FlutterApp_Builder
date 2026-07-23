@@ -14,6 +14,7 @@ import {
   getChildConfig,
 } from "@/types/screen-types";
 import { countDirectChildren } from "./childCounts";
+import { getWidgetChildren } from "@/lib/widgetTreeUtils";
 
 const RESERVED_SCAFFOLD_TYPES: WidgetType[] = [
   "AppBar",
@@ -51,8 +52,9 @@ const findWidgetById = (
 ): FlutterWidget | null => {
   for (const node of nodes) {
     if (node.id === id) return node;
-    if (node.children) {
-      const found = findWidgetById(node.children, id);
+    const children = getWidgetChildren(node);
+    if (children.length > 0) {
+      const found = findWidgetById(children, id);
       if (found) return found;
     }
   }
@@ -158,11 +160,12 @@ export const useDnDHandlers = () => {
       getParent: (widgetId: string) => {
         const findParent = (nodes: FlutterWidget[]): FlutterWidget | null => {
           for (const node of nodes) {
-            if (node.children?.some((child) => child.id === widgetId)) {
+            const children = getWidgetChildren(node);
+            if (children.some((child) => child.id === widgetId)) {
               return node;
             }
-            if (node.children) {
-              const found = findParent(node.children);
+            if (children.length > 0) {
+              const found = findParent(children);
               if (found) return found;
             }
           }
