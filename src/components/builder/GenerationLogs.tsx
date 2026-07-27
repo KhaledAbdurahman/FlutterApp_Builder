@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   FileText,
   RefreshCw,
@@ -11,20 +11,21 @@ import {
   Play,
   Package,
   Monitor,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Badge } from "@/components/ui/badge";
-import { getProjectLogs, GenerationLog } from "@/lib/api";
-import { useBuilderStore } from "@/store/builderStore";
-import { format, isValid } from "date-fns";
+} from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Badge } from '@/components/ui/badge';
+import { PROJECT_SERVICE } from '@/api/projects';
+import type { IProjectGenerationLog } from '@/types/api/project-types';
+import { useBuilderStore } from '@/store/builderStore';
+import { format, isValid } from 'date-fns';
 
 interface GenerationLogsProps {
   open: boolean;
@@ -32,12 +33,12 @@ interface GenerationLogsProps {
 }
 
 const getStatusIcon = (status?: string) => {
-  switch ((status || "info").toLowerCase()) {
-    case "error":
+  switch ((status || 'info').toLowerCase()) {
+    case 'error':
       return <AlertCircle className="w-4 h-4 text-destructive" />;
-    case "warning":
+    case 'warning':
       return <AlertTriangle className="w-4 h-4 text-amber-500" />;
-    case "success":
+    case 'success':
       return <CheckCircle className="w-4 h-4 text-emerald-500" />;
     default:
       return <Info className="w-4 h-4 text-blue-500" />;
@@ -45,13 +46,13 @@ const getStatusIcon = (status?: string) => {
 };
 
 const getStatusBadge = (status?: string) => {
-  const value = (status || "info").toLowerCase();
+  const value = (status || 'info').toLowerCase();
   switch (value) {
-    case "error":
+    case 'error':
       return <Badge variant="destructive">{value}</Badge>;
-    case "warning":
+    case 'warning':
       return <Badge className="bg-amber-500">{value}</Badge>;
-    case "success":
+    case 'success':
       return <Badge className="bg-emerald-500">{value}</Badge>;
     default:
       return <Badge variant="secondary">{value}</Badge>;
@@ -59,33 +60,33 @@ const getStatusBadge = (status?: string) => {
 };
 
 const getStepIcon = (step?: string) => {
-  const normalized = (step || "").toLowerCase();
-  if (normalized.includes("start")) {
+  const normalized = (step || '').toLowerCase();
+  if (normalized.includes('start')) {
     return <Play className="w-4 h-4 text-muted-foreground" />;
   }
-  if (normalized.includes("build_apk")) {
+  if (normalized.includes('build_apk')) {
     return <Package className="w-4 h-4 text-muted-foreground" />;
   }
-  if (normalized.includes("preview")) {
+  if (normalized.includes('preview')) {
     return <Monitor className="w-4 h-4 text-muted-foreground" />;
   }
-  if (normalized.includes("generate")) {
+  if (normalized.includes('generate')) {
     return <FileText className="w-4 h-4 text-muted-foreground" />;
   }
   return <Info className="w-4 h-4 text-muted-foreground" />;
 };
 
 const formatTimestamp = (timestamp?: string) => {
-  if (!timestamp) return "Unknown time";
+  if (!timestamp) return 'Unknown time';
   const date = new Date(timestamp);
-  if (!isValid(date)) return "Unknown time";
-  return format(date, "PPp");
+  if (!isValid(date)) return 'Unknown time';
+  return format(date, 'PPp');
 };
 
 export const GenerationLogs = ({ open, onOpenChange }: GenerationLogsProps) => {
   const { serverProjectId } = useBuilderStore();
 
-  const [logs, setLogs] = useState<GenerationLog[]>([]);
+  const [logs, setLogs] = useState<IProjectGenerationLog[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -95,13 +96,12 @@ export const GenerationLogs = ({ open, onOpenChange }: GenerationLogsProps) => {
     setIsLoading(true);
     setError(null);
     try {
-      const data = await getProjectLogs(serverProjectId);
+      const data = await PROJECT_SERVICE.getGenerationLogs(serverProjectId);
       setLogs(Array.isArray(data) ? data : []);
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Failed to load logs";
+      const message = err instanceof Error ? err.message : 'Failed to load logs';
       setError(message);
-      console.error("Failed to fetch logs:", err);
+      console.error('Failed to fetch logs:', err);
     } finally {
       setIsLoading(false);
     }
@@ -131,9 +131,7 @@ export const GenerationLogs = ({ open, onOpenChange }: GenerationLogsProps) => {
         ) : (
           <>
             <div className="flex items-center justify-between mb-4">
-              <span className="text-sm text-muted-foreground">
-                {logs.length} log(s) found
-              </span>
+              <span className="text-sm text-muted-foreground">{logs.length} log(s) found</span>
               <Button
                 variant="ghost"
                 size="sm"
@@ -141,9 +139,7 @@ export const GenerationLogs = ({ open, onOpenChange }: GenerationLogsProps) => {
                 disabled={isLoading}
                 className="gap-2"
               >
-                <RefreshCw
-                  className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`}
-                />
+                <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
                 Refresh
               </Button>
             </div>
@@ -165,15 +161,13 @@ export const GenerationLogs = ({ open, onOpenChange }: GenerationLogsProps) => {
                   <div className="text-center py-12 text-muted-foreground">
                     <FileText className="w-12 h-12 mx-auto mb-2 opacity-50" />
                     <p>No generation logs yet</p>
-                    <p className="text-xs mt-1">
-                      Generate your app to see logs here
-                    </p>
+                    <p className="text-xs mt-1">Generate your app to see logs here</p>
                   </div>
                 ) : (
                   <div className="space-y-2">
                     {logs.map((log, index) => (
                       <motion.div
-                        key={`${log.step || "log"}-${log.timestamp || index}-${index}`}
+                        key={`${log.step || 'log'}-${log.timestamp || index}-${index}`}
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95 }}
@@ -186,7 +180,7 @@ export const GenerationLogs = ({ open, onOpenChange }: GenerationLogsProps) => {
                               {getStatusBadge(log.status)}
                               <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                                 {getStepIcon(log.step)}
-                                {log.step || "unknown_step"}
+                                {log.step || 'unknown_step'}
                               </span>
                               <span className="text-xs text-muted-foreground">
                                 {formatTimestamp(log.timestamp)}

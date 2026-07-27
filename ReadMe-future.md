@@ -56,13 +56,17 @@ src/
 │       └── routes/
 │           └── example.route.ts
 ├── api/                    # Shared API services
-├── assets/
 ├── components/
 ├── config/
-│   └── api/                # API client, base methods, and handlers
-│       ├── api-client.ts
-│       ├── base-methods.ts
-│       └── handlers/
+│   ├── api/                # API client, base methods, and API handlers
+│   │   ├── api-client.ts
+│   │   ├── api-endpoints.ts
+│   │   ├── base-http-methods.ts
+│   │   ├── ihandler.ts
+│   │   ├── iresource-handler.ts
+│   │   └── resource-handler.ts
+│   └── redux/
+│       └── store.ts
 ├── hooks/
 ├── lib/
 ├── pages/
@@ -76,6 +80,7 @@ src/
 │       └── api/
 ├── stores/
 ├── types/
+│   └── api/                # Shared API contracts, grouped by service
 ├── utils/
 ├── index.css
 └── main.tsx
@@ -137,9 +142,17 @@ Naming should be clear and avoid abbreviations.
 | Functions            | camelCase            | `function getWorkspaceDetails()`       |
 | Variables (`let`)    | camelCase            | `let currentIndex = 0`                 |
 | Parameters           | camelCase            | `(requestId: string)`                  |
-| Types / Interfaces   | PascalCase           | `interface ApiRequest`                 |
+| Types / Interfaces   | `I` + PascalCase     | `interface IApiRequest`                |
 | API interface fields | snake_case           | `{ created_at: string }`               |
 | Classes              | PascalCase           | `class ExampleWorkFlow`                |
+
+### Base HTTP Method Names
+
+`src/config/api/base-http-methods.ts` is a shared API boundary. Its exported
+method names are fixed as `Get`, `Post`, `Patch`, and `Delete`. This is a
+deliberate exception to the general camelCase function rule: these names mirror
+the HTTP verbs and are imported throughout the service layer. Do not rename,
+alias, or recase them without a deliberate, coordinated API migration.
 
 ## Enforcement
 
@@ -153,6 +166,8 @@ These rules should be enforced with tooling instead of relying on memory:
 - Commitlint for commit message rules.
 
 The scripts should be run by Husky.
+
+Static assets should live in `public/`, not in `src/assets/`.
 
 ## Target Tech Stack
 
@@ -197,10 +212,11 @@ Infrastructure lives in `src/config/api/`:
 
 - `api-client.ts`: Axios client setup, base URL, auth header injection, and
   shared response behavior.
-- `base-methods.ts`: High-level `get`, `post`, `put`, and `delete` wrappers.
-  The file name can change later if a clearer name appears.
-- Handler files: `IHandler`, `IResourceHandler`, `ResourceHandler`, and related
-  shared API abstractions.
+- `api-endpoints.ts`: Shared API endpoint path names.
+- `base-http-methods.ts`: High-level `Get`, `Post`, `Patch`, and `Delete`
+  wrappers.
+- Handler files live directly in `src/config/api/`: `IHandler`,
+  `IResourceHandler`, `ResourceHandler`, and related shared API abstractions.
 
 Services live in `src/api/`.
 
@@ -208,8 +224,22 @@ Page-specific API calls can live inside `src/pages/<page-name>/api/` when they
 only belong to one page. The duplication rule is disabled for APIs: if two pages
 use the same API, move it to `src/api/` with its tests and interfaces.
 
-Create API endpoint path names as an enum. Then create base methods for all HTTP
-methods except PATCH. Updates should always use `PUT`.
+Create API endpoint path names as an enum. Dynamic endpoint paths use an `{id}`
+placeholder and are resolved by one shared helper so services do not each invent
+their own URL string format. Updates should always use `PATCH`.
+
+Service contracts live in `src/types/api/`. Each type file belongs to one API
+service and contains only the contracts used by that service. This gives every
+consumer one stable import path without coupling it to a service implementation.
+Types and
+interfaces use the `I` prefix. Small local-only contracts with three properties
+or fewer may stay in their logic file; extract them once they are shared or
+become harder to scan in place.
+
+`src/app/error-handlers/api-response-errors.ts` translates transport failures
+into one application error shape. It is the narrow exception to the usual
+shared-to-app import rule because API infrastructure needs that policy but the
+handler has no page or UI dependency.
 
 Each base method should:
 
@@ -233,8 +263,8 @@ operations: `getAll`, `getById`, `create`, `update`, and `delete`.
 `ResourceHandler` should accept type/interface arguments as follows:
 
 - `EndpointResponse`: used for `getAll` and `getById`.
-- `EndpointRequest`: used for `POST` and `PUT` when both request bodies match.
-- `EndpointUpdateRequest`: used for `PUT` requests when create and update
+- `EndpointRequest`: used for `POST` and `PATCH` when both request bodies match.
+- `EndpointUpdateRequest`: used for `PATCH` requests when create and update
   request bodies differ.
 - `EndpointDetailedResponse`: used for `getById` when the detailed response
   differs from the list response.
@@ -245,13 +275,13 @@ Each API group should expose a singleton instance:
 
 ```ts
 class ComponentService extends ResourceHandler<
-  ComponentResponse,
-  ComponentRequest,
-  ComponentUpdateRequest,
-  ComponentDetailedResponse
+  IComponentResponse,
+  IComponentRequest,
+  IComponentUpdateRequest,
+  IComponentDetailedResponse
 > {
   constructor() {
-    super(ApiEndpointPathNames.COMPONENTS);
+    super(ApiEndpointPathnames.COMPONENTS);
   }
 }
 
@@ -260,22 +290,31 @@ const COMPONENT_SERVICE = new ComponentService();
 export { COMPONENT_SERVICE };
 ```
 
+### Singleton Export Names
+
+Prefer `SCREAMING_SNAKE_CASE` names ending in `_SERVICE`, such as
+`COMPONENT_SERVICE` and `PROJECT_SERVICE`, for new API service singletons. The
+identifier in the `const` declaration and the named export must be identical.
+Once consumers import a singleton, its name is a public API surface: preserve
+that name or make any rename as one coordinated change, never through an export
+alias that leaves consumers guessing which name is canonical.
+
 Custom API actions should live as public async methods on the service class.
 
 Example:
 
 ```ts
 class ProjectService extends ResourceHandler<
-  ProjectResponse,
-  ProjectRequest,
-  ProjectUpdateRequest,
-  ProjectDetailedResponse
+  IProjectResponse,
+  IProjectRequest,
+  IProjectUpdateRequest,
+  IProjectDetailedResponse
 > {
   constructor() {
-    super(ApiEndpointPathNames.PROJECTS);
+    super(ApiEndpointPathnames.PROJECTS);
   }
 
-  public async generateFlutterApplication(): Promise<GenerateFlutterResponse> {
+  public async generateFlutterApplication(): Promise<IGenerateFlutterResponse> {
     // TODO: Implement after reviewing the final backend behavior.
   }
 }
@@ -425,7 +464,8 @@ As of this draft:
 - `package.json` has been moved to React 19.
 - `@/` absolute imports are already configured in `tsconfig.app.json`.
 - Current routing lives in `src/App.tsx` with `react-router-dom`.
-- Current API calls use `fetch` in `src/lib/api.ts`.
+- Live API calls use services in `src/api/`, backed by the shared Axios
+  infrastructure in `src/config/api/`.
 - Current global builder state uses Zustand in `src/store/builderStore.ts`.
 - Current styling is Tailwind plus global CSS.
 - `src/dnd/validateDrop.test.ts` already exists, so the project has at least one
@@ -451,7 +491,7 @@ As of this draft:
 - Backend auth uses token headers with `Token` as the prefix.
 - API infrastructure should live in `src/config/api/`; API services should live
   in `src/api/`.
-- API updates should always use `PUT`, not `PATCH`.
+- API updates should always use `PATCH`, not `PUT`.
 - API list endpoints should return arrays of the response type.
 - Custom API actions should live as public async service methods.
 - API tests should use real API endpoints and should be added after each page

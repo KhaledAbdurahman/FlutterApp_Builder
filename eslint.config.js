@@ -11,9 +11,9 @@ import tseslint from 'typescript-eslint';
 const SRC_ROOT = 'src';
 const PAGE_ROOT = `${SRC_ROOT}/pages`;
 const APP_ROOT = `${SRC_ROOT}/app`;
+const APP_ERROR_HANDLERS_ROOT = `${APP_ROOT}/error-handlers/`;
 const SHARED_ROOTS = new Set([
   'api',
-  'assets',
   'components',
   'config',
   'hooks',
@@ -93,7 +93,10 @@ const architecture = {
             }
 
             if (sourceSharedRoot) {
-              if (importedPath.startsWith(`${APP_ROOT}/`)) {
+              if (
+                importedPath.startsWith(`${APP_ROOT}/`) &&
+                !importedPath.startsWith(APP_ERROR_HANDLERS_ROOT)
+              ) {
                 context.report({ node, messageId: 'sharedToApp' });
               }
 

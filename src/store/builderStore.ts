@@ -1,5 +1,5 @@
-import { create } from "zustand";
-import { v4 as uuidv4 } from "uuid";
+import { create } from 'zustand';
+import { v4 as uuidv4 } from 'uuid';
 import {
   FlutterWidget,
   Screen,
@@ -8,9 +8,9 @@ import {
   WidgetProps,
   getWidgetDefinition,
   resolveWidgetProps,
-} from "@/types/screen-types";
-import { getChildSlots, getWidgetChildren } from "@/lib/widgetTreeUtils";
-import { SavedProject, ProjectJsonData } from "@/lib/api";
+} from '@/types/screen-types';
+import { getChildSlots, getWidgetChildren } from '@/lib/widgetTreeUtils';
+import type { IProject, IProjectId, IProjectJsonData } from '@/types/api/project-types';
 
 interface BuilderState {
   project: Project;
@@ -19,7 +19,7 @@ interface BuilderState {
   activeScreenId: string;
   selectedWidgetId: string | null;
   isDragging: boolean;
-  serverProjectId: number | null;
+  serverProjectId: IProjectId | null;
 
   // Actions
   setActiveScreen: (screenId: string) => void;
@@ -32,12 +32,8 @@ interface BuilderState {
   updateWidget: (widgetId: string, updates: Partial<FlutterWidget>) => void;
   updateWidgetProps: (widgetId: string, props: Partial<WidgetProps>) => void;
   deleteWidget: (widgetId: string) => void;
-  importProjectData: (data: ProjectJsonData) => void;
-  moveWidget: (
-    widgetId: string,
-    newParentId: string | null,
-    index?: number,
-  ) => void;
+  importProjectData: (data: IProjectJsonData) => void;
+  moveWidget: (widgetId: string, newParentId: string | null, index?: number) => void;
   setScreenComponents: (components: FlutterWidget[]) => void;
   getActiveScreen: () => Screen | undefined;
   getWidgetById: (widgetId: string) => FlutterWidget | undefined;
@@ -46,8 +42,8 @@ interface BuilderState {
   setPackageName: (name: string) => void;
   setProjectDescription: (description: string) => void;
   exportProject: () => Project;
-  loadProject: (savedProject: SavedProject) => void;
-  setServerProjectId: (id: number | null) => void;
+  loadProject: (savedProject: IProject) => void;
+  setServerProjectId: (id: IProjectId | null) => void;
 }
 
 const applyDefaultsToWidget = (widget: FlutterWidget): FlutterWidget =>
@@ -56,29 +52,26 @@ const applyDefaultsToWidget = (widget: FlutterWidget): FlutterWidget =>
     props: resolveWidgetProps(widget.type, widget.props),
     children: widget.children?.map(applyDefaultsToWidget),
     itemTemplate:
-      widget.type === "ListView" && widget.itemTemplate
+      widget.type === 'ListView' && widget.itemTemplate
         ? applyDefaultsToWidget(widget.itemTemplate)
         : widget.itemTemplate,
   }) as FlutterWidget;
 
-const applyDefaultsToWidgets = (widgets: FlutterWidget[]) =>
-  widgets.map(applyDefaultsToWidget);
+const applyDefaultsToWidgets = (widgets: FlutterWidget[]) => widgets.map(applyDefaultsToWidget);
 
 const normalizeContainerLayoutValue = (value: unknown): number => {
-  if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (value === "auto") return 0;
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (value === 'auto') return 0;
   return 0;
 };
 
 const normalizeWidgetsForExport = (widgets: FlutterWidget[]): FlutterWidget[] =>
   widgets.map((widget) => {
-    const children = widget.children
-      ? normalizeWidgetsForExport(widget.children)
-      : undefined;
+    const children = widget.children ? normalizeWidgetsForExport(widget.children) : undefined;
 
-    if (widget.type !== "Container") {
+    if (widget.type !== 'Container') {
       const itemTemplate =
-        widget.type === "ListView" && widget.itemTemplate
+        widget.type === 'ListView' && widget.itemTemplate
           ? normalizeWidgetsForExport([widget.itemTemplate])[0]
           : widget.itemTemplate;
       return { ...widget, children, itemTemplate } as FlutterWidget;
@@ -94,63 +87,60 @@ const normalizeWidgetsForExport = (widgets: FlutterWidget[]): FlutterWidget[] =>
       : layout;
 
     const shouldOmitLayout =
-      !normalizedLayout ||
-      (normalizedLayout.w === 0 && normalizedLayout.h === 0);
+      !normalizedLayout || (normalizedLayout.w === 0 && normalizedLayout.h === 0);
     const { layout: _layout, ...restProps } = widget.props;
 
     return {
       ...widget,
-      props: shouldOmitLayout
-        ? restProps
-        : { ...restProps, layout: normalizedLayout },
+      props: shouldOmitLayout ? restProps : { ...restProps, layout: normalizedLayout },
       children,
     } as FlutterWidget;
   });
 
 const createDefaultScreen = (): Screen => ({
   id: uuidv4(),
-  name: "Home",
-  route: "/",
+  name: 'Home',
+  route: '/',
   is_home: true,
   components: applyDefaultsToWidgets([
     {
       id: uuidv4(),
-      type: "Scaffold",
-      props: { backgroundColor: "#FFFFFF" },
+      type: 'Scaffold',
+      props: { backgroundColor: '#FFFFFF' },
       children: [
         {
           id: uuidv4(),
-          type: "AppBar",
-          props: { title: "My App", backgroundColor: "#3B82F6" },
+          type: 'AppBar',
+          props: { title: 'My App', backgroundColor: '#3B82F6' },
         },
         {
           id: uuidv4(),
-          type: "Center",
+          type: 'Center',
           props: {},
           children: [
             {
               id: uuidv4(),
-              type: "Column",
-              props: { mainAxisAlignment: "center" },
+              type: 'Column',
+              props: { mainAxisAlignment: 'center' },
               children: [
                 {
                   id: uuidv4(),
-                  type: "Text",
+                  type: 'Text',
                   props: {
-                    text: "Welcome to Flutter Builder!",
+                    text: 'Welcome to Flutter Builder!',
                     fontSize: 24,
-                    fontWeight: "bold",
+                    fontWeight: 'bold',
                   },
                 },
                 {
                   id: uuidv4(),
-                  type: "SizedBox",
+                  type: 'SizedBox',
                   props: { height: 20 },
                 },
                 {
                   id: uuidv4(),
-                  type: "Button",
-                  props: { text: "Get Started" },
+                  type: 'Button',
+                  props: { text: 'Get Started' },
                 },
               ],
             },
@@ -162,15 +152,12 @@ const createDefaultScreen = (): Screen => ({
 });
 
 const initialProject: Project = {
-  app_name: "my_flutter_app",
-  package_name: "com.example.myapp",
+  app_name: 'my_flutter_app',
+  package_name: 'com.example.myapp',
   screens: [createDefaultScreen()],
 };
 
-const findWidgetById = (
-  widgets: FlutterWidget[],
-  id: string,
-): FlutterWidget | undefined => {
+const findWidgetById = (widgets: FlutterWidget[], id: string): FlutterWidget | undefined => {
   for (const widget of widgets) {
     if (widget.id === id) return widget;
     const children = getWidgetChildren(widget);
@@ -197,10 +184,7 @@ const findAndUpdateWidget = (
     const updatedTemplate = widget.itemTemplate
       ? findAndUpdateWidget([widget.itemTemplate], id, updater)[0]
       : widget.itemTemplate;
-    if (
-      updatedChildren !== widget.children ||
-      updatedTemplate !== widget.itemTemplate
-    ) {
+    if (updatedChildren !== widget.children || updatedTemplate !== widget.itemTemplate) {
       return {
         ...widget,
         children: updatedChildren,
@@ -211,17 +195,12 @@ const findAndUpdateWidget = (
   });
 };
 
-const removeWidgetById = (
-  widgets: FlutterWidget[],
-  id: string,
-): FlutterWidget[] => {
+const removeWidgetById = (widgets: FlutterWidget[], id: string): FlutterWidget[] => {
   return widgets
     .filter((widget) => widget.id !== id)
     .map((widget) => ({
       ...widget,
-      children: widget.children
-        ? removeWidgetById(widget.children, id)
-        : undefined,
+      children: widget.children ? removeWidgetById(widget.children, id) : undefined,
       itemTemplate: widget.itemTemplate
         ? widget.itemTemplate.id === id
           ? undefined
@@ -239,10 +218,8 @@ const addWidgetToParent = (
   return widgets.map((widget) => {
     if (widget.id === parentId) {
       const slots = getChildSlots(widget.type);
-      const hasItemTemplateSlot = slots.some(
-        (slot) => slot.key === "itemTemplate",
-      );
-      const hasChildrenSlot = slots.some((slot) => slot.key === "children");
+      const hasItemTemplateSlot = slots.some((slot) => slot.key === 'itemTemplate');
+      const hasChildrenSlot = slots.some((slot) => slot.key === 'children');
 
       if (hasItemTemplateSlot && !hasChildrenSlot) {
         return { ...widget, itemTemplate: newWidget };
@@ -261,10 +238,7 @@ const addWidgetToParent = (
     const updatedTemplate = widget.itemTemplate
       ? addWidgetToParent([widget.itemTemplate], parentId, newWidget, index)[0]
       : widget.itemTemplate;
-    if (
-      updatedChildren !== widget.children ||
-      updatedTemplate !== widget.itemTemplate
-    ) {
+    if (updatedChildren !== widget.children || updatedTemplate !== widget.itemTemplate) {
       return {
         ...widget,
         children: updatedChildren,
@@ -278,14 +252,13 @@ const addWidgetToParent = (
 export const useBuilderStore = create<BuilderState>((set, get) => ({
   project: initialProject,
   projectTitle: initialProject.app_name,
-  projectDescription: "",
+  projectDescription: '',
   activeScreenId: initialProject.screens[0].id,
   selectedWidgetId: null,
   isDragging: false,
   serverProjectId: null,
 
-  setActiveScreen: (screenId) =>
-    set({ activeScreenId: screenId, selectedWidgetId: null }),
+  setActiveScreen: (screenId) => set({ activeScreenId: screenId, selectedWidgetId: null }),
 
   setSelectedWidget: (widgetId) => set({ selectedWidgetId: widgetId }),
 
@@ -303,11 +276,11 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
 
     set({
       project: {
-        app_name: data.app_name || "My App",
-        package_name: data.package_name || "com.example.app",
+        app_name: data.app_name || 'My App',
+        package_name: data.package_name || 'com.example.app',
         screens: normalizedScreens,
       },
-      projectTitle: data.app_name || "My App",
+      projectTitle: data.app_name || 'My App',
       activeScreenId: normalizedScreens[0].id,
       selectedWidgetId: null,
       serverProjectId: null,
@@ -328,11 +301,11 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
     set({
       project: {
         app_name: jsonData.app_name || savedProject.name,
-        package_name: jsonData.package_name || "com.example.app",
+        package_name: jsonData.package_name || 'com.example.app',
         screens: normalizedScreens,
       },
       projectTitle: savedProject.name || jsonData.app_name,
-      projectDescription: savedProject.description || "",
+      projectDescription: savedProject.description || '',
       activeScreenId: normalizedScreens[0].id,
       selectedWidgetId: null,
       serverProjectId: savedProject.id,
@@ -343,7 +316,7 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
     const newScreen: Screen = {
       id: uuidv4(),
       name,
-      route: `/${name.toLowerCase().replace(/\s+/g, "-")}`,
+      route: `/${name.toLowerCase().replace(/\s+/g, '-')}`,
       is_home: false,
       components: [],
     };
@@ -379,7 +352,7 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
             ? {
                 ...s,
                 name: newName,
-                route: `/${newName.toLowerCase().replace(/\s+/g, "-")}`,
+                route: `/${newName.toLowerCase().replace(/\s+/g, '-')}`,
               }
             : s,
         ),
@@ -391,39 +364,32 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
     const definition = getWidgetDefinition(type);
     const childMode = definition?.childConfig.mode;
     const childSlots = getChildSlots(type);
-    const hasChildrenSlot = childSlots.some((slot) => slot.key === "children");
+    const hasChildrenSlot = childSlots.some((slot) => slot.key === 'children');
     const newWidget = {
       id: uuidv4(),
       type,
       props: resolveWidgetProps(type, definition?.defaultProps),
-      children:
-        childMode && childMode !== "none" && hasChildrenSlot ? [] : undefined,
+      children: childMode && childMode !== 'none' && hasChildrenSlot ? [] : undefined,
     } as FlutterWidget;
 
-    if (type === "Drawer") {
+    if (type === 'Drawer') {
       newWidget.children = [
         {
           id: uuidv4(),
-          type: "Column",
-          props: resolveWidgetProps("Column", undefined as any),
+          type: 'Column',
+          props: resolveWidgetProps('Column', undefined),
           children: [],
         } as FlutterWidget,
       ];
     }
 
     set((state) => {
-      const screen = state.project.screens.find(
-        (s) => s.id === state.activeScreenId,
-      );
+      const screen = state.project.screens.find((s) => s.id === state.activeScreenId);
       if (!screen) return state;
 
       let newComponents: FlutterWidget[];
       if (parentId) {
-        newComponents = addWidgetToParent(
-          screen.components,
-          parentId,
-          newWidget,
-        );
+        newComponents = addWidgetToParent(screen.components, parentId, newWidget);
       } else {
         newComponents = [...screen.components, newWidget];
       }
@@ -432,9 +398,7 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
         project: {
           ...state.project,
           screens: state.project.screens.map((s) =>
-            s.id === state.activeScreenId
-              ? { ...s, components: newComponents }
-              : s,
+            s.id === state.activeScreenId ? { ...s, components: newComponents } : s,
           ),
         },
         selectedWidgetId: newWidget.id,
@@ -444,9 +408,7 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
 
   updateWidget: (widgetId, updates) => {
     set((state) => {
-      const screen = state.project.screens.find(
-        (s) => s.id === state.activeScreenId,
-      );
+      const screen = state.project.screens.find((s) => s.id === state.activeScreenId);
       if (!screen) return state;
 
       const newComponents = findAndUpdateWidget(
@@ -463,9 +425,7 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
         project: {
           ...state.project,
           screens: state.project.screens.map((s) =>
-            s.id === state.activeScreenId
-              ? { ...s, components: newComponents }
-              : s,
+            s.id === state.activeScreenId ? { ...s, components: newComponents } : s,
           ),
         },
       };
@@ -474,27 +434,19 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
 
   updateWidgetProps: (widgetId, props) => {
     set((state) => {
-      const screen = state.project.screens.find(
-        (s) => s.id === state.activeScreenId,
-      );
+      const screen = state.project.screens.find((s) => s.id === state.activeScreenId);
       if (!screen) return state;
 
-      const newComponents = findAndUpdateWidget(
-        screen.components,
-        widgetId,
-        (widget) => ({
-          ...widget,
-          props: { ...widget.props, ...props },
-        }),
-      );
+      const newComponents = findAndUpdateWidget(screen.components, widgetId, (widget) => ({
+        ...widget,
+        props: { ...widget.props, ...props },
+      }));
 
       return {
         project: {
           ...state.project,
           screens: state.project.screens.map((s) =>
-            s.id === state.activeScreenId
-              ? { ...s, components: newComponents }
-              : s,
+            s.id === state.activeScreenId ? { ...s, components: newComponents } : s,
           ),
         },
       };
@@ -503,9 +455,7 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
 
   deleteWidget: (widgetId) => {
     set((state) => {
-      const screen = state.project.screens.find(
-        (s) => s.id === state.activeScreenId,
-      );
+      const screen = state.project.screens.find((s) => s.id === state.activeScreenId);
       if (!screen) return state;
 
       return {
@@ -517,17 +467,14 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
               : s,
           ),
         },
-        selectedWidgetId:
-          state.selectedWidgetId === widgetId ? null : state.selectedWidgetId,
+        selectedWidgetId: state.selectedWidgetId === widgetId ? null : state.selectedWidgetId,
       };
     });
   },
 
   moveWidget: (widgetId, newParentId, index) => {
     set((state) => {
-      const screen = state.project.screens.find(
-        (s) => s.id === state.activeScreenId,
-      );
+      const screen = state.project.screens.find((s) => s.id === state.activeScreenId);
       if (!screen) return state;
 
       const widget = findWidgetById(screen.components, widgetId);
@@ -536,19 +483,10 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
       let newComponents = removeWidgetById(screen.components, widgetId);
 
       if (newParentId) {
-        newComponents = addWidgetToParent(
-          newComponents,
-          newParentId,
-          widget,
-          index,
-        );
+        newComponents = addWidgetToParent(newComponents, newParentId, widget, index);
       } else {
         if (index !== undefined) {
-          newComponents = [
-            ...newComponents.slice(0, index),
-            widget,
-            ...newComponents.slice(index),
-          ];
+          newComponents = [...newComponents.slice(0, index), widget, ...newComponents.slice(index)];
         } else {
           newComponents = [...newComponents, widget];
         }
@@ -558,9 +496,7 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
         project: {
           ...state.project,
           screens: state.project.screens.map((s) =>
-            s.id === state.activeScreenId
-              ? { ...s, components: newComponents }
-              : s,
+            s.id === state.activeScreenId ? { ...s, components: newComponents } : s,
           ),
         },
       };
@@ -603,8 +539,7 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
       project: { ...state.project, package_name: name },
     })),
 
-  setProjectDescription: (description) =>
-    set({ projectDescription: description }),
+  setProjectDescription: (description) => set({ projectDescription: description }),
 
   exportProject: () => {
     const state = get();

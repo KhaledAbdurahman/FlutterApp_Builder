@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { motion } from "framer-motion";
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { motion } from 'framer-motion';
 import {
   Play,
   Download,
@@ -15,40 +15,33 @@ import {
   Save,
   BookOpen,
   Upload,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
+} from '@/components/ui/dropdown-menu';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
-import { useBuilderStore } from "@/store/builderStore";
-import { toast } from "sonner";
-import { ProjectManager } from "./ProjectManager";
-import { GenerationLogs } from "./GenerationLogs";
-import { ThemeToggle } from "@/components/ThemeToggle";
-import { UserProfileMenu } from "@/components/UserProfileMenu";
-import {
-  generateFromSaved,
-  downloadProject,
-  downloadBlob,
-  buildApkFromSaved,
-  downloadApk,
-  updateProject,
-  ProjectJsonData,
-  createProject,
-} from "@/lib/api";
+} from '@/components/ui/dialog';
+import { useBuilderStore } from '@/store/builderStore';
+import { toast } from 'sonner';
+import { ProjectManager } from './ProjectManager';
+import { GenerationLogs } from './GenerationLogs';
+import { ThemeToggle } from '@/components/ThemeToggle';
+import { UserProfileMenu } from '@/components/UserProfileMenu';
+import { PROJECT_SERVICE } from '@/api/projects';
+import type { IProjectJsonData } from '@/types/api/project-types';
+import { downloadBlob } from '@/utils/download-blob';
 import {
   ComponentType,
   DEFAULT_COMPONENT_PROPS,
@@ -57,23 +50,17 @@ import {
   WIDGET_DEFINITIONS,
   getChildConfig,
   resolveWidgetProps,
-} from "@/types/screen-types";
-import {
-  REQUIRED_PARENTS,
-  ROOT_ONLY_WIDGETS,
-  VALIDATION_RULES,
-} from "@/dnd/validationRules";
-import { v4 as uuidv4 } from "uuid";
+} from '@/types/screen-types';
+import { REQUIRED_PARENTS, ROOT_ONLY_WIDGETS, VALIDATION_RULES } from '@/dnd/validationRules';
+import { v4 as uuidv4 } from 'uuid';
 
-const allowedWidgetTypes = new Set(
-  WIDGET_DEFINITIONS.map((definition) => definition.type),
-);
+const allowedWidgetTypes = new Set(WIDGET_DEFINITIONS.map((definition) => definition.type));
 
-const toRoute = (name: string) => `/${name.toLowerCase().replace(/\s+/g, "-")}`;
+const toRoute = (name: string) => `/${name.toLowerCase().replace(/\s+/g, '-')}`;
 
 const buildSchemaDocument = (): string => {
   const widgetSchemas = WIDGET_DEFINITIONS.filter(
-    (definition) => definition.type !== "ListView",
+    (definition) => definition.type !== 'ListView',
   ).map((definition) => ({
     type: definition.type,
     label: definition.label,
@@ -83,86 +70,83 @@ const buildSchemaDocument = (): string => {
   }));
 
   return [
-    "Flutter Builder Specification (AI-ready)",
-    "",
-    "Notes:",
-    "- Each Scaffold is wrapped with SingleChildScrollView in the backend.",
-    "- Screen overflow is handled automatically; no manual overflow widgets needed.",
-    "- Button actions are REQUIRED when using the Button widget.",
-    "",
-    "Screen Schema:",
+    'Flutter Builder Specification (AI-ready)',
+    '',
+    'Notes:',
+    '- Each Scaffold is wrapped with SingleChildScrollView in the backend.',
+    '- Screen overflow is handled automatically; no manual overflow widgets needed.',
+    '- Button actions are REQUIRED when using the Button widget.',
+    '',
+    'Screen Schema:',
     JSON.stringify(
       {
-        id: "string",
-        name: "string",
-        route: "/route",
+        id: 'string',
+        name: 'string',
+        route: '/route',
         is_home: true,
-        components: ["Component"],
+        components: ['Component'],
       },
       null,
       2,
     ),
-    "",
-    "Component Schema:",
+    '',
+    'Component Schema:',
     JSON.stringify(
       {
-        id: "string",
-        type: "ComponentType",
-        props: "Partial<ComponentPropsByType[ComponentType]>",
-        children: "Component[] (optional)",
-        itemTemplate: "Component (ListView only, optional)",
+        id: 'string',
+        type: 'ComponentType',
+        props: 'Partial<ComponentPropsByType[ComponentType]>',
+        children: 'Component[] (optional)',
+        itemTemplate: 'Component (ListView only, optional)',
       },
       null,
       2,
     ),
-    "",
-    "ListView itemTemplate example:",
+    '',
+    'ListView itemTemplate example:',
     JSON.stringify(
       {
-        type: "ListView",
+        type: 'ListView',
         props: { itemCount: 1, shrinkWrap: false, padding: 0 },
         itemTemplate: {
-          type: "Column",
-          children: ["Component"],
+          type: 'Column',
+          children: ['Component'],
         },
       },
       null,
       2,
     ),
-    "",
-    "Button actions schema:",
+    '',
+    'Button actions schema:',
     JSON.stringify(
       {
         actions: [
-          { type: "snackbar", message: "string" },
-          { type: "dialog", title: "string", message: "string" },
-          { type: "navigate", route: "/route" },
-          { type: "goBack" },
+          { type: 'snackbar', message: 'string' },
+          { type: 'dialog', title: 'string', message: 'string' },
+          { type: 'navigate', route: '/route' },
+          { type: 'goBack' },
         ],
       },
       null,
       2,
     ),
-    "",
-    "Component Definitions (excluding ListView):",
+    '',
+    'Component Definitions (excluding ListView):',
     JSON.stringify(widgetSchemas, null, 2),
-    "",
-    "Rules:",
-    "- Root-only widgets: " + JSON.stringify(ROOT_ONLY_WIDGETS),
-    "- Required parents: " + JSON.stringify(REQUIRED_PARENTS),
-    "- Forbidden parent/child pairs: " +
+    '',
+    'Rules:',
+    '- Root-only widgets: ' + JSON.stringify(ROOT_ONLY_WIDGETS),
+    '- Required parents: ' + JSON.stringify(REQUIRED_PARENTS),
+    '- Forbidden parent/child pairs: ' +
       JSON.stringify(
-        VALIDATION_RULES.filter((rule) => rule.result === "forbidden"),
+        VALIDATION_RULES.filter((rule) => rule.result === 'forbidden'),
         null,
         2,
       ),
-  ].join("\n");
+  ].join('\n');
 };
 
-const normalizeProps = (
-  type: ComponentType,
-  rawProps: Record<string, unknown> | undefined,
-) => {
+const normalizeProps = (type: ComponentType, rawProps: Record<string, unknown> | undefined) => {
   const defaults = DEFAULT_COMPONENT_PROPS[type] as Record<string, unknown>;
   const cleaned: Record<string, unknown> = {};
   if (!rawProps) return cleaned;
@@ -170,21 +154,21 @@ const normalizeProps = (
     if (key in rawProps) cleaned[key] = rawProps[key];
   });
 
-  if (type === "Button") {
-    if ("textColor" in rawProps && !("color" in rawProps)) {
+  if (type === 'Button') {
+    if ('textColor' in rawProps && !('color' in rawProps)) {
       cleaned.color = rawProps.textColor;
     }
   }
 
-  if (type === "Padding") {
-    if ("padding" in rawProps && !("all" in rawProps)) {
+  if (type === 'Padding') {
+    if ('padding' in rawProps && !('all' in rawProps)) {
       cleaned.all = rawProps.padding;
     }
   }
 
-  if (type === "Container") {
+  if (type === 'Container') {
     const layoutRaw =
-      rawProps.layout && typeof rawProps.layout === "object"
+      rawProps.layout && typeof rawProps.layout === 'object'
         ? (rawProps.layout as Record<string, unknown>)
         : undefined;
     const width = rawProps.width;
@@ -192,15 +176,15 @@ const normalizeProps = (
     if (layoutRaw || width !== undefined || height !== undefined) {
       cleaned.layout = {
         ...(layoutRaw || {}),
-        ...(typeof width === "number" ? { w: width } : {}),
-        ...(typeof height === "number" ? { h: height } : {}),
+        ...(typeof width === 'number' ? { w: width } : {}),
+        ...(typeof height === 'number' ? { h: height } : {}),
       };
     }
   }
 
-  if (type === "Text") {
-    if (rawProps.fontWeight === "w600") {
-      cleaned.fontWeight = "bold";
+  if (type === 'Text') {
+    if (rawProps.fontWeight === 'w600') {
+      cleaned.fontWeight = 'bold';
     }
   }
 
@@ -224,7 +208,7 @@ export const TopBar = () => {
     loadProject,
   } = useBuilderStore();
 
-  const [newScreenName, setNewScreenName] = useState("");
+  const [newScreenName, setNewScreenName] = useState('');
   const [showNewScreen, setShowNewScreen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [tempProjectName, setTempProjectName] = useState(project.app_name);
@@ -237,18 +221,14 @@ export const TopBar = () => {
   const [isAutoSaving, setIsAutoSaving] = useState(false);
   const [schemaOpen, setSchemaOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
-  const [importText, setImportText] = useState("[]");
+  const [importText, setImportText] = useState('[]');
   const [importErrors, setImportErrors] = useState<string[]>([]);
   const [importWarnings, setImportWarnings] = useState<string[]>([]);
   const [importScreens, setImportScreens] = useState<Screen[] | null>(null);
-  const [importReport, setImportReport] = useState("");
+  const [importReport, setImportReport] = useState('');
   const [importAppName, setImportAppName] = useState(project.app_name);
-  const [importPackageName, setImportPackageName] = useState(
-    project.package_name,
-  );
-  const [autoSaveState, setAutoSaveState] = useState<
-    "idle" | "saving" | "saved" | "error"
-  >("idle");
+  const [importPackageName, setImportPackageName] = useState(project.package_name);
+  const [autoSaveState, setAutoSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
   const schemaDocument = useMemo(() => buildSchemaDocument(), []);
 
@@ -259,9 +239,9 @@ export const TopBar = () => {
   }, [serverProjectId]);
 
   useEffect(() => {
-    if (autoSaveState !== "saved") return;
+    if (autoSaveState !== 'saved') return;
     const timeoutId = window.setTimeout(() => {
-      setAutoSaveState("idle");
+      setAutoSaveState('idle');
     }, 2000);
     return () => window.clearTimeout(timeoutId);
   }, [autoSaveState]);
@@ -270,30 +250,28 @@ export const TopBar = () => {
     async (showToast = false) => {
       if (!serverProjectId || isAutoSaving) return;
       setIsAutoSaving(true);
-      setAutoSaveState("saving");
+      setAutoSaveState('saving');
       try {
         const exportData = exportProject();
-        const jsonData: ProjectJsonData = {
+        const jsonData: IProjectJsonData = {
           app_name: exportData.app_name,
           package_name: exportData.package_name,
           screens: exportData.screens,
         };
         const name = projectTitle.trim() || project.app_name;
-        await updateProject(serverProjectId, {
+        await PROJECT_SERVICE.update(serverProjectId, {
           name,
           description: projectDescription,
           json_data: jsonData,
         });
-        setAutoSaveState("saved");
+        setAutoSaveState('saved');
         if (showToast) {
-          toast.success("Project saved");
+          toast.success('Project saved');
         }
       } catch (error) {
-        setAutoSaveState("error");
+        setAutoSaveState('error');
         if (showToast) {
-          toast.error(
-            error instanceof Error ? error.message : "Failed to save project",
-          );
+          toast.error(error instanceof Error ? error.message : 'Failed to save project');
         }
       } finally {
         setIsAutoSaving(false);
@@ -320,31 +298,31 @@ export const TopBar = () => {
   const handleAddScreen = () => {
     if (newScreenName.trim()) {
       addScreen(newScreenName.trim());
-      setNewScreenName("");
+      setNewScreenName('');
       setShowNewScreen(false);
-      toast.success("Screen created!");
+      toast.success('Screen created!');
     }
   };
 
   const handleExport = () => {
     const exportData = exportProject();
     const blob = new Blob([JSON.stringify(exportData, null, 2)], {
-      type: "application/json",
+      type: 'application/json',
     });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
+    const a = document.createElement('a');
     a.href = url;
     a.download = `${project.app_name}_spec.json`;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success("Project exported!");
+    toast.success('Project exported!');
   };
 
   const handleSaveSettings = () => {
     setProjectName(tempProjectName);
     setPackageName(tempPackageName);
     setSettingsOpen(false);
-    toast.success("Settings saved!");
+    toast.success('Settings saved!');
   };
 
   const validateImportedScreens = useCallback(() => {
@@ -355,8 +333,7 @@ export const TopBar = () => {
     try {
       parsed = JSON.parse(importText);
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Invalid JSON format";
+      const message = error instanceof Error ? error.message : 'Invalid JSON format';
       setImportErrors([`JSON parse error: ${message}`]);
       setImportWarnings([]);
       setImportScreens(null);
@@ -365,7 +342,7 @@ export const TopBar = () => {
     }
 
     if (!Array.isArray(parsed)) {
-      const message = "Input must be an array of screens.";
+      const message = 'Input must be an array of screens.';
       setImportErrors([message]);
       setImportWarnings([]);
       setImportScreens(null);
@@ -376,7 +353,7 @@ export const TopBar = () => {
     const explicitHome = parsed.some(
       (screen) =>
         !!screen &&
-        typeof screen === "object" &&
+        typeof screen === 'object' &&
         (screen as { is_home?: boolean }).is_home === true,
     );
 
@@ -385,7 +362,7 @@ export const TopBar = () => {
       parentType: ComponentType | null,
       path: string,
     ): FlutterWidget | null => {
-      if (!input || typeof input !== "object") {
+      if (!input || typeof input !== 'object') {
         errors.push(`${path}: widget must be an object.`);
         return null;
       }
@@ -404,13 +381,8 @@ export const TopBar = () => {
       }
 
       const requiredParents = REQUIRED_PARENTS[type];
-      if (
-        requiredParents &&
-        (!parentType || !requiredParents.includes(parentType))
-      ) {
-        errors.push(
-          `${path}: ${type} must be inside ${requiredParents.join(" or ")}.`,
-        );
+      if (requiredParents && (!parentType || !requiredParents.includes(parentType))) {
+        errors.push(`${path}: ${type} must be inside ${requiredParents.join(' or ')}.`);
         return null;
       }
 
@@ -419,7 +391,7 @@ export const TopBar = () => {
           (rule) =>
             rule.parentType === parentType &&
             rule.childType === type &&
-            rule.result === "forbidden",
+            rule.result === 'forbidden',
         );
         if (forbiddenRule) {
           errors.push(
@@ -430,54 +402,42 @@ export const TopBar = () => {
       }
 
       const idValue = (input as { id?: unknown }).id;
-      const id =
-        typeof idValue === "string" && idValue.trim() ? idValue : uuidv4();
+      const id = typeof idValue === 'string' && idValue.trim() ? idValue : uuidv4();
       if (id !== idValue) {
         warnings.push(`${path}: missing id, generated "${id}".`);
       }
 
       const rawProps = (input as { props?: unknown }).props;
       const propsObject =
-        rawProps && typeof rawProps === "object" && !Array.isArray(rawProps)
+        rawProps && typeof rawProps === 'object' && !Array.isArray(rawProps)
           ? (rawProps as Record<string, unknown>)
           : undefined;
       if (rawProps !== undefined && !propsObject) {
-        warnings.push(
-          `${path}: props must be an object; default props applied.`,
-        );
+        warnings.push(`${path}: props must be an object; default props applied.`);
       }
 
       const cleanedProps = normalizeProps(type, propsObject);
       const resolvedProps = resolveWidgetProps(type, cleanedProps);
 
       const childConfig = getChildConfig(type);
-      let rawChildren = (input as { children?: unknown }).children;
+      const rawChildren = (input as { children?: unknown }).children;
       let childrenArray = Array.isArray(rawChildren) ? rawChildren : [];
 
       if (rawChildren !== undefined && !Array.isArray(rawChildren)) {
-        warnings.push(
-          `${path}: children must be an array; ignored invalid value.`,
-        );
+        warnings.push(`${path}: children must be an array; ignored invalid value.`);
       }
 
-      if (childConfig?.mode === "none" && childrenArray.length > 0) {
-        warnings.push(
-          `${path}: ${type} cannot have children; children removed.`,
-        );
+      if (childConfig?.mode === 'none' && childrenArray.length > 0) {
+        warnings.push(`${path}: ${type} cannot have children; children removed.`);
         childrenArray = [];
       }
 
-      if (childConfig?.mode === "single" && childrenArray.length > 1) {
-        warnings.push(
-          `${path}: ${type} allows one child; extra children removed.`,
-        );
+      if (childConfig?.mode === 'single' && childrenArray.length > 1) {
+        warnings.push(`${path}: ${type} allows one child; extra children removed.`);
         childrenArray = [childrenArray[0]];
       }
 
-      if (
-        childConfig?.maxChildren &&
-        childrenArray.length > childConfig.maxChildren
-      ) {
+      if (childConfig?.maxChildren && childrenArray.length > childConfig.maxChildren) {
         warnings.push(
           `${path}: ${type} allows ${childConfig.maxChildren} children; extras removed.`,
         );
@@ -485,18 +445,16 @@ export const TopBar = () => {
       }
 
       const normalizedChildren = childrenArray
-        .map((child, index) =>
-          normalizeWidget(child, type, `${path}.children[${index}]`),
-        )
+        .map((child, index) => normalizeWidget(child, type, `${path}.children[${index}]`))
         .filter(Boolean) as FlutterWidget[];
 
       let normalizedTemplate: FlutterWidget | undefined = undefined;
-      if (type === "ListView" && "itemTemplate" in input) {
+      if (type === 'ListView' && 'itemTemplate' in input) {
         const rawTemplate = (input as { itemTemplate?: unknown }).itemTemplate;
-        if (rawTemplate && typeof rawTemplate === "object") {
+        if (rawTemplate && typeof rawTemplate === 'object') {
           normalizedTemplate = normalizeWidget(
             rawTemplate,
-            "ListView",
+            'ListView',
             `${path}.itemTemplate`,
           ) as FlutterWidget;
         } else if (rawTemplate !== undefined) {
@@ -508,14 +466,13 @@ export const TopBar = () => {
         id,
         type,
         props: resolvedProps,
-        children:
-          normalizedChildren.length > 0 ? normalizedChildren : undefined,
+        children: normalizedChildren.length > 0 ? normalizedChildren : undefined,
         itemTemplate: normalizedTemplate,
       } as FlutterWidget;
     };
 
     const normalizedScreens: Screen[] = parsed.map((screen, index) => {
-      if (!screen || typeof screen !== "object") {
+      if (!screen || typeof screen !== 'object') {
         errors.push(`screens[${index}]: screen must be an object.`);
         return {
           id: uuidv4(),
@@ -527,31 +484,19 @@ export const TopBar = () => {
       }
 
       const rawId = (screen as { id?: unknown }).id;
-      const id = typeof rawId === "string" && rawId.trim() ? rawId : uuidv4();
-      if (id !== rawId)
-        warnings.push(`screens[${index}]: missing id, generated.`);
+      const id = typeof rawId === 'string' && rawId.trim() ? rawId : uuidv4();
+      if (id !== rawId) warnings.push(`screens[${index}]: missing id, generated.`);
 
       const rawName = (screen as { name?: unknown }).name;
-      const name =
-        typeof rawName === "string" && rawName.trim()
-          ? rawName
-          : `Screen ${index + 1}`;
-      if (name !== rawName)
-        warnings.push(`screens[${index}]: missing name, defaulted.`);
+      const name = typeof rawName === 'string' && rawName.trim() ? rawName : `Screen ${index + 1}`;
+      if (name !== rawName) warnings.push(`screens[${index}]: missing name, defaulted.`);
 
       const rawRoute = (screen as { route?: unknown }).route;
-      const route =
-        typeof rawRoute === "string" && rawRoute.trim()
-          ? rawRoute
-          : toRoute(name);
-      if (route !== rawRoute)
-        warnings.push(`screens[${index}]: missing route, generated.`);
+      const route = typeof rawRoute === 'string' && rawRoute.trim() ? rawRoute : toRoute(name);
+      if (route !== rawRoute) warnings.push(`screens[${index}]: missing route, generated.`);
 
       const rawIsHome = (screen as { is_home?: unknown }).is_home;
-      const is_home =
-        typeof rawIsHome === "boolean"
-          ? rawIsHome
-          : !explicitHome && index === 0;
+      const is_home = typeof rawIsHome === 'boolean' ? rawIsHome : !explicitHome && index === 0;
       if (rawIsHome === undefined) {
         warnings.push(`screens[${index}]: missing is_home, defaulted.`);
       }
@@ -559,18 +504,12 @@ export const TopBar = () => {
       const rawComponents = (screen as { components?: unknown }).components;
       const componentsArray = Array.isArray(rawComponents) ? rawComponents : [];
       if (rawComponents !== undefined && !Array.isArray(rawComponents)) {
-        warnings.push(
-          `screens[${index}]: components must be an array; ignored invalid value.`,
-        );
+        warnings.push(`screens[${index}]: components must be an array; ignored invalid value.`);
       }
 
       const components = componentsArray
         .map((component, compIndex) =>
-          normalizeWidget(
-            component,
-            null,
-            `screens[${index}].components[${compIndex}]`,
-          ),
+          normalizeWidget(component, null, `screens[${index}].components[${compIndex}]`),
         )
         .filter(Boolean) as FlutterWidget[];
 
@@ -585,17 +524,15 @@ export const TopBar = () => {
 
     if (!normalizedScreens.some((screen) => screen.is_home)) {
       normalizedScreens[0].is_home = true;
-      warnings.push("No home screen found; first screen set as home.");
+      warnings.push('No home screen found; first screen set as home.');
     }
 
     const report = [
-      errors.length
-        ? `Errors (${errors.length})\n- ${errors.join("\n- ")}`
-        : "Errors: none",
+      errors.length ? `Errors (${errors.length})\n- ${errors.join('\n- ')}` : 'Errors: none',
       warnings.length
-        ? `Warnings (${warnings.length})\n- ${warnings.join("\n- ")}`
-        : "Warnings: none",
-    ].join("\n\n");
+        ? `Warnings (${warnings.length})\n- ${warnings.join('\n- ')}`
+        : 'Warnings: none',
+    ].join('\n\n');
 
     setImportErrors(errors);
     setImportWarnings(warnings);
@@ -606,89 +543,71 @@ export const TopBar = () => {
   const applyImportedScreens = useCallback(() => {
     if (!importScreens || importErrors.length > 0) return;
     importProjectData({
-      app_name: importAppName.trim() || "My App",
-      package_name: importPackageName.trim() || "com.example.app",
+      app_name: importAppName.trim() || 'My App',
+      package_name: importPackageName.trim() || 'com.example.app',
       screens: importScreens,
     });
-    toast.success("Screens imported to canvas.");
+    toast.success('Screens imported to canvas.');
     setImportOpen(false);
-  }, [
-    importScreens,
-    importErrors.length,
-    importProjectData,
-    importAppName,
-    importPackageName,
-  ]);
+  }, [importScreens, importErrors.length, importProjectData, importAppName, importPackageName]);
 
   const saveImportedProject = useCallback(async () => {
     if (!importScreens || importErrors.length > 0) return;
     try {
-      const name = importAppName.trim() || "My App";
-      const payload: ProjectJsonData = {
+      const name = importAppName.trim() || 'My App';
+      const payload: IProjectJsonData = {
         app_name: name,
-        package_name: importPackageName.trim() || "com.example.app",
+        package_name: importPackageName.trim() || 'com.example.app',
         screens: importScreens,
       };
-      const saved = await createProject({
+      const saved = await PROJECT_SERVICE.create({
         name,
         json_data: payload,
       });
       loadProject(saved);
-      toast.success("Project imported and saved.");
+      toast.success('Project imported and saved.');
       setImportOpen(false);
     } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Failed to save imported project",
-      );
+      toast.error(error instanceof Error ? error.message : 'Failed to save imported project');
     }
-  }, [
-    importScreens,
-    importErrors.length,
-    importAppName,
-    importPackageName,
-    loadProject,
-  ]);
+  }, [importScreens, importErrors.length, importAppName, importPackageName, loadProject]);
 
   const handleGenerateApp = async () => {
     setIsGenerating(true);
     try {
       if (!serverProjectId) {
-        throw new Error("Please save the project before generating.");
+        throw new Error('Please save the project before generating.');
       }
 
       // Generate from saved project (no download here)
-      const result = await generateFromSaved(serverProjectId);
+      const result = await PROJECT_SERVICE.generateFlutterApplication(serverProjectId);
 
-      if (typeof result === "object" && result && "status" in result) {
+      if (typeof result === 'object' && result && 'status' in result) {
         const status = (result as { status?: string; message?: string }).status;
-        const message = (result as { status?: string; message?: string })
-          .message;
-        if (status && status !== "success") {
-          throw new Error(message || "Failed to generate project");
+        const message = (result as { status?: string; message?: string }).message;
+        if (status && status !== 'success') {
+          throw new Error(message || 'Failed to generate project');
         }
       }
 
-      const blob = await downloadProject(serverProjectId);
+      const blob = await PROJECT_SERVICE.downloadFlutterApplication(serverProjectId);
       downloadBlob(blob, `${project.app_name}.zip`);
 
       setHasGeneratedProject(true);
-      toast.success("Flutter app generated and downloaded!");
+      toast.success('Flutter app generated and downloaded!');
     } catch (error) {
-      console.error("Generation error:", error);
+      console.error('Generation error:', error);
 
-      if (error instanceof TypeError && error.message === "Failed to fetch") {
+      if (error instanceof TypeError && error.message === 'Failed to fetch') {
         toast.error(
-          "Cannot connect to backend. This could be a CORS issue or the server is not running. " +
-            "Ensure Django has CORS headers enabled for this origin.",
+          'Cannot connect to backend. This could be a CORS issue or the server is not running. ' +
+            'Ensure Django has CORS headers enabled for this origin.',
           { duration: 6000 },
         );
       } else {
-        toast.error(
-          error instanceof Error ? error.message : "Failed to generate app.",
-          { duration: 5000 },
-        );
+        toast.error(error instanceof Error ? error.message : 'Failed to generate app.', {
+          duration: 5000,
+        });
       }
     } finally {
       setIsGenerating(false);
@@ -697,74 +616,65 @@ export const TopBar = () => {
 
   const handleBuildApk = async () => {
     setIsBuildingApk(true);
-    const toastId = "build-apk";
+    const toastId = 'build-apk';
     try {
       if (!serverProjectId) {
-        throw new Error("Please save the project before building APK.");
+        throw new Error('Please save the project before building APK.');
       }
 
-      toast.loading("Generating Flutter project...", { id: toastId });
+      toast.loading('Generating Flutter project...', { id: toastId });
 
       // Always generate before building
-      const generateResult = await generateFromSaved(serverProjectId);
+      const generateResult = await PROJECT_SERVICE.generateFlutterApplication(serverProjectId);
 
-      if (
-        typeof generateResult === "object" &&
-        generateResult &&
-        "status" in generateResult
-      ) {
-        const status = (generateResult as { status?: string; message?: string })
-          .status;
-        const message = (
-          generateResult as { status?: string; message?: string }
-        ).message;
-        if (status && status !== "success") {
-          throw new Error(message || "Failed to generate project");
+      if (typeof generateResult === 'object' && generateResult && 'status' in generateResult) {
+        const status = (generateResult as { status?: string; message?: string }).status;
+        const message = (generateResult as { status?: string; message?: string }).message;
+        if (status && status !== 'success') {
+          throw new Error(message || 'Failed to generate project');
         }
       }
 
-      toast.loading("Building APK...", { id: toastId });
+      toast.loading('Building APK...', { id: toastId });
 
-      const result = await buildApkFromSaved(serverProjectId);
+      const result = await PROJECT_SERVICE.buildAndroidApplicationPackage(serverProjectId);
 
-      if (typeof result === "object" && result && "status" in result) {
+      if (typeof result === 'object' && result && 'status' in result) {
         const status = result.status;
         const message = result.message;
 
-        if (status === "building") {
-          toast.info(
-            message || "APK build started. This may take a few minutes...",
-            { duration: 5000 },
-          );
+        if (status === 'building') {
+          toast.info(message || 'APK build started. This may take a few minutes...', {
+            duration: 5000,
+          });
           // Poll or wait for completion - for now show message
           toast.dismiss(toastId);
           setIsBuildingApk(false);
           return;
         }
 
-        if (status !== "success") {
-          throw new Error(message || "Failed to build APK");
+        if (status !== 'success') {
+          throw new Error(message || 'Failed to build APK');
         }
       }
 
-      const blob = await downloadApk(serverProjectId);
+      const blob = await PROJECT_SERVICE.downloadAndroidApplicationPackage(serverProjectId);
 
       downloadBlob(blob, `${project.app_name}.apk`);
       setHasGeneratedProject(true);
-      toast.success("APK built and downloaded!", { id: toastId });
+      toast.success('APK built and downloaded!', { id: toastId });
     } catch (error) {
-      console.error("APK build error:", error);
+      console.error('APK build error:', error);
 
-      if (error instanceof TypeError && error.message === "Failed to fetch") {
+      if (error instanceof TypeError && error.message === 'Failed to fetch') {
         toast.error(
-          "Cannot connect to backend. This could be a CORS issue or the server is not running.",
+          'Cannot connect to backend. This could be a CORS issue or the server is not running.',
           { duration: 6000 },
         );
       } else {
-        toast.error(
-          error instanceof Error ? error.message : "Failed to build APK.",
-          { duration: 5000 },
-        );
+        toast.error(error instanceof Error ? error.message : 'Failed to build APK.', {
+          duration: 5000,
+        });
       }
     } finally {
       toast.dismiss(toastId);
@@ -781,11 +691,7 @@ export const TopBar = () => {
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
           <div className="w-30 h-10 rounded-xl flex items-center justify-center">
-            <img
-              src="/Builder.png"
-              alt="AppBuilder Logo"
-              className="w-30 h-14"
-            />
+            <img src="/Builder.png" alt="AppBuilder Logo" className="w-30 h-14" />
           </div>
           {/* <span className="font-semibold text-lg">{project.app_name}</span> */}
         </div>
@@ -796,9 +702,7 @@ export const TopBar = () => {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="gap-2">
               <span className="text-muted-foreground text-sm">Screen:</span>
-              <span className="font-medium">
-                {activeScreen?.name || "Select"}
-              </span>
+              <span className="font-medium">{activeScreen?.name || 'Select'}</span>
               <ChevronDown className="w-4 h-4 text-muted-foreground" />
             </Button>
           </DropdownMenuTrigger>
@@ -811,12 +715,8 @@ export const TopBar = () => {
               >
                 <span>{screen.name}</span>
                 <div className="flex items-center gap-2">
-                  {screen.is_home && (
-                    <span className="text-xs text-primary">Home</span>
-                  )}
-                  {screen.id === activeScreenId && (
-                    <Check className="w-4 h-4 text-primary" />
-                  )}
+                  {screen.is_home && <span className="text-xs text-primary">Home</span>}
+                  {screen.id === activeScreenId && <Check className="w-4 h-4 text-primary" />}
                 </div>
               </DropdownMenuItem>
             ))}
@@ -828,7 +728,7 @@ export const TopBar = () => {
                   onChange={(e) => setNewScreenName(e.target.value)}
                   placeholder="Screen name"
                   className="h-8 text-sm"
-                  onKeyDown={(e) => e.key === "Enter" && handleAddScreen()}
+                  onKeyDown={(e) => e.key === 'Enter' && handleAddScreen()}
                   autoFocus
                 />
                 <Button size="sm" onClick={handleAddScreen} className="h-8">
@@ -849,20 +749,18 @@ export const TopBar = () => {
                 Add Screen
               </DropdownMenuItem>
             )}
-            {project.screens.length > 1 &&
-              activeScreen &&
-              !activeScreen.is_home && (
-                <>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onClick={() => deleteScreen(activeScreenId)}
-                    className="text-destructive focus:text-destructive"
-                  >
-                    <X className="w-4 h-4 mr-2" />
-                    Delete Current Screen
-                  </DropdownMenuItem>
-                </>
-              )}
+            {project.screens.length > 1 && activeScreen && !activeScreen.is_home && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => deleteScreen(activeScreenId)}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <X className="w-4 h-4 mr-2" />
+                  Delete Current Screen
+                </DropdownMenuItem>
+              </>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
@@ -891,7 +789,7 @@ export const TopBar = () => {
                   variant="outline"
                   onClick={() => {
                     navigator.clipboard.writeText(schemaDocument);
-                    toast.success("Specification copied.");
+                    toast.success('Specification copied.');
                   }}
                 >
                   Copy
@@ -927,9 +825,7 @@ export const TopBar = () => {
 
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">
-                    Validation Report
-                  </label>
+                  <label className="text-sm font-medium">Validation Report</label>
                   <Textarea
                     value={importReport}
                     readOnly
@@ -941,22 +837,16 @@ export const TopBar = () => {
                     onClick={() => {
                       if (!importReport) return;
                       navigator.clipboard.writeText(importReport);
-                      toast.success("Report copied.");
+                      toast.success('Report copied.');
                     }}
                   >
                     Copy Report
                   </Button>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">
-                    Normalized Output
-                  </label>
+                  <label className="text-sm font-medium">Normalized Output</label>
                   <Textarea
-                    value={
-                      importScreens
-                        ? JSON.stringify(importScreens, null, 2)
-                        : ""
-                    }
+                    value={importScreens ? JSON.stringify(importScreens, null, 2) : ''}
                     readOnly
                     className="min-h-[160px] font-mono text-xs"
                     placeholder="Normalized screens will appear here."
@@ -965,10 +855,8 @@ export const TopBar = () => {
                     variant="outline"
                     onClick={() => {
                       if (!importScreens) return;
-                      navigator.clipboard.writeText(
-                        JSON.stringify(importScreens, null, 2),
-                      );
-                      toast.success("Normalized screens copied.");
+                      navigator.clipboard.writeText(JSON.stringify(importScreens, null, 2));
+                      toast.success('Normalized screens copied.');
                     }}
                   >
                     Copy Output
@@ -989,9 +877,7 @@ export const TopBar = () => {
                   <label className="text-sm font-medium">Package Name</label>
                   <Input
                     value={importPackageName}
-                    onChange={(event) =>
-                      setImportPackageName(event.target.value)
-                    }
+                    onChange={(event) => setImportPackageName(event.target.value)}
                     placeholder="com.example.myapp"
                   />
                 </div>
@@ -1045,19 +931,10 @@ export const TopBar = () => {
           ) : (
             <Save className="w-4 h-4" />
           )}
-          {isAutoSaving
-            ? "Saving..."
-            : autoSaveState === "saved"
-              ? "Saved"
-              : "Save"}
+          {isAutoSaving ? 'Saving...' : autoSaveState === 'saved' ? 'Saved' : 'Save'}
         </Button>
         {serverProjectId && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setLogsOpen(true)}
-            className="gap-2"
-          >
+          <Button variant="ghost" size="sm" onClick={() => setLogsOpen(true)} className="gap-2">
             <FileText className="w-4 h-4" />
             Logs
           </Button>
@@ -1095,12 +972,7 @@ export const TopBar = () => {
             </div>
           </DialogContent>
         </Dialog>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleExport}
-          className="gap-2"
-        >
+        <Button variant="outline" size="sm" onClick={handleExport} className="gap-2">
           <Download className="w-4 h-4" />
           Export JSON
         </Button>
@@ -1115,7 +987,7 @@ export const TopBar = () => {
           ) : (
             <Play className="w-4 h-4" />
           )}
-          {isGenerating ? "Generating..." : "Generate App"}
+          {isGenerating ? 'Generating...' : 'Generate App'}
         </Button>
         <Button
           size="sm"
@@ -1129,15 +1001,12 @@ export const TopBar = () => {
           ) : (
             <Package className="w-4 h-4" />
           )}
-          {isBuildingApk ? "Building..." : "Build APK"}
+          {isBuildingApk ? 'Building...' : 'Build APK'}
         </Button>
         <UserProfileMenu />
       </div>
 
-      <ProjectManager
-        open={projectManagerOpen}
-        onOpenChange={setProjectManagerOpen}
-      />
+      <ProjectManager open={projectManagerOpen} onOpenChange={setProjectManagerOpen} />
       <GenerationLogs open={logsOpen} onOpenChange={setLogsOpen} />
     </motion.header>
   );

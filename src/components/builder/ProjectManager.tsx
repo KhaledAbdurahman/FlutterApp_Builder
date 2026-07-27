@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   FolderOpen,
   Save,
@@ -10,18 +10,18 @@ import {
   AlertCircle,
   RefreshCw,
   Download,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+} from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,21 +31,14 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { useBuilderStore } from "@/store/builderStore";
-import {
-  listProjects,
-  createProject,
-  updateProject,
-  deleteProject,
-  downloadProject,
-  downloadBlob,
-  SavedProject,
-  ProjectJsonData,
-} from "@/lib/api";
-import { toast } from "sonner";
-import { formatDistanceToNow } from "date-fns";
+} from '@/components/ui/alert-dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { useBuilderStore } from '@/store/builderStore';
+import { PROJECT_SERVICE } from '@/api/projects';
+import type { IProject, IProjectId, IProjectJsonData } from '@/types/api/project-types';
+import { downloadBlob } from '@/utils/download-blob';
+import { toast } from 'sonner';
+import { formatDistanceToNow } from 'date-fns';
 
 interface ProjectManagerProps {
   open: boolean;
@@ -65,25 +58,24 @@ export const ProjectManager = ({ open, onOpenChange }: ProjectManagerProps) => {
     setProjectDescription,
   } = useBuilderStore();
 
-  const [projects, setProjects] = useState<SavedProject[]>([]);
+  const [projects, setProjects] = useState<IProject[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Delete confirmation
-  const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<IProjectId | null>(null);
 
   const fetchProjects = async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const data = await listProjects();
+      const data = await PROJECT_SERVICE.getAll();
       setProjects(data);
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Failed to load projects";
+      const message = err instanceof Error ? err.message : 'Failed to load projects';
       setError(message);
-      console.error("Failed to fetch projects:", err);
+      console.error('Failed to fetch projects:', err);
     } finally {
       setIsLoading(false);
     }
@@ -96,25 +88,24 @@ export const ProjectManager = ({ open, onOpenChange }: ProjectManagerProps) => {
     const fetchAndPrefill = async () => {
       setProjectTitle(projectTitle || project.app_name);
       if (!serverProjectId) {
-        setProjectDescription(projectDescription || "");
+        setProjectDescription(projectDescription || '');
       }
       setIsLoading(true);
       setError(null);
       try {
-        const data = await listProjects();
+        const data = await PROJECT_SERVICE.getAll();
         if (!isActive) return;
         setProjects(data);
         if (serverProjectId) {
           const current = data.find((p) => p.id === serverProjectId);
           setProjectTitle(current?.name || project.app_name);
-          setProjectDescription(current?.description || "");
+          setProjectDescription(current?.description || '');
         }
       } catch (err) {
         if (!isActive) return;
-        const message =
-          err instanceof Error ? err.message : "Failed to load projects";
+        const message = err instanceof Error ? err.message : 'Failed to load projects';
         setError(message);
-        console.error("Failed to fetch projects:", err);
+        console.error('Failed to fetch projects:', err);
       } finally {
         if (isActive) setIsLoading(false);
       }
@@ -124,17 +115,11 @@ export const ProjectManager = ({ open, onOpenChange }: ProjectManagerProps) => {
     return () => {
       isActive = false;
     };
-  }, [
-    open,
-    project.app_name,
-    serverProjectId,
-    setProjectTitle,
-    setProjectDescription,
-  ]);
+  }, [open, project.app_name, serverProjectId, setProjectTitle, setProjectDescription]);
 
   const handleSave = async () => {
     if (!projectTitle.trim()) {
-      toast.error("Please enter a project name");
+      toast.error('Please enter a project name');
       return;
     }
 
@@ -142,84 +127,81 @@ export const ProjectManager = ({ open, onOpenChange }: ProjectManagerProps) => {
     try {
       const exportData = exportProject();
       // Ensure json_data contains all required fields for generation
-      const jsonData: ProjectJsonData = {
+      const jsonData: IProjectJsonData = {
         app_name: exportData.app_name,
         package_name: exportData.package_name,
         screens: exportData.screens,
       };
 
-      let savedProject: SavedProject;
+      let savedProject: IProject;
 
       if (serverProjectId) {
         // Update existing project
-        savedProject = await updateProject(serverProjectId, {
+        savedProject = await PROJECT_SERVICE.update(serverProjectId, {
           name: projectTitle,
           description: projectDescription,
           json_data: jsonData,
         });
-        toast.success("Project updated!");
+        toast.success('Project updated!');
       } else {
         // Create new project
-        savedProject = await createProject({
+        savedProject = await PROJECT_SERVICE.create({
           name: projectTitle,
           description: projectDescription,
           json_data: jsonData,
         });
         setServerProjectId(savedProject.id);
-        toast.success("Project saved!");
+        toast.success('Project saved!');
       }
 
       fetchProjects();
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Failed to save project";
+      const message = err instanceof Error ? err.message : 'Failed to save project';
       toast.error(message);
-      console.error("Save error:", err);
+      console.error('Save error:', err);
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleLoad = (savedProject: SavedProject) => {
+  const handleLoad = (savedProject: IProject) => {
     try {
       loadProject(savedProject);
       setServerProjectId(savedProject.id);
       setProjectTitle(savedProject.name);
-      setProjectDescription(savedProject.description || "");
+      setProjectDescription(savedProject.description || '');
       onOpenChange(false);
       toast.success(`Loaded "${savedProject.name}"`);
     } catch (err) {
-      toast.error("Failed to load project");
-      console.error("Load error:", err);
+      toast.error('Failed to load project');
+      console.error('Load error:', err);
     }
   };
 
-  const handleDelete = async (projectId: number) => {
+  const handleDelete = async (projectId: IProjectId) => {
     try {
-      await deleteProject(projectId);
+      await PROJECT_SERVICE.delete(projectId);
       setProjects((prev) => prev.filter((p) => p.id !== projectId));
       if (serverProjectId === projectId) {
         setServerProjectId(null);
       }
-      toast.success("Project deleted");
+      toast.success('Project deleted');
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Failed to delete project";
+      const message = err instanceof Error ? err.message : 'Failed to delete project';
       toast.error(message);
-      console.error("Delete error:", err);
+      console.error('Delete error:', err);
     } finally {
       setDeleteConfirmId(null);
     }
   };
 
-  const handleDownload = async (projectId: number, projectName: string) => {
+  const handleDownload = async (projectId: IProjectId, projectName: string) => {
     try {
-      const blob = await downloadProject(projectId);
+      const blob = await PROJECT_SERVICE.downloadFlutterApplication(projectId);
       downloadBlob(blob, `${projectName}.zip`);
-      toast.success("Download started!");
+      toast.success('Download started!');
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Failed to download project";
+      const message = err instanceof Error ? err.message : 'Failed to download project';
       toast.error(message);
     }
   };
@@ -257,9 +239,7 @@ export const ProjectManager = ({ open, onOpenChange }: ProjectManagerProps) => {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">
-                  Description (optional)
-                </label>
+                <label className="text-sm font-medium">Description (optional)</label>
                 <Textarea
                   value={projectDescription}
                   onChange={(e) => setProjectDescription(e.target.value)}
@@ -272,17 +252,13 @@ export const ProjectManager = ({ open, onOpenChange }: ProjectManagerProps) => {
                   This will update the existing project (ID: {serverProjectId})
                 </p>
               )}
-              <Button
-                onClick={handleSave}
-                disabled={isSaving}
-                className="w-full gap-2"
-              >
+              <Button onClick={handleSave} disabled={isSaving} className="w-full gap-2">
                 {isSaving ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
                   <Save className="w-4 h-4" />
                 )}
-                {serverProjectId ? "Update Project" : "Save Project"}
+                {serverProjectId ? 'Update Project' : 'Save Project'}
               </Button>
             </TabsContent>
 
@@ -298,9 +274,7 @@ export const ProjectManager = ({ open, onOpenChange }: ProjectManagerProps) => {
                   disabled={isLoading}
                   className="gap-2"
                 >
-                  <RefreshCw
-                    className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`}
-                  />
+                  <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
                   Refresh
                 </Button>
               </div>
@@ -332,17 +306,13 @@ export const ProjectManager = ({ open, onOpenChange }: ProjectManagerProps) => {
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, scale: 0.95 }}
                           className={`p-4 border rounded-lg cursor-pointer transition-colors hover:border-primary group ${
-                            serverProjectId === proj.id
-                              ? "border-primary bg-primary/5"
-                              : ""
+                            serverProjectId === proj.id ? 'border-primary bg-primary/5' : ''
                           }`}
                           onClick={() => handleLoad(proj)}
                         >
                           <div className="flex items-start justify-between">
                             <div className="flex-1 min-w-0">
-                              <h4 className="font-medium truncate">
-                                {proj.name}
-                              </h4>
+                              <h4 className="font-medium truncate">{proj.name}</h4>
                               {proj.description && (
                                 <p className="text-sm text-muted-foreground truncate mt-1">
                                   {proj.description}
@@ -351,12 +321,9 @@ export const ProjectManager = ({ open, onOpenChange }: ProjectManagerProps) => {
                               <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
                                 <Clock className="w-3 h-3" />
                                 <span>
-                                  {formatDistanceToNow(
-                                    new Date(proj.updated_at),
-                                    {
-                                      addSuffix: true,
-                                    },
-                                  )}
+                                  {formatDistanceToNow(new Date(proj.updated_at), {
+                                    addSuffix: true,
+                                  })}
                                 </span>
                               </div>
                             </div>
@@ -396,16 +363,12 @@ export const ProjectManager = ({ open, onOpenChange }: ProjectManagerProps) => {
         </DialogContent>
       </Dialog>
 
-      <AlertDialog
-        open={deleteConfirmId !== null}
-        onOpenChange={() => setDeleteConfirmId(null)}
-      >
+      <AlertDialog open={deleteConfirmId !== null} onOpenChange={() => setDeleteConfirmId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Project?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. The project will be permanently
-              deleted from the server.
+              This action cannot be undone. The project will be permanently deleted from the server.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

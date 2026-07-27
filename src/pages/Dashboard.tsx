@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
-import { listProjects, deleteProject, SavedProject } from "@/lib/api";
-import { ThemeToggle } from "@/components/ThemeToggle";
-import { UserProfileMenu } from "@/components/UserProfileMenu";
-import { Button } from "@/components/ui/button";
+import { useEffect, useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
+import { PROJECT_SERVICE } from '@/api/projects';
+import type { IProject } from '@/types/api/project-types';
+import { ThemeToggle } from '@/components/ThemeToggle';
+import { UserProfileMenu } from '@/components/UserProfileMenu';
+import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
@@ -12,16 +13,8 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import {
-  Plus,
-  FolderOpen,
-  Trash2,
-  Loader2,
-  Smartphone,
-  Calendar,
-  LayoutGrid,
-} from "lucide-react";
+} from '@/components/ui/card';
+import { Plus, FolderOpen, Trash2, Loader2, Smartphone, Calendar, LayoutGrid } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,17 +24,17 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { toast } from "sonner";
-import { useBuilderStore } from "@/store/builderStore";
-import { Screen } from "@/types/screen-types";
-import BrandLogo from "@/components/BrandLogo";
+} from '@/components/ui/alert-dialog';
+import { toast } from 'sonner';
+import { useBuilderStore } from '@/store/builderStore';
+import { Screen } from '@/types/screen-types';
+import BrandLogo from '@/components/BrandLogo';
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const [projects, setProjects] = useState<SavedProject[]>([]);
+  const [projects, setProjects] = useState<IProject[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [deleteConfirm, setDeleteConfirm] = useState<SavedProject | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<IProject | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const { loadProject, setServerProjectId } = useBuilderStore();
@@ -53,10 +46,10 @@ export default function Dashboard() {
   const fetchProjects = async () => {
     try {
       setIsLoading(true);
-      const data = await listProjects();
+      const data = await PROJECT_SERVICE.getAll();
       setProjects(data);
     } catch (error) {
-      toast.error("Failed to load projects");
+      toast.error('Failed to load projects');
     } finally {
       setIsLoading(false);
     }
@@ -65,12 +58,12 @@ export default function Dashboard() {
   const handleCreateNew = () => {
     // Reset to a fresh project state by setting server project ID to null
     setServerProjectId(null);
-    navigate("/builder");
+    navigate('/builder');
   };
 
-  const handleOpenProject = (project: SavedProject) => {
+  const handleOpenProject = (project: IProject) => {
     loadProject(project);
-    navigate("/builder");
+    navigate('/builder');
   };
 
   const handleDeleteProject = async () => {
@@ -78,11 +71,11 @@ export default function Dashboard() {
 
     try {
       setIsDeleting(true);
-      await deleteProject(deleteConfirm.id);
+      await PROJECT_SERVICE.delete(deleteConfirm.id);
       setProjects(projects.filter((p) => p.id !== deleteConfirm.id));
-      toast.success("Project deleted successfully");
+      toast.success('Project deleted successfully');
     } catch (error) {
-      toast.error("Failed to delete project");
+      toast.error('Failed to delete project');
     } finally {
       setIsDeleting(false);
       setDeleteConfirm(null);
@@ -90,14 +83,14 @@ export default function Dashboard() {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
+    return new Date(dateString).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
     });
   };
 
-  const getScreenCount = (project: SavedProject): number => {
+  const getScreenCount = (project: IProject): number => {
     const screens = project.json_data?.screens as Screen[] | undefined;
     return screens?.length || 0;
   };
@@ -127,9 +120,7 @@ export default function Dashboard() {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold mb-2">My Projects</h1>
-            <p className="text-muted-foreground">
-              Manage your Flutter app projects
-            </p>
+            <p className="text-muted-foreground">Manage your Flutter app projects</p>
           </div>
           <Button onClick={handleCreateNew} className="gap-2">
             <Plus className="w-4 h-4" />
@@ -190,10 +181,7 @@ export default function Dashboard() {
                   </div>
                 </CardContent>
                 <CardFooter className="flex gap-2">
-                  <Button
-                    className="flex-1 gap-2"
-                    onClick={() => handleOpenProject(project)}
-                  >
+                  <Button className="flex-1 gap-2" onClick={() => handleOpenProject(project)}>
                     <FolderOpen className="w-4 h-4" />
                     Open
                   </Button>
@@ -213,16 +201,12 @@ export default function Dashboard() {
       </main>
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog
-        open={!!deleteConfirm}
-        onOpenChange={() => setDeleteConfirm(null)}
-      >
+      <AlertDialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Project</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete "{deleteConfirm?.name}"? This
-              action cannot be undone.
+              Are you sure you want to delete "{deleteConfirm?.name}"? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
