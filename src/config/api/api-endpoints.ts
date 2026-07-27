@@ -14,6 +14,8 @@ enum ApiEndpointPathnames {
   PROJECT_GENERATION_LOGS = 'projects/{id}/logs/',
   PROJECT_START_LIVE_PREVIEW = 'projects/{id}/start_preview/',
   PROJECT_STOP_LIVE_PREVIEW = 'projects/{id}/stop_preview/',
+  PROJECT_UPDATE_LIVE_PREVIEW = 'projects/{id}/update_preview/',
+  PROJECT_LIVE_PREVIEW_HEARTBEAT = 'projects/{id}/preview_heartbeat/',
   PROJECT_ACTIVE_LIVE_PREVIEWS = 'projects/active_previews/',
   SCREENS = 'screens/',
   SCREEN = 'screens/{id}/',

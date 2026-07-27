@@ -3,14 +3,10 @@ import {
   DragStartEvent,
   DragEndEvent,
   DragOverEvent,
-  DragOverlay,
   useSensor,
   useSensors,
   PointerSensor,
   KeyboardSensor,
-  closestCenter,
-  DropAnimation,
-  defaultDropAnimationSideEffects,
   UniqueIdentifier,
 } from '@dnd-kit/core';
 import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
@@ -24,6 +20,7 @@ import {
 } from '@/dnd/treeValidationAdapters';
 import { FlutterWidget, getWidgetDefinition } from '@/types/screen-types';
 import { getWidgetChildren } from '@/lib/widgetTreeUtils';
+import { getSiblingReorderIndex, resolveTreeMoveType } from '@/dnd/tree-drop-utils';
 
 // --- Utility: Recursion helpers ---
 
@@ -99,8 +96,6 @@ export interface UseWidgetTreeDnDProps {
 
 export const useWidgetTreeDnD = ({ onCommit }: UseWidgetTreeDnDProps = {}) => {
   const {
-    project,
-    activeScreenId,
     getActiveScreen,
     moveWidget,
     setIsDragging,
@@ -119,6 +114,10 @@ export const useWidgetTreeDnD = ({ onCommit }: UseWidgetTreeDnDProps = {}) => {
 
   const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
   const [overId, setOverId] = useState<UniqueIdentifier | null>(null);
+  const [dropIndicator, setDropIndicator] = useState<{
+    targetId: string;
+    action: TreeMoveType;
+  } | null>(null);
   const pendingDragIdRef = useRef<string | null>(null);
 
   // Sensors
@@ -152,15 +151,11 @@ export const useWidgetTreeDnD = ({ onCommit }: UseWidgetTreeDnDProps = {}) => {
   >({});
 
   const activeScreen = getActiveScreen();
-  const flattenedItems = activeScreen ? activeScreen.components : []; // This isn't flat, but handled recursively?
-  // Wait, for Sortable, we usually need flattened IDs.
-  // For this implementation, we will assume the Tree Component
-  // manages the sortable structure (e.g., flattened projection).
-  // This hook handles the LOGIC (onDragEnd) mainly.
 
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
     setActiveId(active.id);
+    setDropIndicator(null);
     setIsDragging(true);
     const dragId = active.id?.toString();
 
@@ -187,6 +182,7 @@ export const useWidgetTreeDnD = ({ onCommit }: UseWidgetTreeDnDProps = {}) => {
     setOverId(over ? over.id : null);
 
     if (!over) {
+      setDropIndicator(null);
       dismissDndToast();
       return;
     }
@@ -203,6 +199,7 @@ export const useWidgetTreeDnD = ({ onCommit }: UseWidgetTreeDnDProps = {}) => {
     if (overData?.type === 'slot' && overData.parentId) {
       const parentMeta = findWidgetWithMeta(nodes, overData.parentId);
       if (!parentMeta) return;
+      setDropIndicator({ targetId: overData.parentId, action: 'inside' });
       showDndToast(
         `Drop ${getWidgetLabel(sourceMeta.widget)} into itemTemplate of ${getWidgetLabel(parentMeta.widget)}`,
         1200,
@@ -214,7 +211,19 @@ export const useWidgetTreeDnD = ({ onCommit }: UseWidgetTreeDnDProps = {}) => {
     if (!targetMeta) return;
 
     const targetDef = getWidgetDefinition(targetMeta.widget.type);
-    const verb = targetDef?.childConfig.mode !== 'none' ? 'into' : 'after';
+    const draggedRect = active.rect.current.translated;
+    const draggedCenterY = draggedRect
+      ? draggedRect.top + draggedRect.height / 2
+      : over.rect.top + over.rect.height / 2;
+    const action = resolveTreeMoveType(
+      draggedCenterY,
+      over.rect.top,
+      over.rect.height,
+      targetDef?.childConfig.mode !== 'none',
+      false,
+    );
+    setDropIndicator({ targetId: targetMeta.widget.id, action });
+    const verb = action === 'inside' ? 'into' : action;
     showDndToast(
       `Drop ${getWidgetLabel(sourceMeta.widget)} ${verb} ${getWidgetLabel(targetMeta.widget)}`,
       1200,
@@ -262,14 +271,17 @@ export const useWidgetTreeDnD = ({ onCommit }: UseWidgetTreeDnDProps = {}) => {
     }
 
     if (action === 'inside') {
-      // Move INSIDE target (append)
-      moveWidget(movedWidgetId, targetWidgetId); // No index usually means append
+      moveWidget(movedWidgetId, targetWidgetId);
     } else {
-      // Before or After
-      // 1. Find target's parent and target's index
       const targetMeta = findWidgetWithMeta(nodes, targetWidgetId);
-      if (targetMeta) {
-        const newIndex = action === 'after' ? targetMeta.index + 1 : targetMeta.index;
+      if (sourceMeta && targetMeta) {
+        const newIndex = getSiblingReorderIndex(
+          sourceMeta.parentId,
+          targetMeta.parentId,
+          sourceMeta.index,
+          targetMeta.index,
+          action === 'after',
+        );
         moveWidget(movedWidgetId, targetMeta.parentId, newIndex);
       }
     }
@@ -280,6 +292,7 @@ export const useWidgetTreeDnD = ({ onCommit }: UseWidgetTreeDnDProps = {}) => {
     const { active, over } = event;
     setActiveId(null);
     setOverId(null);
+    setDropIndicator(null);
     setIsDragging(false);
     const dragId = active.id?.toString();
 
@@ -311,28 +324,26 @@ export const useWidgetTreeDnD = ({ onCommit }: UseWidgetTreeDnDProps = {}) => {
 
     if (!sourceMeta || !targetMeta) return;
 
-    // Default intent
+    const targetDef = getWidgetDefinition(targetMeta.widget.type);
+    const canHaveChildren = targetDef?.childConfig.mode !== 'none';
+    const draggedRect = active.rect.current.translated;
+    const draggedCenterY = draggedRect
+      ? draggedRect.top + draggedRect.height / 2
+      : over.rect.top + over.rect.height / 2;
+
     const intent: TreeMoveIntent = {
       movedWidgetId: sourceId,
       movedWidgetType: sourceMeta.widget.type,
       targetWidgetId: targetMeta.widget.id,
       targetWidgetType: targetMeta.widget.type,
-      action: 'after', // Default to reorder/sibling
+      action: resolveTreeMoveType(
+        draggedCenterY,
+        over.rect.top,
+        over.rect.height,
+        canHaveChildren,
+        overData?.type === 'slot',
+      ),
     };
-
-    // HEURISTIC: Handle Nesting into Containers
-    const targetDef = getWidgetDefinition(targetMeta.widget.type);
-    const canHaveChildren = targetDef?.childConfig.mode !== 'none';
-
-    // Check if target is a valid container that might be empty or explicitly targeted
-    if (canHaveChildren) {
-      // If dropping onto a container, we assume intent is to nest inside it
-      intent.action = 'inside';
-    }
-
-    if (overData?.type === 'slot') {
-      intent.action = 'inside';
-    }
 
     // Validation
     const ctx = buildValidationContextLookup(nodes);
@@ -379,6 +390,14 @@ export const useWidgetTreeDnD = ({ onCommit }: UseWidgetTreeDnDProps = {}) => {
     }
   };
 
+  const handleDragCancel = () => {
+    setActiveId(null);
+    setOverId(null);
+    setDropIndicator(null);
+    setIsDragging(false);
+    dismissDndToast();
+  };
+
   const restoreSnapshot = (dragId?: string) => {
     // `dnd-kit` usually handles the revert animation if we just return without updating data.
 
@@ -411,8 +430,10 @@ export const useWidgetTreeDnD = ({ onCommit }: UseWidgetTreeDnDProps = {}) => {
     handleDragStart,
     handleDragOver,
     handleDragEnd,
+    handleDragCancel,
     activeId,
     overId,
+    dropIndicator,
     confirmDialog,
     setConfirmDialog,
     commitMove,

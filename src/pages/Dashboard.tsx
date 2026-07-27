@@ -102,9 +102,7 @@ export default function Dashboard() {
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link to="/" className="flex items-center gap-3">
-              <div className="w-25 h-10 rounded-xl bg-white flex items-center justify-center">
-                <BrandLogo bg_color="#0a0f1c" />
-              </div>
+              <BrandLogo />
             </Link>
           </div>
 

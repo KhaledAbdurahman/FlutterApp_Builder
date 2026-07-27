@@ -14,8 +14,9 @@ import {
 } from '@/stores/builder/builder-tree-utils';
 import {
   applyDefaultsToWidgets,
-  getScreenRoute,
+  getUniqueScreenRoute,
   normalizeScreens,
+  remapScreenNavigationRoutes,
 } from '@/stores/builder/builder-project-utils';
 import type { IProject, IProjectId, IProjectJsonData } from '@/types/api/project-types';
 import type {
@@ -119,32 +120,54 @@ const builderSlice = createSlice({
       const newScreen: Screen = {
         id: uuidv4(),
         name,
-        route: getScreenRoute(name),
+        route: getUniqueScreenRoute(name, state.project.screens),
         is_home: false,
         components: [],
       };
 
       state.project.screens.push(newScreen);
       state.activeScreenId = newScreen.id;
+      state.selectedWidgetId = null;
     },
     deleteScreen(state, action: PayloadAction<string>) {
+      const deletedScreen = state.project.screens.find((screen) => screen.id === action.payload);
+      if (!deletedScreen || deletedScreen.is_home) return;
+
       const screens = state.project.screens.filter((screen) => screen.id !== action.payload);
       const nextScreens = screens.length > 0 ? screens : normalizeScreens([]);
+      const fallbackScreen = nextScreens.find((screen) => screen.is_home) ?? nextScreens[0];
 
-      state.project.screens = nextScreens;
-      state.activeScreenId = nextScreens[0].id;
+      state.project.screens = remapScreenNavigationRoutes(
+        nextScreens,
+        deletedScreen.route,
+        fallbackScreen.route,
+      );
+      state.activeScreenId =
+        state.activeScreenId === deletedScreen.id ? fallbackScreen.id : state.activeScreenId;
       state.selectedWidgetId = null;
     },
     renameScreen(state, action: PayloadAction<IRenameScreenPayload>) {
       const { screenId, newName } = action.payload;
-      state.project.screens = state.project.screens.map((screen) =>
+      const renamedScreen = state.project.screens.find((screen) => screen.id === screenId);
+      if (!renamedScreen) return;
+
+      const nextRoute = renamedScreen.is_home
+        ? renamedScreen.route
+        : getUniqueScreenRoute(newName, state.project.screens, screenId);
+      const renamedScreens = state.project.screens.map((screen) =>
         screen.id === screenId
           ? {
               ...screen,
               name: newName,
-              route: getScreenRoute(newName),
+              route: nextRoute,
             }
           : screen,
+      );
+
+      state.project.screens = remapScreenNavigationRoutes(
+        renamedScreens,
+        renamedScreen.route,
+        nextRoute,
       );
     },
     addWidget(state, action: PayloadAction<IAddWidgetPayload>) {

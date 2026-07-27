@@ -1,6 +1,3 @@
-// Placeholder for a robust visual Tree Component
-// This component implements the recursive tree structure and integrates the DnD hook.
-
 import { useCallback, useMemo, useState, type KeyboardEvent } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DndContext, DragOverlay, pointerWithin, useDroppable } from '@dnd-kit/core';
@@ -23,20 +20,28 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { REQUIRED_PARENTS, ROOT_ONLY_WIDGETS, VALIDATION_RULES } from '@/dnd/validationRules';
 
-interface TreeNodeProps {
+interface ITreeNodeProps {
   widget: FlutterWidget;
   depth: number;
   parentId: string | null;
   index: number;
   siblingCount: number;
   onMove: (widgetId: string, parentId: string | null, index: number) => void;
+  dropTargetId?: string;
+  dropAction?: 'inside' | 'before' | 'after';
 }
 
-interface SlotNodeProps {
+interface ISlotNodeProps {
   slot: VirtualTreeNode;
   depth: number;
   parent: FlutterWidget;
   onMove: (widgetId: string, parentId: string | null, index: number) => void;
+  dropTargetId?: string;
+  dropAction?: 'inside' | 'before' | 'after';
+}
+
+interface IWidgetTreeProps {
+  embedded?: boolean;
 }
 
 const isLucideIcon = (icon: unknown): icon is LucideIcon =>
@@ -47,7 +52,14 @@ const resolveLucideIcon = (iconName?: string): LucideIcon => {
   return isLucideIcon(resolvedIcon) ? resolvedIcon : LucideIcons.Box;
 };
 
-const SlotTreeNode = ({ slot, depth, parent, onMove }: SlotNodeProps) => {
+const SlotTreeNode = ({
+  slot,
+  depth,
+  parent,
+  onMove,
+  dropTargetId,
+  dropAction,
+}: ISlotNodeProps) => {
   const { setNodeRef, isOver } = useDroppable({
     id: slot.id,
     data: { type: 'slot', parentId: parent.id, slotKey: slot.slotKey },
@@ -72,6 +84,8 @@ const SlotTreeNode = ({ slot, depth, parent, onMove }: SlotNodeProps) => {
           index={0}
           siblingCount={1}
           onMove={onMove}
+          dropTargetId={dropTargetId}
+          dropAction={dropAction}
         />
       ) : (
         <div
@@ -85,7 +99,6 @@ const SlotTreeNode = ({ slot, depth, parent, onMove }: SlotNodeProps) => {
   );
 };
 
-// Draggable Node Component
 const SortableTreeNode = ({
   widget,
   depth,
@@ -93,9 +106,18 @@ const SortableTreeNode = ({
   index,
   siblingCount,
   onMove,
-}: TreeNodeProps) => {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging, isOver } =
-    useSortable({ id: widget.id, data: { widget } });
+  dropTargetId,
+  dropAction,
+}: ITreeNodeProps) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    setActivatorNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: widget.id, data: { widget } });
 
   const style = {
     transform: CSS.Translate.toString(transform),
@@ -108,6 +130,9 @@ const SortableTreeNode = ({
 
   const definition = getWidgetDefinition(widget.type);
   const IconComponent = resolveLucideIcon(definition?.icon);
+  const childMode = definition?.childConfig.mode;
+  const placementLabel =
+    childMode === 'none' ? 'leaf' : childMode === 'single' ? 'one child' : 'children';
 
   const [isExpanded, setIsExpanded] = useState(true);
   const childNodes = getTreeChildren(widget);
@@ -121,9 +146,13 @@ const SortableTreeNode = ({
   // Explicit "empty parent" indicator to help drop
   const isEmptyContainer =
     definition?.childConfig.mode !== 'none' && getWidgetChildren(widget).length === 0;
+  const activeDropAction = dropTargetId === widget.id ? dropAction : undefined;
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes}>
+    <div ref={setNodeRef} style={style} className="relative">
+      {activeDropAction === 'before' && (
+        <div className="pointer-events-none absolute left-7 right-1 top-0 z-10 h-0.5 bg-primary" />
+      )}
       <motion.div
         initial={{ opacity: 0, x: -10 }}
         animate={{ opacity: 1, x: 0 }}
@@ -131,19 +160,25 @@ const SortableTreeNode = ({
           'relative flex items-center gap-2 py-2 px-2 rounded-md cursor-pointer transition-colors text-sm group w-full min-w-max',
           isSelected ? 'bg-primary/20 text-primary' : 'hover:bg-muted text-foreground',
           isDragging && 'opacity-50',
-          isOver && 'bg-primary/10 ring-1 ring-primary/30',
-          // Add Drop Zone visual for empty containers if needed (though hook logic handles the action)
+          activeDropAction === 'inside' && 'bg-primary/10 ring-1 ring-primary/50',
           isEmptyContainer && 'border border-dashed border-muted-foreground/30',
         )}
-        onClick={(e) => {
-          setSelectedWidget(widget.id);
-        }}
-        {...listeners}
+        onClick={() => setSelectedWidget(widget.id)}
       >
         <span className="absolute left-1 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">
           {depth + 1}
         </span>
-        <GripVertical className="w-3 h-3 text-muted-foreground/60 group-hover:text-muted-foreground" />
+        <button
+          ref={setActivatorNodeRef}
+          type="button"
+          className="cursor-grab touch-none rounded p-0.5 text-muted-foreground/60 hover:bg-muted hover:text-muted-foreground active:cursor-grabbing"
+          aria-label={`Move ${widget.type}`}
+          onClick={(event) => event.stopPropagation()}
+          {...attributes}
+          {...listeners}
+        >
+          <GripVertical className="h-3.5 w-3.5" />
+        </button>
         {hasChildren ? (
           <button
             onClick={(e) => {
@@ -170,8 +205,11 @@ const SortableTreeNode = ({
             "{widgetText}"
           </span>
         )}
+        <span className="ml-auto text-[10px] font-medium uppercase tracking-wide text-muted-foreground/70">
+          {placementLabel}
+        </span>
         {isSelected && (
-          <div className="ml-auto flex items-center gap-1">
+          <div className="flex items-center gap-1">
             <button
               type="button"
               className="p-1 rounded hover:bg-muted"
@@ -223,6 +261,8 @@ const SortableTreeNode = ({
                     depth={depth + 1}
                     parent={widget}
                     onMove={onMove}
+                    dropTargetId={dropTargetId}
+                    dropAction={dropAction}
                   />
                 ) : (
                   <SortableTreeNode
@@ -233,6 +273,8 @@ const SortableTreeNode = ({
                     index={actualChildren.findIndex((node) => node.id === child.id)}
                     siblingCount={actualChildren.length}
                     onMove={onMove}
+                    dropTargetId={dropTargetId}
+                    dropAction={dropAction}
                   />
                 ),
               );
@@ -240,11 +282,14 @@ const SortableTreeNode = ({
           </motion.div>
         )}
       </AnimatePresence>
+      {activeDropAction === 'after' && (
+        <div className="pointer-events-none absolute bottom-0 left-7 right-1 z-10 h-0.5 bg-primary" />
+      )}
     </div>
   );
 };
 
-export const WidgetTree = () => {
+export const WidgetTree = ({ embedded = false }: IWidgetTreeProps) => {
   const { getActiveScreen, selectedWidgetId, moveWidget } = useBuilderStore();
   const screen = getActiveScreen();
   const [nestDialog, setNestDialog] = useState<null | {
@@ -260,6 +305,8 @@ export const WidgetTree = () => {
     handleDragStart,
     handleDragOver,
     handleDragEnd,
+    handleDragCancel,
+    dropIndicator,
     confirmDialog,
     cancelPendingMove,
     confirmPendingMove,
@@ -470,13 +517,20 @@ export const WidgetTree = () => {
   );
 
   return (
-    <div className="w-80 shrink-0 border-r border-border bg-card flex flex-col h-full overflow-hidden">
-      <div className="p-4 border-b border-border flex items-center gap-2">
-        <Layers className="w-4 h-4 text-muted-foreground" />
-        <h2 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">
-          Widget Tree
-        </h2>
-      </div>
+    <div
+      className={cn(
+        'flex h-full flex-col overflow-hidden bg-card',
+        !embedded && 'w-80 shrink-0 border-r border-border',
+      )}
+    >
+      {!embedded && (
+        <div className="flex items-center gap-2 border-b border-border p-4">
+          <Layers className="h-4 w-4 text-muted-foreground" />
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+            Widget Tree
+          </h2>
+        </div>
+      )}
 
       <div
         className="flex-1 overflow-auto p-2 scrollbar-thin"
@@ -489,6 +543,7 @@ export const WidgetTree = () => {
           onDragStart={handleDragStart}
           onDragOver={handleDragOver}
           onDragEnd={handleDragEnd}
+          onDragCancel={handleDragCancel}
         >
           <SortableContext items={allWidgetIds} strategy={verticalListSortingStrategy}>
             {screen?.components.map((widget, index) => (
@@ -500,6 +555,8 @@ export const WidgetTree = () => {
                 index={index}
                 siblingCount={screen.components.length}
                 onMove={handleMove}
+                dropTargetId={dropIndicator?.targetId}
+                dropAction={dropIndicator?.action}
               />
             ))}
           </SortableContext>

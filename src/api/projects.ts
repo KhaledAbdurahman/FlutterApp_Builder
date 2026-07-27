@@ -10,6 +10,12 @@ import type {
   IProjectId,
   IProjectUpdateRequest,
 } from '@/types/api/project-types';
+import type {
+  IActiveLivePreviewsResponse,
+  ILivePreviewActionResponse,
+  ILivePreviewStartResponse,
+  ILivePreviewUpdateRequest,
+} from '@/types/api/live-preview-types';
 
 class ProjectService extends ResourceHandler<
   IProject,
@@ -66,20 +72,38 @@ class ProjectService extends ResourceHandler<
     });
   }
 
-  public startLivePreview(projectId: IProjectId): Promise<IProject> {
-    return Post<IProject>({
+  public startLivePreview(projectId: IProjectId): Promise<ILivePreviewStartResponse> {
+    return Post<ILivePreviewStartResponse>({
       endpoint: getEndpointPathname(ApiEndpointPathnames.PROJECT_START_LIVE_PREVIEW, projectId),
     });
   }
 
-  public stopLivePreview(projectId: IProjectId): Promise<IProject> {
-    return Post<IProject>({
+  public stopLivePreview(projectId: IProjectId): Promise<ILivePreviewActionResponse> {
+    return Post<ILivePreviewActionResponse>({
       endpoint: getEndpointPathname(ApiEndpointPathnames.PROJECT_STOP_LIVE_PREVIEW, projectId),
     });
   }
 
-  public getActiveLivePreviews(): Promise<IProject[]> {
-    return Get<IProject[]>({ endpoint: ApiEndpointPathnames.PROJECT_ACTIVE_LIVE_PREVIEWS });
+  public updateLivePreview(
+    projectId: IProjectId,
+    payload: ILivePreviewUpdateRequest,
+  ): Promise<ILivePreviewActionResponse> {
+    return Post<ILivePreviewActionResponse, ILivePreviewUpdateRequest>({
+      endpoint: getEndpointPathname(ApiEndpointPathnames.PROJECT_UPDATE_LIVE_PREVIEW, projectId),
+      payload,
+    });
+  }
+
+  public sendLivePreviewHeartbeat(projectId: IProjectId): Promise<ILivePreviewActionResponse> {
+    return Post<ILivePreviewActionResponse>({
+      endpoint: getEndpointPathname(ApiEndpointPathnames.PROJECT_LIVE_PREVIEW_HEARTBEAT, projectId),
+    });
+  }
+
+  public getActiveLivePreviews(): Promise<IActiveLivePreviewsResponse> {
+    return Get<IActiveLivePreviewsResponse>({
+      endpoint: ApiEndpointPathnames.PROJECT_ACTIVE_LIVE_PREVIEWS,
+    });
   }
 }
 
