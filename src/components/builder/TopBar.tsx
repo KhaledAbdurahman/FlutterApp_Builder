@@ -15,6 +15,7 @@ import {
   Save,
   BookOpen,
   Upload,
+  MonitorPlay,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -29,6 +30,8 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -39,6 +42,7 @@ import { ProjectManager } from '@/components/builder/ProjectManager';
 import { GenerationLogs } from '@/components/builder/GenerationLogs';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { UserProfileMenu } from '@/components/UserProfileMenu';
+import BrandLogo from '@/components/BrandLogo';
 import { PROJECT_SERVICE } from '@/api/projects';
 import type { IProjectJsonData } from '@/types/api/project-types';
 import { downloadBlob } from '@/utils/download-blob';
@@ -57,6 +61,11 @@ import { v4 as uuidv4 } from 'uuid';
 const allowedWidgetTypes = new Set(WIDGET_DEFINITIONS.map((definition) => definition.type));
 
 const toRoute = (name: string) => `/${name.toLowerCase().replace(/\s+/g, '-')}`;
+
+interface ITopBarProps {
+  isPreviewOpen: boolean;
+  onLaunchPreview: () => void;
+}
 
 const buildSchemaDocument = (): string => {
   const widgetSchemas = WIDGET_DEFINITIONS.filter(
@@ -191,7 +200,7 @@ const normalizeProps = (type: ComponentType, rawProps: Record<string, unknown> |
   return cleaned;
 };
 
-export const TopBar = () => {
+export const TopBar = ({ isPreviewOpen, onLaunchPreview }: ITopBarProps) => {
   const {
     project,
     projectTitle,
@@ -209,7 +218,8 @@ export const TopBar = () => {
   } = useBuilderStore();
 
   const [newScreenName, setNewScreenName] = useState('');
-  const [showNewScreen, setShowNewScreen] = useState(false);
+  const [screenMenuOpen, setScreenMenuOpen] = useState(false);
+  const [addScreenDialogOpen, setAddScreenDialogOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [tempProjectName, setTempProjectName] = useState(project.app_name);
   const [tempPackageName, setTempPackageName] = useState(project.package_name);
@@ -299,9 +309,16 @@ export const TopBar = () => {
     if (newScreenName.trim()) {
       addScreen(newScreenName.trim());
       setNewScreenName('');
-      setShowNewScreen(false);
+      setAddScreenDialogOpen(false);
       toast.success('Screen created!');
     }
+  };
+
+  const handleOpenAddScreenDialog = () => {
+    setScreenMenuOpen(false);
+
+    // Radix must release the menu focus lock before the dialog claims it.
+    window.setTimeout(() => setAddScreenDialogOpen(true), 0);
   };
 
   const handleExport = () => {
@@ -496,7 +513,7 @@ export const TopBar = () => {
       if (route !== rawRoute) warnings.push(`screens[${index}]: missing route, generated.`);
 
       const rawIsHome = (screen as { is_home?: unknown }).is_home;
-      const is_home = typeof rawIsHome === 'boolean' ? rawIsHome : !explicitHome && index === 0;
+      const isHome = typeof rawIsHome === 'boolean' ? rawIsHome : !explicitHome && index === 0;
       if (rawIsHome === undefined) {
         warnings.push(`screens[${index}]: missing is_home, defaulted.`);
       }
@@ -517,7 +534,7 @@ export const TopBar = () => {
         id,
         name,
         route,
-        is_home,
+        is_home: isHome,
         components,
       } as Screen;
     });
@@ -690,15 +707,13 @@ export const TopBar = () => {
     >
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
-          <div className="w-30 h-10 rounded-xl flex items-center justify-center">
-            <img src="/Builder.png" alt="AppBuilder Logo" className="w-30 h-14" />
-          </div>
+          <BrandLogo className="h-10" />
           {/* <span className="font-semibold text-lg">{project.app_name}</span> */}
         </div>
 
         <div className="h-6 w-px bg-border" />
 
-        <DropdownMenu>
+        <DropdownMenu modal={false} open={screenMenuOpen} onOpenChange={setScreenMenuOpen}>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="gap-2">
               <span className="text-muted-foreground text-sm">Screen:</span>
@@ -706,49 +721,25 @@ export const TopBar = () => {
               <ChevronDown className="w-4 h-4 text-muted-foreground" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-56">
+          <DropdownMenuContent align="start" className="w-72 max-w-[calc(100vw-2rem)]">
             {project.screens.map((screen) => (
               <DropdownMenuItem
                 key={screen.id}
                 onClick={() => setActiveScreen(screen.id)}
                 className="flex items-center justify-between"
               >
-                <span>{screen.name}</span>
-                <div className="flex items-center gap-2">
+                <span className="min-w-0 flex-1 truncate">{screen.name}</span>
+                <div className="flex shrink-0 items-center gap-2">
                   {screen.is_home && <span className="text-xs text-primary">Home</span>}
                   {screen.id === activeScreenId && <Check className="w-4 h-4 text-primary" />}
                 </div>
               </DropdownMenuItem>
             ))}
             <DropdownMenuSeparator />
-            {showNewScreen ? (
-              <div className="p-2 flex gap-2">
-                <Input
-                  value={newScreenName}
-                  onChange={(e) => setNewScreenName(e.target.value)}
-                  placeholder="Screen name"
-                  className="h-8 text-sm"
-                  onKeyDown={(e) => e.key === 'Enter' && handleAddScreen()}
-                  autoFocus
-                />
-                <Button size="sm" onClick={handleAddScreen} className="h-8">
-                  <Check className="w-4 h-4" />
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => setShowNewScreen(false)}
-                  className="h-8"
-                >
-                  <X className="w-4 h-4" />
-                </Button>
-              </div>
-            ) : (
-              <DropdownMenuItem onClick={() => setShowNewScreen(true)}>
-                <Plus className="w-4 h-4 mr-2" />
-                Add Screen
-              </DropdownMenuItem>
-            )}
+            <DropdownMenuItem onSelect={handleOpenAddScreenDialog}>
+              <Plus className="w-4 h-4 mr-2" />
+              Add Screen
+            </DropdownMenuItem>
             {project.screens.length > 1 && activeScreen && !activeScreen.is_home && (
               <>
                 <DropdownMenuSeparator />
@@ -763,6 +754,60 @@ export const TopBar = () => {
             )}
           </DropdownMenuContent>
         </DropdownMenu>
+
+        <Dialog
+          open={addScreenDialogOpen}
+          onOpenChange={(open) => {
+            setAddScreenDialogOpen(open);
+            if (!open) setNewScreenName('');
+          }}
+        >
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Add Screen</DialogTitle>
+              <DialogDescription className="sr-only">
+                Create a screen by entering its name.
+              </DialogDescription>
+            </DialogHeader>
+            <form
+              className="space-y-5"
+              onSubmit={(event) => {
+                event.preventDefault();
+                handleAddScreen();
+              }}
+            >
+              <div className="space-y-2">
+                <label htmlFor="new-screen-name" className="text-sm font-medium">
+                  Screen name
+                </label>
+                <Input
+                  id="new-screen-name"
+                  value={newScreenName}
+                  onChange={(event) => setNewScreenName(event.target.value)}
+                  placeholder="Checkout"
+                  className="h-10 w-full"
+                  autoFocus
+                />
+              </div>
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setNewScreenName('');
+                    setAddScreenDialogOpen(false);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={!newScreenName.trim()}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create Screen
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <div className="flex items-center gap-3">
@@ -932,6 +977,15 @@ export const TopBar = () => {
             <Save className="w-4 h-4" />
           )}
           {isAutoSaving ? 'Saving...' : autoSaveState === 'saved' ? 'Saved' : 'Save'}
+        </Button>
+        <Button
+          variant={isPreviewOpen ? 'secondary' : 'ghost'}
+          size="sm"
+          onClick={onLaunchPreview}
+          className="gap-2"
+        >
+          <MonitorPlay className="h-4 w-4" />
+          {isPreviewOpen ? 'Preview Open' : 'Launch Preview'}
         </Button>
         {serverProjectId && (
           <Button variant="ghost" size="sm" onClick={() => setLogsOpen(true)} className="gap-2">

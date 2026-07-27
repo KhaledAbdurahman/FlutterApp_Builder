@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
 import { Smartphone, ArrowRight, Eye, EyeOff, Loader2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import BrandLogo from '@/components/BrandLogo';
 
 const loginSchema = z.object({
   username: z.string().min(1, 'Username is required'),
@@ -116,9 +117,7 @@ export default function Auth() {
 
         <div className="relative z-10 flex flex-col justify-center px-16">
           <Link to="/" className="flex items-center gap-3 mb-12">
-            <div className="w-35 h-10 rounded-xl flex items-center justify-center">
-              <img src="/Builder.png" alt="AppBuilder Logo" className="w-35 h-14" />
-            </div>
+            <BrandLogo variant="white" className="h-14" />
           </Link>
 
           <h1 className="text-4xl font-bold text-white mb-4">
@@ -157,10 +156,7 @@ export default function Auth() {
         >
           {/* Mobile Logo */}
           <Link to="/" className="lg:hidden flex items-center gap-3 mb-8">
-            <div className="w-35 h-10 rounded-xl flex items-center justify-center">
-              <img src="/Builder.png" alt="AppBuilder Logo" className="w-35 h-14" />
-            </div>
-            <span className="text-xl font-bold text-gradient">FlutterForge</span>
+            <BrandLogo className="h-12" />
           </Link>
 
           {/* Tab Switcher */}

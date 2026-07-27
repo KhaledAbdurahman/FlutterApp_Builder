@@ -74,9 +74,7 @@ export default function Landing() {
       <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-3">
-            <div className="w-25 h-10 rounded-xl bg-white flex items-center justify-center">
-              <BrandLogo bg_color="#080c16" />
-            </div>
+            <BrandLogo />
           </Link>
 
           <div className="flex items-center gap-4">
@@ -295,9 +293,7 @@ export default function Landing() {
       <footer className="border-t border-border py-12 px-6">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-3">
-            <div className="w-25 h-10 rounded-xl bg-white flex items-center justify-center">
-              <BrandLogo bg_color="#080c16" />
-            </div>
+            <BrandLogo />
           </div>
           <p className="text-sm text-muted-foreground">
             © 2026 AppBuilder. Built with ❤️ for Flutter developers.

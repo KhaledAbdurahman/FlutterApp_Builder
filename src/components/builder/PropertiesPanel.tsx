@@ -17,6 +17,19 @@ import { getWidgetDefinition } from '@/types/screen-types';
 import type { ActionBase, BottomNavItem, ComponentPropsByType } from '@/types/screen-types';
 import { toast } from 'sonner';
 
+const CreateActionForType = (actionType: ActionBase['type'], defaultRoute: string): ActionBase => {
+  switch (actionType) {
+    case 'snackbar':
+      return { type: 'snackbar', message: 'Action triggered!' };
+    case 'dialog':
+      return { type: 'dialog', title: 'Dialog', message: 'Action triggered!' };
+    case 'navigate':
+      return { type: 'navigate', route: defaultRoute };
+    case 'goBack':
+      return { type: 'goBack' };
+  }
+};
+
 export const PropertiesPanel = () => {
   const { selectedWidgetId, getWidgetById, updateWidgetProps, deleteWidget, project } =
     useBuilderStore();
@@ -30,7 +43,13 @@ export const PropertiesPanel = () => {
     }
   };
 
-  const screenRoutes = project.screens.map((s) => s.route);
+  const screenOptions = project.screens.map((screen) => ({
+    id: screen.id,
+    name: screen.name,
+    route: screen.route,
+  }));
+  const defaultRoute =
+    project.screens.find((screen) => screen.is_home)?.route ?? screenOptions[0]?.route ?? '/';
 
   const addAction = () => {
     if (!widget || widget.type !== 'Button') return;
@@ -52,6 +71,13 @@ export const PropertiesPanel = () => {
     updateWidgetProps(widget.id, { actions: currentActions });
   };
 
+  const replaceActionType = (index: number, actionType: ActionBase['type']) => {
+    if (!widget || widget.type !== 'Button') return;
+    const currentActions = [...(widget.props.actions || [])];
+    currentActions[index] = CreateActionForType(actionType, defaultRoute);
+    updateWidgetProps(widget.id, { actions: currentActions });
+  };
+
   const removeAction = (index: number) => {
     if (!widget || widget.type !== 'Button') return;
     const currentActions = [...(widget.props.actions || [])];
@@ -66,7 +92,7 @@ export const PropertiesPanel = () => {
     const newItem: BottomNavItem = {
       label: 'New Tab',
       icon: 'home',
-      route: '/',
+      route: defaultRoute,
     };
     updateWidgetProps(widget.id, { items: [...currentItems, newItem] });
   };
@@ -358,10 +384,8 @@ export const PropertiesPanel = () => {
                         <div className="flex items-center justify-between">
                           <Select
                             value={action.type}
-                            onValueChange={(v) =>
-                              updateAction(index, {
-                                type: v as ActionBase['type'],
-                              })
+                            onValueChange={(value) =>
+                              replaceActionType(index, value as ActionBase['type'])
                             }
                           >
                             <SelectTrigger className="h-8 text-xs">
@@ -419,9 +443,9 @@ export const PropertiesPanel = () => {
                               <SelectValue placeholder="Select route..." />
                             </SelectTrigger>
                             <SelectContent>
-                              {screenRoutes.map((route) => (
-                                <SelectItem key={route} value={route}>
-                                  {route}
+                              {screenOptions.map((screen) => (
+                                <SelectItem key={screen.id} value={screen.route}>
+                                  {screen.name} ({screen.route})
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -1191,9 +1215,9 @@ export const PropertiesPanel = () => {
                         <SelectValue placeholder="Select route" />
                       </SelectTrigger>
                       <SelectContent>
-                        {screenRoutes.map((route) => (
-                          <SelectItem key={route} value={route}>
-                            {route}
+                        {screenOptions.map((screen) => (
+                          <SelectItem key={screen.id} value={screen.route}>
+                            {screen.name} ({screen.route})
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -1311,9 +1335,9 @@ export const PropertiesPanel = () => {
                             <SelectValue placeholder="Select route..." />
                           </SelectTrigger>
                           <SelectContent>
-                            {screenRoutes.map((route) => (
-                              <SelectItem key={route} value={route}>
-                                {route}
+                            {screenOptions.map((screen) => (
+                              <SelectItem key={screen.id} value={screen.route}>
+                                {screen.name} ({screen.route})
                               </SelectItem>
                             ))}
                           </SelectContent>
