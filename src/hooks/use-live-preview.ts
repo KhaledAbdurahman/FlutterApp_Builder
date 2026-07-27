@@ -5,6 +5,11 @@ import { useAppDispatch, useAppSelector } from '@/config/redux/store';
 import { builderActions } from '@/stores/builder/builder-slice';
 import { exportProject } from '@/stores/builder/builder-project-utils';
 import { selectBuilderState } from '@/stores/builder/builder-selectors';
+import type {
+  ILivePreviewServerStatus,
+  ILivePreviewStartResponse,
+  ILivePreviewStatusResponse,
+} from '@/types/api/live-preview-types';
 import type { IProjectId, IProjectJsonData } from '@/types/api/project-types';
 import {
   CreateLivePreviewProjectSignature,
@@ -13,6 +18,8 @@ import {
 
 const LIVE_PREVIEW_HEARTBEAT_INTERVAL = 15_000;
 const LIVE_PREVIEW_UPDATE_DELAY = 900;
+const LIVE_PREVIEW_STATUS_POLL_INTERVAL = 1_000;
+const LIVE_PREVIEW_STATUS_MAX_ATTEMPTS = 300;
 const GENERATED_SIGNATURE_KEY_PREFIX = 'live-preview-generated-signature';
 
 type ILivePreviewPhase =
@@ -20,6 +27,9 @@ type ILivePreviewPhase =
 
 const IsRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null;
+
+const Wait = (delay: number): Promise<void> =>
+  new Promise((resolve) => window.setTimeout(resolve, delay));
 
 const GetErrorMessage = (error: unknown): string => {
   const message =
@@ -119,6 +129,8 @@ const useLivePreview = (isOpen: boolean) => {
   );
 
   const [phase, setPhase] = useState<ILivePreviewPhase>('idle');
+  const [previewServerStatus, setPreviewServerStatus] = useState<ILivePreviewServerStatus>('idle');
+  const [previewStatusMessage, setPreviewStatusMessage] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [updateErrorMessage, setUpdateErrorMessage] = useState<string | null>(null);
@@ -165,12 +177,16 @@ const useLivePreview = (isOpen: boolean) => {
       }
 
       try {
+        let stopResult = null;
+
         if (projectId !== null) {
-          await PROJECT_SERVICE.stopLivePreview(projectId);
+          stopResult = await PROJECT_SERVICE.stopLivePreview(projectId);
         }
 
         if (operationRef.current !== operationId) return;
 
+        setPreviewServerStatus(stopResult?.preview_status ?? 'stopped');
+        setPreviewStatusMessage(stopResult?.message ?? null);
         setPreviewUrl(null);
         setErrorMessage(null);
         setUpdateErrorMessage(null);
@@ -181,6 +197,7 @@ const useLivePreview = (isOpen: boolean) => {
 
         setPreviewUrl(null);
         setIsUpdating(false);
+        setPreviewServerStatus('error');
 
         if (silent) {
           SetPhase('idle');
@@ -213,6 +230,8 @@ const useLivePreview = (isOpen: boolean) => {
       setUpdateErrorMessage(null);
       setPreviewUrl(null);
       setIsUpdating(false);
+      setPreviewServerStatus('idle');
+      setPreviewStatusMessage(null);
       SetPhase('saving');
 
       try {
@@ -268,10 +287,90 @@ const useLivePreview = (isOpen: boolean) => {
         if (operationRef.current !== operationId || !isOpenRef.current) return;
 
         SetPhase('launching');
-        const startResult = await PROJECT_SERVICE.startLivePreview(projectId);
+        setPreviewServerStatus('starting');
+        setPreviewStatusMessage('Starting the Flutter preview server.');
 
-        if (startResult.status !== 'success' || !startResult.preview_url) {
-          throw new Error(startResult.message || 'The preview server did not return a URL.');
+        let startResponse: ILivePreviewStartResponse | null = null;
+        let startError: unknown = null;
+        let pollingCancelled = false;
+
+        const ApplyPreviewStatus = (response: ILivePreviewStatusResponse): void => {
+          if (
+            operationRef.current !== operationId ||
+            !isOpenRef.current ||
+            phaseRef.current !== 'launching'
+          ) {
+            return;
+          }
+
+          setPreviewServerStatus(response.preview_status);
+          setPreviewStatusMessage(response.message);
+        };
+
+        const observedStartRequest = PROJECT_SERVICE.startLivePreview(projectId).then(
+          (response) => {
+            startResponse = response;
+
+            if (response.status === 'error' || response.preview_status === 'error') {
+              startError = new Error(
+                response.error || response.message || 'The preview server failed to start.',
+              );
+            }
+
+            return response;
+          },
+          (error: unknown) => {
+            startError = error;
+            return null;
+          },
+        );
+
+        const PollUntilReady = async (): Promise<ILivePreviewStatusResponse | null> => {
+          for (let attempt = 0; attempt < LIVE_PREVIEW_STATUS_MAX_ATTEMPTS; attempt += 1) {
+            await Wait(LIVE_PREVIEW_STATUS_POLL_INTERVAL);
+
+            if (pollingCancelled || operationRef.current !== operationId || !isOpenRef.current) {
+              return null;
+            }
+
+            if (startError) {
+              throw startError;
+            }
+
+            const statusResponse = await PROJECT_SERVICE.getLivePreviewStatus(projectId);
+            ApplyPreviewStatus(statusResponse);
+
+            if (statusResponse.status === 'error' || statusResponse.preview_status === 'error') {
+              throw new Error(
+                statusResponse.error ||
+                  statusResponse.message ||
+                  'The preview server reported an error.',
+              );
+            }
+
+            if (statusResponse.ready) {
+              return statusResponse;
+            }
+          }
+
+          throw new Error('The preview did not become ready within five minutes.');
+        };
+
+        let readinessResponse: ILivePreviewStatusResponse | null = null;
+
+        try {
+          readinessResponse = await PollUntilReady();
+        } finally {
+          pollingCancelled = true;
+          void observedStartRequest;
+        }
+
+        if (!readinessResponse) return;
+
+        const readyPreviewUrl = readinessResponse.preview_url ?? startResponse?.preview_url;
+
+        if (!readinessResponse.ready || !readyPreviewUrl) {
+          throw new Error(readinessResponse.message || 'The ready preview did not return a URL.');
         }
 
         if (operationRef.current !== operationId || !isOpenRef.current) {
@@ -280,7 +379,7 @@ const useLivePreview = (isOpen: boolean) => {
         }
 
         const resolvedUrl = ResolveLivePreviewUrl(
-          startResult.preview_url,
+          readyPreviewUrl,
           API_BASE_URL,
           window.location.origin,
         );
@@ -291,6 +390,8 @@ const useLivePreview = (isOpen: boolean) => {
         lastSavedProjectSignatureRef.current = currentSnapshot.projectSignature;
         lastUpdatedScreenSignatureRef.current = currentSnapshot.activeScreenSignature;
         heartbeatFailureCountRef.current = 0;
+        setPreviewServerStatus('ready');
+        setPreviewStatusMessage(readinessResponse.message);
         setActiveProjectId(projectId);
         setPreviewUrl(resolvedUrl);
         setFrameRevision((revision) => revision + 1);
@@ -301,7 +402,10 @@ const useLivePreview = (isOpen: boolean) => {
         launchProjectIdRef.current = null;
         sessionProjectIdRef.current = null;
         setActiveProjectId(null);
-        setErrorMessage(GetErrorMessage(error));
+        const message = GetErrorMessage(error);
+        setPreviewServerStatus('error');
+        setPreviewStatusMessage(message);
+        setErrorMessage(message);
         SetPhase('error');
       }
     },
@@ -340,6 +444,8 @@ const useLivePreview = (isOpen: boolean) => {
 
         if (response.status === 'info') {
           setErrorMessage(response.message || 'The preview session is no longer running.');
+          setPreviewServerStatus('stopped');
+          setPreviewStatusMessage(response.message || 'The preview session stopped.');
           sessionProjectIdRef.current = null;
           setActiveProjectId(null);
           SetPhase('error');
@@ -351,7 +457,10 @@ const useLivePreview = (isOpen: boolean) => {
         heartbeatFailureCountRef.current += 1;
 
         if (heartbeatFailureCountRef.current >= 2) {
-          setErrorMessage(`Preview heartbeat failed. ${GetErrorMessage(error)}`);
+          const message = `Preview heartbeat failed. ${GetErrorMessage(error)}`;
+          setPreviewServerStatus('error');
+          setPreviewStatusMessage(message);
+          setErrorMessage(message);
           SetPhase('error');
         }
       }
@@ -453,6 +562,8 @@ const useLivePreview = (isOpen: boolean) => {
     isUpdating,
     launchPreview: LaunchPreview,
     phase,
+    previewServerStatus,
+    previewStatusMessage,
     previewUrl,
     refreshFrame: RefreshFrame,
     restartPreview: RestartPreview,

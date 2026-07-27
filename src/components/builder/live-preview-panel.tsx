@@ -23,6 +23,7 @@ import {
 import { Slider } from '@/components/ui/slider';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useLivePreview } from '@/hooks/use-live-preview';
+import type { ILivePreviewServerStatus } from '@/types/api/live-preview-types';
 import { CalculateLivePreviewScale } from '@/utils/live-preview-utils';
 
 const PHONE_BEZEL_HORIZONTAL = 20;
@@ -37,16 +38,22 @@ const PreviewDevices = {
     label: 'iPhone 14',
     width: 390,
     height: 844,
+    safeAreaTop: 47,
+    cutout: 'notch',
   },
   pixel8: {
     label: 'Pixel 8',
     width: 412,
     height: 915,
+    safeAreaTop: 32,
+    cutout: 'punch-hole',
   },
   smallAndroid: {
     label: 'Small Android',
     width: 360,
     height: 800,
+    safeAreaTop: 24,
+    cutout: 'none',
   },
 } as const;
 
@@ -60,7 +67,18 @@ interface ILivePreviewPanelProps {
 
 const GetPhaseDetails = (
   phase: ILivePreviewPhase,
+  previewServerStatus: ILivePreviewServerStatus,
+  previewStatusMessage: string | null,
 ): { label: string; description: string; progress: number } => {
+  if (phase === 'launching') {
+    const statusDetails = GetPreviewStatusDetails(previewServerStatus);
+
+    return {
+      ...statusDetails,
+      description: previewStatusMessage || statusDetails.description,
+    };
+  }
+
   switch (phase) {
     case 'saving':
       return {
@@ -73,12 +91,6 @@ const GetPhaseDetails = (
         label: 'Generating Flutter app',
         description: 'Preparing the Flutter project used by the preview server.',
         progress: 52,
-      };
-    case 'launching':
-      return {
-        label: 'Launching preview',
-        description: 'Flutter is starting its web server. This can take a moment.',
-        progress: 82,
       };
     case 'stopping':
       return {
@@ -107,6 +119,55 @@ const GetPhaseDetails = (
   }
 };
 
+const GetPreviewStatusDetails = (
+  previewServerStatus: ILivePreviewServerStatus,
+): { label: string; description: string; progress: number } => {
+  switch (previewServerStatus) {
+    case 'starting':
+      return {
+        label: 'Starting preview',
+        description: 'The Flutter preview process is starting.',
+        progress: 64,
+      };
+    case 'getting_dependencies':
+      return {
+        label: 'Getting dependencies',
+        description: 'Flutter is resolving the generated application dependencies.',
+        progress: 74,
+      };
+    case 'compiling':
+      return {
+        label: 'Compiling Flutter app',
+        description: 'Flutter is compiling the web application.',
+        progress: 88,
+      };
+    case 'ready':
+      return {
+        label: 'Preview ready',
+        description: 'The Flutter application is ready to interact with.',
+        progress: 100,
+      };
+    case 'error':
+      return {
+        label: 'Preview failed',
+        description: 'The preview server reported an error.',
+        progress: 100,
+      };
+    case 'stopped':
+      return {
+        label: 'Preview stopped',
+        description: 'The preview server stopped before becoming ready.',
+        progress: 100,
+      };
+    default:
+      return {
+        label: 'Waiting for preview',
+        description: 'Waiting for the preview server to begin.',
+        progress: 58,
+      };
+  }
+};
+
 const LivePreviewPanel = ({ open, onClose }: ILivePreviewPanelProps) => {
   const {
     errorMessage,
@@ -114,6 +175,8 @@ const LivePreviewPanel = ({ open, onClose }: ILivePreviewPanelProps) => {
     isUpdating,
     launchPreview,
     phase,
+    previewServerStatus,
+    previewStatusMessage,
     previewUrl,
     refreshFrame,
     restartPreview,
@@ -129,8 +192,9 @@ const LivePreviewPanel = ({ open, onClose }: ILivePreviewPanelProps) => {
   const device = PreviewDevices[deviceId];
   const phoneWidth = device.width + PHONE_BEZEL_HORIZONTAL;
   const phoneHeight = device.height + PHONE_BEZEL_VERTICAL;
+  const applicationViewportHeight = device.height - device.safeAreaTop;
   const scale = fitToScreen ? fitScale : zoomPercent / 100;
-  const phaseDetails = GetPhaseDetails(phase);
+  const phaseDetails = GetPhaseDetails(phase, previewServerStatus, previewStatusMessage);
   const frameKey = `${previewUrl ?? 'empty'}:${frameRevision}`;
   const isFrameLoading =
     phase === 'ready' &&
@@ -411,14 +475,41 @@ const LivePreviewPanel = ({ open, onClose }: ILivePreviewPanelProps) => {
                 width: device.width,
               }}
             >
-              <div className="pointer-events-none absolute left-1/2 top-2 z-20 h-5 w-20 -translate-x-1/2 rounded-full bg-[#111316]" />
+              <div
+                className="pointer-events-none absolute left-0 right-0 top-0 z-10 bg-white"
+                style={{ height: device.safeAreaTop }}
+                aria-hidden="true"
+                data-preview-safe-area={deviceId}
+              />
+
+              {device.cutout === 'notch' && (
+                <div
+                  className="pointer-events-none absolute left-1/2 top-0 z-20 flex h-[30px] w-[120px] -translate-x-1/2 items-center justify-center rounded-b-[18px] bg-[#111316]"
+                  aria-hidden="true"
+                  data-preview-cutout="notch"
+                >
+                  <div className="h-1 w-10 rounded-full bg-white/20" />
+                </div>
+              )}
+
+              {device.cutout === 'punch-hole' && (
+                <div
+                  className="pointer-events-none absolute left-1/2 top-[9px] z-20 h-[14px] w-[14px] -translate-x-1/2 rounded-full bg-[#111316] ring-1 ring-black/30"
+                  aria-hidden="true"
+                  data-preview-cutout="punch-hole"
+                />
+              )}
 
               {previewUrl && phase === 'ready' && (
                 <iframe
                   key={frameKey}
                   src={previewUrl}
                   title={`${device.label} Flutter live preview`}
-                  className="absolute inset-0 h-full w-full border-0 bg-white"
+                  className="absolute left-0 w-full border-0 bg-white"
+                  style={{
+                    height: applicationViewportHeight,
+                    top: device.safeAreaTop,
+                  }}
                   allow="clipboard-read; clipboard-write"
                   onLoad={() => {
                     setFailedFrameKey('');
@@ -429,7 +520,13 @@ const LivePreviewPanel = ({ open, onClose }: ILivePreviewPanelProps) => {
               )}
 
               {(phase !== 'ready' || !previewUrl) && (
-                <div className="absolute inset-0 z-10 flex items-center justify-center bg-background p-8">
+                <div
+                  className="absolute left-0 z-10 flex w-full items-center justify-center bg-background p-8"
+                  style={{
+                    height: applicationViewportHeight,
+                    top: device.safeAreaTop,
+                  }}
+                >
                   {phase === 'error' ? (
                     <div className="w-full max-w-xs text-center">
                       <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10 text-destructive">
@@ -465,7 +562,13 @@ const LivePreviewPanel = ({ open, onClose }: ILivePreviewPanelProps) => {
               )}
 
               {isFrameLoading && (
-                <div className="absolute inset-0 z-10 flex items-center justify-center bg-background">
+                <div
+                  className="absolute left-0 z-10 flex w-full items-center justify-center bg-background"
+                  style={{
+                    height: applicationViewportHeight,
+                    top: device.safeAreaTop,
+                  }}
+                >
                   <div className="text-center">
                     <Loader2 className="mx-auto h-6 w-6 animate-spin text-primary" />
                     <p className="mt-3 text-sm font-medium">Loading Flutter view</p>
@@ -474,7 +577,13 @@ const LivePreviewPanel = ({ open, onClose }: ILivePreviewPanelProps) => {
               )}
 
               {hasFrameError && (
-                <div className="absolute inset-0 z-10 flex items-center justify-center bg-background p-8">
+                <div
+                  className="absolute left-0 z-10 flex w-full items-center justify-center bg-background p-8"
+                  style={{
+                    height: applicationViewportHeight,
+                    top: device.safeAreaTop,
+                  }}
+                >
                   <div className="text-center">
                     <AlertTriangle className="mx-auto h-7 w-7 text-destructive" />
                     <p className="mt-3 text-sm font-semibold">Preview page failed to load</p>

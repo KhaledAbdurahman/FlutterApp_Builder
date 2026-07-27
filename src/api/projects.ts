@@ -14,6 +14,8 @@ import type {
   IActiveLivePreviewsResponse,
   ILivePreviewActionResponse,
   ILivePreviewStartResponse,
+  ILivePreviewStatusResponse,
+  ILivePreviewStopResponse,
   ILivePreviewUpdateRequest,
 } from '@/types/api/live-preview-types';
 
@@ -78,9 +80,15 @@ class ProjectService extends ResourceHandler<
     });
   }
 
-  public stopLivePreview(projectId: IProjectId): Promise<ILivePreviewActionResponse> {
-    return Post<ILivePreviewActionResponse>({
+  public stopLivePreview(projectId: IProjectId): Promise<ILivePreviewStopResponse> {
+    return Post<ILivePreviewStopResponse>({
       endpoint: getEndpointPathname(ApiEndpointPathnames.PROJECT_STOP_LIVE_PREVIEW, projectId),
+    });
+  }
+
+  public getLivePreviewStatus(projectId: IProjectId): Promise<ILivePreviewStatusResponse> {
+    return Get<ILivePreviewStatusResponse>({
+      endpoint: getEndpointPathname(ApiEndpointPathnames.PROJECT_LIVE_PREVIEW_STATUS, projectId),
     });
   }
 

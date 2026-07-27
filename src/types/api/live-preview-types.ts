@@ -1,17 +1,39 @@
 import type { Screen } from '@/types/screen-types';
 
 type ILivePreviewResponseStatus = 'success' | 'error' | 'info';
+type ILivePreviewServerStatus =
+  'idle' | 'starting' | 'getting_dependencies' | 'compiling' | 'ready' | 'error' | 'stopped';
 
 interface ILivePreviewStartResponse {
   status: ILivePreviewResponseStatus;
   message: string;
-  preview_url: string;
-  port: number;
+  preview_status: ILivePreviewServerStatus;
+  ready: boolean;
+  preview_url: string | null;
+  port: number | null;
+  error?: string | null;
+}
+
+interface ILivePreviewStatusResponse {
+  status: ILivePreviewResponseStatus;
+  preview_status: ILivePreviewServerStatus;
+  ready: boolean;
+  message: string;
+  preview_url: string | null;
+  port: number | null;
+  error: string | null;
+  started_at: string | null;
+  updated_at: string | null;
 }
 
 interface ILivePreviewActionResponse {
   status: ILivePreviewResponseStatus;
   message?: string;
+}
+
+interface ILivePreviewStopResponse extends ILivePreviewActionResponse {
+  preview_status: ILivePreviewServerStatus;
+  ready: boolean;
 }
 
 interface ILivePreviewUpdateRequest {
@@ -38,6 +60,9 @@ export type {
   IActiveLivePreviewsResponse,
   ILivePreviewActionResponse,
   ILivePreviewResponseStatus,
+  ILivePreviewServerStatus,
   ILivePreviewStartResponse,
+  ILivePreviewStatusResponse,
+  ILivePreviewStopResponse,
   ILivePreviewUpdateRequest,
 };
