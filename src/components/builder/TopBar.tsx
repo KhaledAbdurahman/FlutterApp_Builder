@@ -33,10 +33,10 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { useBuilderStore } from '@/store/builderStore';
+import { useBuilderStore } from '@/stores/builder/use-builder-store';
 import { toast } from 'sonner';
-import { ProjectManager } from './ProjectManager';
-import { GenerationLogs } from './GenerationLogs';
+import { ProjectManager } from '@/components/builder/ProjectManager';
+import { GenerationLogs } from '@/components/builder/GenerationLogs';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { UserProfileMenu } from '@/components/UserProfileMenu';
 import { PROJECT_SERVICE } from '@/api/projects';

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from "react";
+import React, { useState, useCallback, useRef } from 'react';
 import {
   DragStartEvent,
   DragEndEvent,
@@ -12,18 +12,18 @@ import {
   DropAnimation,
   defaultDropAnimationSideEffects,
   UniqueIdentifier,
-} from "@dnd-kit/core";
-import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
-import { useBuilderStore } from "@/store/builderStore";
-import { toast } from "sonner";
-import { validateDrop, ValidationContext } from "@/dnd/validateDrop";
+} from '@dnd-kit/core';
+import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
+import { useBuilderStore } from '@/stores/builder/use-builder-store';
+import { toast } from 'sonner';
+import { validateDrop, ValidationContext } from '@/dnd/validateDrop';
 import {
   adaptTreeMoveToValidation,
   TreeMoveIntent,
   TreeMoveType,
-} from "@/dnd/treeValidationAdapters";
-import { FlutterWidget, getWidgetDefinition } from "@/types/screen-types";
-import { getWidgetChildren } from "@/lib/widgetTreeUtils";
+} from '@/dnd/treeValidationAdapters';
+import { FlutterWidget, getWidgetDefinition } from '@/types/screen-types';
+import { getWidgetChildren } from '@/lib/widgetTreeUtils';
 
 // --- Utility: Recursion helpers ---
 
@@ -48,9 +48,7 @@ const findWidgetWithMeta = (
 
 // Flatten tree for projection logic (simplifies validation lookups in hooks)
 // This is separate from the rendering projection.
-const buildValidationContextLookup = (
-  widgets: FlutterWidget[],
-): ValidationContext => {
+const buildValidationContextLookup = (widgets: FlutterWidget[]): ValidationContext => {
   return {
     widgets,
     getParent: (widgetId: string) => {
@@ -65,23 +63,17 @@ const buildValidationContextLookup = (
   };
 };
 
-const DND_TOAST_ID = "widget-tree-dnd";
+const DND_TOAST_ID = 'widget-tree-dnd';
 
-const showAccessibleToast = (
-  message: string,
-  variant: "info" | "error" = "info",
-) => {
+const showAccessibleToast = (message: string, variant: 'info' | 'error' = 'info') => {
   const base =
-    "pointer-events-auto rounded-md border px-3 py-2 text-sm shadow-md bg-background text-foreground";
-  const tone =
-    variant === "error"
-      ? "border-destructive text-destructive"
-      : "border-border";
+    'pointer-events-auto rounded-md border px-3 py-2 text-sm shadow-md bg-background text-foreground';
+  const tone = variant === 'error' ? 'border-destructive text-destructive' : 'border-border';
   toast.custom(
     () =>
       React.createElement(
-        "div",
-        { role: "status", "aria-live": "polite", className: `${base} ${tone}` },
+        'div',
+        { role: 'status', 'aria-live': 'polite', className: `${base} ${tone}` },
         message,
       ),
     { duration: 2000 },
@@ -89,8 +81,8 @@ const showAccessibleToast = (
 };
 
 const getWidgetLabel = (widget?: FlutterWidget | null) => {
-  if (!widget) return "root";
-  const text = typeof widget.props?.text === "string" ? widget.props.text : "";
+  if (!widget) return 'root';
+  const text = typeof widget.props?.text === 'string' ? widget.props.text : '';
   return text ? `${widget.type} "${text}"` : widget.type;
 };
 
@@ -144,7 +136,7 @@ export const useWidgetTreeDnD = ({ onCommit }: UseWidgetTreeDnDProps = {}) => {
     dndToastMessageRef.current = message;
     toast.message(message, {
       id: DND_TOAST_ID,
-      position: "top-center",
+      position: 'top-center',
       duration,
     });
   }, []);
@@ -156,10 +148,7 @@ export const useWidgetTreeDnD = ({ onCommit }: UseWidgetTreeDnDProps = {}) => {
 
   // Snapshot for undo
   const snapshotRef = useRef<
-    Record<
-      string,
-      { components: FlutterWidget[]; selectedWidgetId: string | null }
-    >
+    Record<string, { components: FlutterWidget[]; selectedWidgetId: string | null }>
   >({});
 
   const activeScreen = getActiveScreen();
@@ -207,13 +196,11 @@ export const useWidgetTreeDnD = ({ onCommit }: UseWidgetTreeDnDProps = {}) => {
     const nodes = screen.components;
 
     const sourceMeta = findWidgetWithMeta(nodes, active.id as string);
-    const overData = over.data.current as
-      | { type?: string; parentId?: string }
-      | undefined;
+    const overData = over.data.current as { type?: string; parentId?: string } | undefined;
 
     if (!sourceMeta) return;
 
-    if (overData?.type === "slot" && overData.parentId) {
+    if (overData?.type === 'slot' && overData.parentId) {
       const parentMeta = findWidgetWithMeta(nodes, overData.parentId);
       if (!parentMeta) return;
       showDndToast(
@@ -227,7 +214,7 @@ export const useWidgetTreeDnD = ({ onCommit }: UseWidgetTreeDnDProps = {}) => {
     if (!targetMeta) return;
 
     const targetDef = getWidgetDefinition(targetMeta.widget.type);
-    const verb = targetDef?.childConfig.mode !== "none" ? "into" : "after";
+    const verb = targetDef?.childConfig.mode !== 'none' ? 'into' : 'after';
     showDndToast(
       `Drop ${getWidgetLabel(sourceMeta.widget)} ${verb} ${getWidgetLabel(targetMeta.widget)}`,
       1200,
@@ -247,17 +234,17 @@ export const useWidgetTreeDnD = ({ onCommit }: UseWidgetTreeDnDProps = {}) => {
     const targetMeta = findWidgetWithMeta(nodes, targetWidgetId);
 
     if (sourceMeta && targetMeta) {
-      const sourceParentId = sourceMeta.parentId ?? "root";
+      const sourceParentId = sourceMeta.parentId ?? 'root';
       const sourceParentWidget = getParentWidget(nodes, sourceMeta.widget.id);
 
       let destinationParentId: string | null = null;
       let destinationParentWidget: FlutterWidget | null = null;
 
-      if (action === "inside") {
+      if (action === 'inside') {
         destinationParentId = targetMeta.widget.id;
         destinationParentWidget = targetMeta.widget;
       } else {
-        destinationParentId = targetMeta.parentId ?? "root";
+        destinationParentId = targetMeta.parentId ?? 'root';
         destinationParentWidget = getParentWidget(nodes, targetMeta.widget.id);
       }
 
@@ -274,7 +261,7 @@ export const useWidgetTreeDnD = ({ onCommit }: UseWidgetTreeDnDProps = {}) => {
       }
     }
 
-    if (action === "inside") {
+    if (action === 'inside') {
       // Move INSIDE target (append)
       moveWidget(movedWidgetId, targetWidgetId); // No index usually means append
     } else {
@@ -282,8 +269,7 @@ export const useWidgetTreeDnD = ({ onCommit }: UseWidgetTreeDnDProps = {}) => {
       // 1. Find target's parent and target's index
       const targetMeta = findWidgetWithMeta(nodes, targetWidgetId);
       if (targetMeta) {
-        const newIndex =
-          action === "after" ? targetMeta.index + 1 : targetMeta.index;
+        const newIndex = action === 'after' ? targetMeta.index + 1 : targetMeta.index;
         moveWidget(movedWidgetId, targetMeta.parentId, newIndex);
       }
     }
@@ -311,9 +297,7 @@ export const useWidgetTreeDnD = ({ onCommit }: UseWidgetTreeDnDProps = {}) => {
 
     const sourceId = active.id as string;
     const targetId = over.id as string;
-    const overData = over.data.current as
-      | { type?: string; parentId?: string }
-      | undefined;
+    const overData = over.data.current as { type?: string; parentId?: string } | undefined;
 
     const screen = getActiveScreen();
     if (!screen) return;
@@ -321,33 +305,33 @@ export const useWidgetTreeDnD = ({ onCommit }: UseWidgetTreeDnDProps = {}) => {
 
     const sourceMeta = findWidgetWithMeta(nodes, sourceId);
     const targetMeta =
-      overData?.type === "slot" && overData.parentId
+      overData?.type === 'slot' && overData.parentId
         ? findWidgetWithMeta(nodes, overData.parentId)
         : findWidgetWithMeta(nodes, targetId);
 
     if (!sourceMeta || !targetMeta) return;
 
     // Default intent
-    let intent: TreeMoveIntent = {
+    const intent: TreeMoveIntent = {
       movedWidgetId: sourceId,
       movedWidgetType: sourceMeta.widget.type,
       targetWidgetId: targetMeta.widget.id,
       targetWidgetType: targetMeta.widget.type,
-      action: "after", // Default to reorder/sibling
+      action: 'after', // Default to reorder/sibling
     };
 
     // HEURISTIC: Handle Nesting into Containers
     const targetDef = getWidgetDefinition(targetMeta.widget.type);
-    const canHaveChildren = targetDef?.childConfig.mode !== "none";
+    const canHaveChildren = targetDef?.childConfig.mode !== 'none';
 
     // Check if target is a valid container that might be empty or explicitly targeted
     if (canHaveChildren) {
       // If dropping onto a container, we assume intent is to nest inside it
-      intent.action = "inside";
+      intent.action = 'inside';
     }
 
-    if (overData?.type === "slot") {
-      intent.action = "inside";
+    if (overData?.type === 'slot') {
+      intent.action = 'inside';
     }
 
     // Validation
@@ -355,30 +339,20 @@ export const useWidgetTreeDnD = ({ onCommit }: UseWidgetTreeDnDProps = {}) => {
     const { source, destination } = adaptTreeMoveToValidation(intent, ctx);
 
     const scaffoldTarget =
-      destination.type === "Scaffold"
-        ? findWidgetWithMeta(nodes, destination.id)?.widget
-        : null;
+      destination.type === 'Scaffold' ? findWidgetWithMeta(nodes, destination.id)?.widget : null;
     const scaffoldContext = scaffoldTarget
       ? {
-          appBarExists:
-            scaffoldTarget.children?.some((c) => c.type === "AppBar") ?? false,
-          drawerExists:
-            scaffoldTarget.children?.some((c) => c.type === "Drawer") ?? false,
+          appBarExists: scaffoldTarget.children?.some((c) => c.type === 'AppBar') ?? false,
+          drawerExists: scaffoldTarget.children?.some((c) => c.type === 'Drawer') ?? false,
           bottomNavExists:
-            scaffoldTarget.children?.some(
-              (c) => c.type === "BottomNavigationBar",
-            ) ?? false,
+            scaffoldTarget.children?.some((c) => c.type === 'BottomNavigationBar') ?? false,
         }
       : undefined;
 
-    const result = validateDrop(
-      source,
-      { ...destination, scaffoldContext },
-      ctx,
-    );
+    const result = validateDrop(source, { ...destination, scaffoldContext }, ctx);
 
     if (result.valid) {
-      if (result.confidence === "low") {
+      if (result.confidence === 'low') {
         const anchor = over.rect
           ? {
               x: over.rect.left + over.rect.width / 2,
@@ -388,7 +362,7 @@ export const useWidgetTreeDnD = ({ onCommit }: UseWidgetTreeDnDProps = {}) => {
         pendingDragIdRef.current = dragId ?? null;
         setConfirmDialog({
           isOpen: true,
-          message: result.message || "Unsure about this placement.",
+          message: result.message || 'Unsure about this placement.',
           intent,
           anchor,
         });
@@ -398,7 +372,7 @@ export const useWidgetTreeDnD = ({ onCommit }: UseWidgetTreeDnDProps = {}) => {
         if (dragId) delete snapshotRef.current[dragId];
       }
     } else {
-      showAccessibleToast(result.message || "Invalid move", "error");
+      showAccessibleToast(result.message || 'Invalid move', 'error');
       dismissDndToast();
       // Revert (Snapshot restore)
       restoreSnapshot(dragId);

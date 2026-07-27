@@ -1,13 +1,11 @@
 import { configureStore } from '@reduxjs/toolkit';
 import { useDispatch, useSelector } from 'react-redux';
-
-type EmptyRootState = Record<string, never>;
-
-// Redux is mounted before the Zustand slices move, so the root reducer starts as a stable no-op.
-const rootReducer = (state: EmptyRootState = {}) => state;
+import { builderReducer } from '@/stores/builder/builder-slice';
 
 const Store = configureStore({
-  reducer: rootReducer,
+  reducer: {
+    builder: builderReducer,
+  },
 });
 
 type RootState = ReturnType<typeof Store.getState>;

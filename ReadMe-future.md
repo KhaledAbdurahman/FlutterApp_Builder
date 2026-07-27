@@ -438,7 +438,8 @@ Open testing concerns:
    - Import boundary enforcement.
    - Husky, lint-staged, and commitlint.
 5. Introduce the target folder structure without changing behavior.
-6. Move global builder state from Zustand to Redux.
+6. Move global builder state from Zustand to Redux. Done: the builder slice now
+   lives in `src/stores/builder/` and is mounted from `src/config/redux/store.ts`.
 7. Move routes into `src/app/router` and migrate from React Router to TanStack
    Router.
 8. Move builder, auth, dashboard, landing, not-found, error, project-detail, and
@@ -466,7 +467,7 @@ As of this draft:
 - Current routing lives in `src/App.tsx` with `react-router-dom`.
 - Live API calls use services in `src/api/`, backed by the shared Axios
   infrastructure in `src/config/api/`.
-- Current global builder state uses Zustand in `src/store/builderStore.ts`.
+- Current global builder state uses Redux in `src/stores/builder/`.
 - Current styling is Tailwind plus global CSS.
 - `src/dnd/validateDrop.test.ts` already exists, so the project has at least one
   test surface started.

@@ -1,10 +1,12 @@
-import { useDroppable } from "@dnd-kit/core";
-import { motion } from "framer-motion";
-import { FlutterWidget, WidgetType } from "@/types/screen-types";
-import { useBuilderStore } from "@/store/builderStore";
-import { cn } from "@/lib/utils";
-import * as LucideIcons from "lucide-react";
-import { useEffect, useState } from "react";
+import { useDroppable } from '@dnd-kit/core';
+import { motion } from 'framer-motion';
+import type { CSSProperties } from 'react';
+import type { LucideIcon } from 'lucide-react';
+import type { ComponentPropsByType, FlutterWidget, WidgetType } from '@/types/screen-types';
+import { useBuilderStore } from '@/stores/builder/use-builder-store';
+import { cn } from '@/lib/utils';
+import * as LucideIcons from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 interface WidgetRendererProps {
   widget: FlutterWidget;
@@ -21,23 +23,18 @@ interface DrawerContentProps {
   onSelect: (id: string) => void;
 }
 
-const DrawerContent = ({
-  drawer,
-  depth,
-  isDragging,
-  onSelect,
-}: DrawerContentProps) => {
+const DrawerContent = ({ drawer, depth, isDragging, onSelect }: DrawerContentProps) => {
   const { setNodeRef, isOver } = useDroppable({
     id: `drop-${drawer.id}`,
-    data: { type: "widget", widgetId: drawer.id },
+    data: { type: 'widget', widgetId: drawer.id },
   });
 
   return (
     <div
       ref={setNodeRef}
       className={cn(
-        "flex-1 overflow-auto p-3",
-        isOver && isDragging && "ring-2 ring-accent ring-dashed",
+        'flex-1 overflow-auto p-3',
+        isOver && isDragging && 'ring-2 ring-accent ring-dashed',
       )}
       onClick={(e) => {
         e.stopPropagation();
@@ -55,22 +52,26 @@ const DrawerContent = ({
   );
 };
 
-const RESERVED_SCAFFOLD_TYPES: WidgetType[] = [
-  "AppBar",
-  "Drawer",
-  "BottomNavigationBar",
-];
+const RESERVED_SCAFFOLD_TYPES: WidgetType[] = ['AppBar', 'Drawer', 'BottomNavigationBar'];
+
+const FlutterImageFitToCssObjectFit: Record<
+  ComponentPropsByType['Image']['fit'],
+  CSSProperties['objectFit']
+> = {
+  cover: 'cover',
+  contain: 'contain',
+  fill: 'fill',
+  fitWidth: 'cover',
+  fitHeight: 'cover',
+  scaleDown: 'scale-down',
+};
 
 const getScaffoldSlots = (scaffold: FlutterWidget) => {
   const children = scaffold.children || [];
-  const appBar = children.find((child) => child.type === "AppBar");
-  const drawer = children.find((child) => child.type === "Drawer");
-  const bottomNavigationBar = children.find(
-    (child) => child.type === "BottomNavigationBar",
-  );
-  const bodyChildren = children.filter(
-    (child) => !RESERVED_SCAFFOLD_TYPES.includes(child.type),
-  );
+  const appBar = children.find((child) => child.type === 'AppBar');
+  const drawer = children.find((child) => child.type === 'Drawer');
+  const bottomNavigationBar = children.find((child) => child.type === 'BottomNavigationBar');
+  const bodyChildren = children.filter((child) => !RESERVED_SCAFFOLD_TYPES.includes(child.type));
 
   // TODO: Decide how to represent multiple body children in a Scaffold. Currently only the first is rendered.
   const body = bodyChildren[0];
@@ -79,29 +80,28 @@ const getScaffoldSlots = (scaffold: FlutterWidget) => {
 };
 
 const toLucideName = (icon?: string) => {
-  if (!icon) return "";
+  if (!icon) return '';
   return icon
-    .replace(/[-_]+/g, " ")
+    .replace(/[-_]+/g, ' ')
     .replace(/\s+(.)/g, (_, chr) => chr.toUpperCase())
     .replace(/^(.)/, (chr) => chr.toUpperCase())
-    .replace(/\s/g, "");
+    .replace(/\s/g, '');
 };
 
-const resolveLucideIcon = (icon?: string) => {
+const isLucideIcon = (icon: unknown): icon is LucideIcon =>
+  typeof icon === 'object' && icon !== null && '$$typeof' in icon;
+
+const resolveLucideIcon = (icon?: string): LucideIcon => {
   const name = toLucideName(icon);
-  return (LucideIcons as any)[name] || LucideIcons.Circle;
+  const resolvedIcon = LucideIcons[name as keyof typeof LucideIcons];
+  return isLucideIcon(resolvedIcon) ? resolvedIcon : LucideIcons.Circle;
 };
 
-const WidgetRenderer = ({
-  widget,
-  depth = 0,
-  renderContext,
-}: WidgetRendererProps) => {
+const WidgetRenderer = ({ widget, depth = 0, renderContext }: WidgetRendererProps) => {
   const { selectedWidgetId, setSelectedWidget, isDragging } = useBuilderStore();
   const isSelected = selectedWidgetId === widget.id;
 
-  const scaffoldSlots =
-    widget.type === "Scaffold" ? getScaffoldSlots(widget) : null;
+  const scaffoldSlots = widget.type === 'Scaffold' ? getScaffoldSlots(widget) : null;
   const hasAppBarSlot = !!scaffoldSlots?.appBar;
   const hasDrawerSlot = !!scaffoldSlots?.drawer;
   const hasBottomNavSlot = !!scaffoldSlots?.bottomNavigationBar;
@@ -109,51 +109,48 @@ const WidgetRenderer = ({
 
   const { setNodeRef, isOver } = useDroppable({
     id: `drop-${widget.id}`,
-    data: { type: "widget", widgetId: widget.id },
+    data: { type: 'widget', widgetId: widget.id },
   });
 
-  const { setNodeRef: setAppBarSlotRef, isOver: isOverAppBarSlot } =
-    useDroppable({
-      id: `scaffold-slot-${widget.id}-appBar`,
-      data: { type: "scaffold-slot", scaffoldId: widget.id, slot: "appBar" },
-      disabled: widget.type !== "Scaffold" || hasAppBarSlot,
-    });
+  const { setNodeRef: setAppBarSlotRef, isOver: isOverAppBarSlot } = useDroppable({
+    id: `scaffold-slot-${widget.id}-appBar`,
+    data: { type: 'scaffold-slot', scaffoldId: widget.id, slot: 'appBar' },
+    disabled: widget.type !== 'Scaffold' || hasAppBarSlot,
+  });
 
-  const { setNodeRef: setDrawerSlotRef, isOver: isOverDrawerSlot } =
-    useDroppable({
-      id: `scaffold-slot-${widget.id}-drawer`,
-      data: { type: "scaffold-slot", scaffoldId: widget.id, slot: "drawer" },
-      disabled: widget.type !== "Scaffold" || hasDrawerSlot,
-    });
+  const { setNodeRef: setDrawerSlotRef, isOver: isOverDrawerSlot } = useDroppable({
+    id: `scaffold-slot-${widget.id}-drawer`,
+    data: { type: 'scaffold-slot', scaffoldId: widget.id, slot: 'drawer' },
+    disabled: widget.type !== 'Scaffold' || hasDrawerSlot,
+  });
 
   const { setNodeRef: setBodySlotRef, isOver: isOverBodySlot } = useDroppable({
     id: `scaffold-slot-${widget.id}-body`,
-    data: { type: "scaffold-slot", scaffoldId: widget.id, slot: "body" },
-    disabled: widget.type !== "Scaffold" || hasBodySlot,
+    data: { type: 'scaffold-slot', scaffoldId: widget.id, slot: 'body' },
+    disabled: widget.type !== 'Scaffold' || hasBodySlot,
   });
 
-  const { setNodeRef: setBottomNavSlotRef, isOver: isOverBottomNavSlot } =
-    useDroppable({
-      id: `scaffold-slot-${widget.id}-bottomNavigationBar`,
-      data: {
-        type: "scaffold-slot",
-        scaffoldId: widget.id,
-        slot: "bottomNavigationBar",
-      },
-      disabled: widget.type !== "Scaffold" || hasBottomNavSlot,
-    });
+  const { setNodeRef: setBottomNavSlotRef, isOver: isOverBottomNavSlot } = useDroppable({
+    id: `scaffold-slot-${widget.id}-bottomNavigationBar`,
+    data: {
+      type: 'scaffold-slot',
+      scaffoldId: widget.id,
+      slot: 'bottomNavigationBar',
+    },
+    disabled: widget.type !== 'Scaffold' || hasBottomNavSlot,
+  });
 
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   useEffect(() => {
     if (!isDrawerOpen) return;
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
+      if (event.key === 'Escape') {
         setIsDrawerOpen(false);
       }
     };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
   }, [isDrawerOpen]);
 
   const handleClick = (e: React.MouseEvent) => {
@@ -162,10 +159,10 @@ const WidgetRenderer = ({
   };
 
   const baseClasses = cn(
-    "relative transition-all duration-150 cursor-pointer",
-    isSelected && "ring-2 ring-primary ring-offset-1 ring-offset-background",
-    isOver && isDragging && "ring-2 ring-accent ring-dashed",
-    "hover:ring-1 hover:ring-primary/50",
+    'relative transition-all duration-150 cursor-pointer',
+    isSelected && 'ring-2 ring-primary ring-offset-1 ring-offset-background',
+    isOver && isDragging && 'ring-2 ring-accent ring-dashed',
+    'hover:ring-1 hover:ring-primary/50',
   );
 
   const renderChildren = () => {
@@ -178,39 +175,31 @@ const WidgetRenderer = ({
   };
 
   switch (widget.type) {
-    case "Scaffold": {
-      const { appBar, drawer, bottomNavigationBar, body } =
-        getScaffoldSlots(widget);
+    case 'Scaffold': {
+      const { appBar, drawer, bottomNavigationBar, body } = getScaffoldSlots(widget);
       const appBarHeight = appBar ? (appBar.props.height ?? 56) : 0;
-      const bottomNavHeight = bottomNavigationBar
-        ? (bottomNavigationBar.props.height ?? 56)
-        : 0;
+      const bottomNavHeight = bottomNavigationBar ? (bottomNavigationBar.props.height ?? 56) : 0;
       const safeAreaTop = 0;
       const safeAreaBottom = 0;
       // TODO: Decide how to compute safe area insets for different device presets.
 
-      const bodyOverflow = body?.type === "Column" ? "hidden" : "auto";
+      const bodyOverflow = body?.type === 'Column' ? 'hidden' : 'auto';
       const MenuIcon = LucideIcons.Menu;
 
       return (
         <div
           ref={setNodeRef}
           onClick={handleClick}
-          className={cn(
-            baseClasses,
-            "flex flex-col h-full text-gray-900 relative",
-          )}
-          style={{ backgroundColor: widget.props.backgroundColor || "#FFFFFF" }}
+          className={cn(baseClasses, 'flex flex-col h-full text-gray-900 relative')}
+          style={{ backgroundColor: widget.props.backgroundColor || '#FFFFFF' }}
         >
           {/* AppBar slot */}
           <div
             ref={setAppBarSlotRef}
             style={{ height: appBarHeight + safeAreaTop }}
             className={cn(
-              "shrink-0",
-              isOverAppBarSlot &&
-                isDragging &&
-                "ring-2 ring-accent ring-dashed",
+              'shrink-0',
+              isOverAppBarSlot && isDragging && 'ring-2 ring-accent ring-dashed',
             )}
           >
             {appBar && (
@@ -220,16 +209,16 @@ const WidgetRenderer = ({
                   setSelectedWidget(appBar.id);
                 }}
                 className={cn(
-                  "flex items-center px-4 gap-2",
-                  selectedWidgetId === appBar.id && "ring-2 ring-primary",
+                  'flex items-center px-4 gap-2',
+                  selectedWidgetId === appBar.id && 'ring-2 ring-primary',
                 )}
                 style={{
                   height: appBar.props.height ?? 56,
-                  backgroundColor: appBar.props.backgroundColor || "#6200EE",
+                  backgroundColor: appBar.props.backgroundColor || '#6200EE',
                   boxShadow:
                     (appBar.props.elevation ?? 0) > 0
                       ? `0 ${(appBar.props.elevation ?? 0) * 2}px ${(appBar.props.elevation ?? 0) * 4}px rgba(0,0,0,0.15)`
-                      : "none",
+                      : 'none',
                 }}
               >
                 {drawer && (
@@ -258,16 +247,13 @@ const WidgetRenderer = ({
                   </button>
                 )}
                 <div
-                  className={cn(
-                    "flex-1",
-                    appBar.props.centerTitle ? "text-center" : "text-left",
-                  )}
+                  className={cn('flex-1', appBar.props.centerTitle ? 'text-center' : 'text-left')}
                 >
                   <span
                     className="font-medium text-lg"
-                    style={{ color: appBar.props.color || "#FFFFFF" }}
+                    style={{ color: appBar.props.color || '#FFFFFF' }}
                   >
-                    {appBar.props.title || "App Bar"}
+                    {appBar.props.title || 'App Bar'}
                   </span>
                 </div>
               </div>
@@ -278,9 +264,9 @@ const WidgetRenderer = ({
           <div
             ref={setBodySlotRef}
             className={cn(
-              "flex-1 min-h-0",
-              bodyOverflow === "auto" ? "overflow-auto" : "overflow-hidden",
-              isOverBodySlot && isDragging && "ring-2 ring-accent ring-dashed",
+              'flex-1 min-h-0',
+              bodyOverflow === 'auto' ? 'overflow-auto' : 'overflow-hidden',
+              isOverBodySlot && isDragging && 'ring-2 ring-accent ring-dashed',
             )}
             style={{
               maxHeight: `calc(100% - ${appBarHeight + bottomNavHeight + safeAreaTop + safeAreaBottom}px)`,
@@ -304,10 +290,8 @@ const WidgetRenderer = ({
             ref={setBottomNavSlotRef}
             style={{ height: bottomNavHeight + safeAreaBottom }}
             className={cn(
-              "shrink-0",
-              isOverBottomNavSlot &&
-                isDragging &&
-                "ring-2 ring-accent ring-dashed",
+              'shrink-0',
+              isOverBottomNavSlot && isDragging && 'ring-2 ring-accent ring-dashed',
             )}
           >
             {bottomNavigationBar && (
@@ -318,12 +302,10 @@ const WidgetRenderer = ({
                 }}
                 className="h-full border-t border-gray-200 bg-white flex items-center justify-around px-4"
               >
-                {bottomNavigationBar.props.items &&
-                bottomNavigationBar.props.items.length > 0 ? (
+                {bottomNavigationBar.props.items && bottomNavigationBar.props.items.length > 0 ? (
                   bottomNavigationBar.props.items.map((item, index) => {
                     const IconComponent = resolveLucideIcon(item.icon);
-                    const isActive =
-                      (bottomNavigationBar.props.currentIndex ?? 0) === index;
+                    const isActive = (bottomNavigationBar.props.currentIndex ?? 0) === index;
                     return (
                       <div
                         key={`${item.label}-${index}`}
@@ -333,19 +315,15 @@ const WidgetRenderer = ({
                           className="w-5 h-5"
                           style={{
                             color: isActive
-                              ? bottomNavigationBar.props.selectedItemColor ||
-                                "#6200EE"
-                              : bottomNavigationBar.props.unselectedItemColor ||
-                                "#757575",
+                              ? bottomNavigationBar.props.selectedItemColor || '#6200EE'
+                              : bottomNavigationBar.props.unselectedItemColor || '#757575',
                           }}
                         />
                         <span
                           style={{
                             color: isActive
-                              ? bottomNavigationBar.props.selectedItemColor ||
-                                "#6200EE"
-                              : bottomNavigationBar.props.unselectedItemColor ||
-                                "#757575",
+                              ? bottomNavigationBar.props.selectedItemColor || '#6200EE'
+                              : bottomNavigationBar.props.unselectedItemColor || '#757575',
                           }}
                         >
                           {item.label}
@@ -357,7 +335,7 @@ const WidgetRenderer = ({
                   <div className="flex-1 flex items-center justify-center">
                     <div className="flex flex-col items-center text-xs text-muted-foreground">
                       {(() => {
-                        const HomeIcon = resolveLucideIcon("home");
+                        const HomeIcon = resolveLucideIcon('home');
                         return <HomeIcon className="w-5 h-5" />;
                       })()}
                       <span>Home</span>
@@ -381,35 +359,28 @@ const WidgetRenderer = ({
                 className="absolute top-0 left-0 h-full w-64 bg-white shadow-lg z-30"
                 initial={{ x: -260 }}
                 animate={{ x: isDrawerOpen ? 0 : -260 }}
-                transition={{ type: "spring", stiffness: 260, damping: 26 }}
+                transition={{ type: 'spring', stiffness: 260, damping: 26 }}
               >
                 <div
                   ref={setDrawerSlotRef}
                   className={cn(
-                    "h-full flex flex-col",
-                    isOverDrawerSlot &&
-                      isDragging &&
-                      "ring-2 ring-accent ring-dashed",
+                    'h-full flex flex-col',
+                    isOverDrawerSlot && isDragging && 'ring-2 ring-accent ring-dashed',
                   )}
                 >
                   <div
                     className="p-4 text-white"
                     style={{
-                      backgroundColor:
-                        drawer.props.header?.backgroundColor || "#6200EE",
+                      backgroundColor: drawer.props.header?.backgroundColor || '#6200EE',
                     }}
                     onClick={(e) => {
                       e.stopPropagation();
                       setSelectedWidget(drawer.id);
                     }}
                   >
-                    <p className="font-semibold">
-                      {drawer.props.header?.title || "Menu"}
-                    </p>
+                    <p className="font-semibold">{drawer.props.header?.title || 'Menu'}</p>
                     {drawer.props.header?.subtitle && (
-                      <p className="text-xs opacity-80">
-                        {drawer.props.header.subtitle}
-                      </p>
+                      <p className="text-xs opacity-80">{drawer.props.header.subtitle}</p>
                     )}
                   </div>
                   <DrawerContent
@@ -426,282 +397,242 @@ const WidgetRenderer = ({
       );
     }
 
-    case "AppBar":
+    case 'AppBar':
       return (
         <div
           onClick={handleClick}
-          className={cn(baseClasses, "flex items-center px-4")}
+          className={cn(baseClasses, 'flex items-center px-4')}
           style={{
             height: widget.props.height ?? 56,
-            backgroundColor: widget.props.backgroundColor || "#6200EE",
+            backgroundColor: widget.props.backgroundColor || '#6200EE',
             boxShadow:
               (widget.props.elevation ?? 0) > 0
                 ? `0 ${(widget.props.elevation ?? 0) * 2}px ${(widget.props.elevation ?? 0) * 4}px rgba(0,0,0,0.15)`
-                : "none",
+                : 'none',
           }}
         >
           {widget.props.showBackButton && (
             <LucideIcons.ArrowLeft className="w-5 h-5 text-white mr-2" />
           )}
-          <span
-            className="font-medium text-lg"
-            style={{ color: widget.props.color || "#FFFFFF" }}
-          >
-            {widget.props.title || "App Bar"}
+          <span className="font-medium text-lg" style={{ color: widget.props.color || '#FFFFFF' }}>
+            {widget.props.title || 'App Bar'}
           </span>
         </div>
       );
 
-    case "Container":
+    case 'Container':
       return (
         <div
           ref={setNodeRef}
           onClick={handleClick}
-          className={cn(baseClasses, "min-h-[40px]")}
+          className={cn(baseClasses, 'min-h-[40px]')}
           style={{
-            backgroundColor: widget.props.backgroundColor || "transparent",
+            backgroundColor: widget.props.backgroundColor || 'transparent',
             padding: widget.props.padding || 0,
             margin: widget.props.margin || 0,
             borderRadius: widget.props.borderRadius || 0,
             border: widget.props.border
-              ? `${widget.props.borderWidth ?? 1}px solid ${
-                  widget.props.borderColor || "#ccc"
-                }`
-              : "none",
+              ? `${widget.props.borderWidth ?? 1}px solid ${widget.props.borderColor || '#ccc'}`
+              : 'none',
             width: resolveContainerLayoutValue(widget.props.layout?.w),
             height: resolveContainerLayoutValue(widget.props.layout?.h),
-            display: "flex",
+            display: 'flex',
             justifyContent: alignmentToJustify(widget.props.alignment),
             alignItems: alignmentToAlign(widget.props.alignment),
           }}
         >
           {renderChildren()}
-          {(!widget.children || widget.children.length === 0) && (
-            <DropZoneIndicator />
-          )}
+          {(!widget.children || widget.children.length === 0) && <DropZoneIndicator />}
         </div>
       );
 
-    case "Center":
+    case 'Center':
+      return (
+        <div
+          ref={setNodeRef}
+          onClick={handleClick}
+          className={cn(baseClasses, 'flex-1 flex items-center justify-center min-h-[60px]')}
+        >
+          {renderChildren()}
+          {(!widget.children || widget.children.length === 0) && <DropZoneIndicator />}
+        </div>
+      );
+
+    case 'Row':
+      return (
+        <div
+          ref={setNodeRef}
+          onClick={handleClick}
+          className={cn(baseClasses, 'flex flex-row min-h-[40px] gap-2')}
+          style={{
+            justifyContent: alignmentToFlex(widget.props.mainAxisAlignment),
+            alignItems: alignmentToFlex(widget.props.crossAxisAlignment),
+            width: widget.props.mainAxisSize === 'max' ? '100%' : 'auto',
+          }}
+        >
+          {renderChildren()}
+          {(!widget.children || widget.children.length === 0) && <DropZoneIndicator />}
+        </div>
+      );
+
+    case 'Column':
       return (
         <div
           ref={setNodeRef}
           onClick={handleClick}
           className={cn(
             baseClasses,
-            "flex-1 flex items-center justify-center min-h-[60px]",
-          )}
-        >
-          {renderChildren()}
-          {(!widget.children || widget.children.length === 0) && (
-            <DropZoneIndicator />
-          )}
-        </div>
-      );
-
-    case "Row":
-      return (
-        <div
-          ref={setNodeRef}
-          onClick={handleClick}
-          className={cn(baseClasses, "flex flex-row min-h-[40px] gap-2")}
-          style={{
-            justifyContent: alignmentToFlex(widget.props.mainAxisAlignment),
-            alignItems: alignmentToFlex(widget.props.crossAxisAlignment),
-            width: widget.props.mainAxisSize === "max" ? "100%" : "auto",
-          }}
-        >
-          {renderChildren()}
-          {(!widget.children || widget.children.length === 0) && (
-            <DropZoneIndicator />
-          )}
-        </div>
-      );
-
-    case "Column":
-      return (
-        <div
-          ref={setNodeRef}
-          onClick={handleClick}
-          className={cn(
-            baseClasses,
-            "flex flex-col min-h-[40px] gap-2",
-            renderContext?.isScaffoldBody && "h-full min-h-0 overflow-auto",
+            'flex flex-col min-h-[40px] gap-2',
+            renderContext?.isScaffoldBody && 'h-full min-h-0 overflow-auto',
           )}
           style={{
             justifyContent: alignmentToFlex(widget.props.mainAxisAlignment),
             alignItems: alignmentToFlex(widget.props.crossAxisAlignment),
-            width: widget.props.mainAxisSize === "max" ? "100%" : "auto",
+            width: widget.props.mainAxisSize === 'max' ? '100%' : 'auto',
           }}
         >
           {renderChildren()}
-          {(!widget.children || widget.children.length === 0) && (
-            <DropZoneIndicator />
-          )}
+          {(!widget.children || widget.children.length === 0) && <DropZoneIndicator />}
         </div>
       );
 
-    case "Text":
+    case 'Text':
       return (
         <span
           onClick={handleClick}
-          className={cn(baseClasses, "inline-block")}
+          className={cn(baseClasses, 'inline-block')}
           style={{
             fontSize: widget.props.fontSize || 16,
-            color: widget.props.color || "#000000",
-            fontWeight: widget.props.fontWeight === "bold" ? 700 : 400,
+            color: widget.props.color || '#000000',
+            fontWeight: widget.props.fontWeight === 'bold' ? 700 : 400,
             textAlign: alignmentToTextAlign(widget.props.alignment),
-            fontStyle: widget.props.fontStyle || "normal",
+            fontStyle: widget.props.fontStyle || 'normal',
             letterSpacing: widget.props.letterSpacing ?? 0,
-            textDecoration: widget.props.decoration || "none",
-            display: widget.props.maxLines ? "-webkit-box" : "inline-block",
-            WebkitBoxOrient: widget.props.maxLines ? "vertical" : undefined,
+            textDecoration: widget.props.decoration || 'none',
+            display: widget.props.maxLines ? '-webkit-box' : 'inline-block',
+            WebkitBoxOrient: widget.props.maxLines ? 'vertical' : undefined,
             WebkitLineClamp: widget.props.maxLines,
-            overflow: widget.props.maxLines ? "hidden" : undefined,
-            textOverflow:
-              widget.props.overflow === "ellipsis" ? "ellipsis" : undefined,
+            overflow: widget.props.maxLines ? 'hidden' : undefined,
+            textOverflow: widget.props.overflow === 'ellipsis' ? 'ellipsis' : undefined,
           }}
         >
-          {widget.props.text || "Text"}
+          {widget.props.text || 'Text'}
         </span>
       );
 
-    case "Button":
+    case 'Button':
       return (
         <button
           onClick={handleClick}
-          className={cn(
-            baseClasses,
-            "px-6 py-2 rounded-md text-white font-medium",
-          )}
+          className={cn(baseClasses, 'px-6 py-2 rounded-md text-white font-medium')}
           style={{
-            backgroundColor: widget.props.backgroundColor || "#6200EE",
-            color: widget.props.color || "#FFFFFF",
+            backgroundColor: widget.props.backgroundColor || '#6200EE',
+            color: widget.props.color || '#FFFFFF',
             borderRadius: widget.props.borderRadius ?? 8,
             boxShadow:
               (widget.props.elevation ?? 0) > 0
                 ? `0 ${(widget.props.elevation ?? 0) * 2}px ${(widget.props.elevation ?? 0) * 4}px rgba(0,0,0,0.15)`
-                : "none",
+                : 'none',
           }}
         >
-          {widget.props.text || "Button"}
+          {widget.props.text || 'Button'}
         </button>
       );
 
-    case "TextField":
+    case 'TextField':
       return (
         <input
           onClick={handleClick}
-          type={widget.props.obscureText ? "password" : "text"}
-          placeholder={widget.props.hintText || "Enter text..."}
-          className={cn(
-            baseClasses,
-            "border border-gray-300 rounded-md px-3 py-2 w-full",
-          )}
+          type={widget.props.obscureText ? 'password' : 'text'}
+          placeholder={widget.props.hintText || 'Enter text...'}
+          className={cn(baseClasses, 'border border-gray-300 rounded-md px-3 py-2 w-full')}
           style={{
-            border: widget.props.border === false ? "none" : undefined,
+            border: widget.props.border === false ? 'none' : undefined,
           }}
           aria-label={widget.props.labelText || widget.props.hintText}
           inputMode={
-            widget.props.keyboardType === "number"
-              ? "numeric"
-              : widget.props.keyboardType === "email"
-                ? "email"
-                : widget.props.keyboardType === "phone"
-                  ? "tel"
-                  : widget.props.keyboardType === "url"
-                    ? "url"
-                    : "text"
+            widget.props.keyboardType === 'number'
+              ? 'numeric'
+              : widget.props.keyboardType === 'email'
+                ? 'email'
+                : widget.props.keyboardType === 'phone'
+                  ? 'tel'
+                  : widget.props.keyboardType === 'url'
+                    ? 'url'
+                    : 'text'
           }
           readOnly
         />
       );
 
-    case "Icon": {
+    case 'Icon': {
       const IconComponent = resolveLucideIcon(widget.props.icon);
       return (
         <div
           onClick={handleClick}
-          className={cn(baseClasses, "flex items-center justify-center")}
+          className={cn(baseClasses, 'flex items-center justify-center')}
           style={{
             width: widget.props.size || 24,
             height: widget.props.size || 24,
-            color: widget.props.color || "#000000",
+            color: widget.props.color || '#000000',
           }}
         >
           <IconComponent className="w-full h-full" />
         </div>
       );
     }
-    case "Drawer":
+    case 'Drawer':
       return (
         <div
           ref={setNodeRef}
           onClick={handleClick}
-          className={cn(
-            baseClasses,
-            "bg-white border border-gray-200 rounded-md",
-          )}
+          className={cn(baseClasses, 'bg-white border border-gray-200 rounded-md')}
         >
           <div
             className="p-3 text-white"
             style={{
-              backgroundColor:
-                widget.props.header?.backgroundColor || "#6200EE",
+              backgroundColor: widget.props.header?.backgroundColor || '#6200EE',
             }}
           >
-            <p className="font-semibold">
-              {widget.props.header?.title || "Menu"}
-            </p>
+            <p className="font-semibold">{widget.props.header?.title || 'Menu'}</p>
             {widget.props.header?.subtitle && (
-              <p className="text-xs opacity-80">
-                {widget.props.header.subtitle}
-              </p>
+              <p className="text-xs opacity-80">{widget.props.header.subtitle}</p>
             )}
           </div>
           <div className="p-3">
             {renderChildren()}
-            {(!widget.children || widget.children.length === 0) && (
-              <DropZoneIndicator />
-            )}
+            {(!widget.children || widget.children.length === 0) && <DropZoneIndicator />}
           </div>
         </div>
       );
 
-    case "ListTile": {
+    case 'ListTile': {
       const IconComponent = resolveLucideIcon(widget.props.icon);
       return (
         <div
           onClick={handleClick}
-          className={cn(
-            baseClasses,
-            "flex items-center gap-3 px-3 py-2 rounded-md hover:bg-muted",
-          )}
+          className={cn(baseClasses, 'flex items-center gap-3 px-3 py-2 rounded-md hover:bg-muted')}
         >
           <div className="w-8 h-8 rounded-md bg-muted flex items-center justify-center">
             <IconComponent className="w-4 h-4 text-muted-foreground" />
           </div>
           <div className="flex-1">
-            <p className="text-sm font-medium">
-              {widget.props.title || "List Item"}
-            </p>
+            <p className="text-sm font-medium">{widget.props.title || 'List Item'}</p>
             {widget.props.actions?.route && (
-              <p className="text-xs text-muted-foreground">
-                {widget.props.actions.route}
-              </p>
+              <p className="text-xs text-muted-foreground">{widget.props.actions.route}</p>
             )}
           </div>
           <LucideIcons.ChevronRight className="w-4 h-4 text-muted-foreground" />
         </div>
       );
     }
-    case "BottomNavigationBar":
+    case 'BottomNavigationBar':
       return (
         <div
           onClick={handleClick}
           className={cn(
             baseClasses,
-            "border-t border-gray-200 bg-white flex items-center justify-around px-4",
+            'border-t border-gray-200 bg-white flex items-center justify-around px-4',
           )}
           style={{ height: widget.props.height ?? 56 }}
         >
@@ -710,13 +641,10 @@ const WidgetRenderer = ({
               const IconComponent = resolveLucideIcon(item.icon);
               const isActive = (widget.props.currentIndex ?? 0) === index;
               const color = isActive
-                ? widget.props.selectedItemColor || "#6200EE"
-                : widget.props.unselectedItemColor || "#757575";
+                ? widget.props.selectedItemColor || '#6200EE'
+                : widget.props.unselectedItemColor || '#757575';
               return (
-                <div
-                  key={`${item.label}-${index}`}
-                  className="flex flex-col items-center text-xs"
-                >
+                <div key={`${item.label}-${index}`} className="flex flex-col items-center text-xs">
                   <IconComponent className="w-5 h-5" style={{ color }} />
                   <span style={{ color }}>{item.label}</span>
                 </div>
@@ -726,7 +654,7 @@ const WidgetRenderer = ({
             <div className="flex-1 flex items-center justify-center">
               <div className="flex flex-col items-center text-xs text-muted-foreground">
                 {(() => {
-                  const HomeIcon = resolveLucideIcon("home");
+                  const HomeIcon = resolveLucideIcon('home');
                   return <HomeIcon className="w-5 h-5" />;
                 })()}
                 <span>Home</span>
@@ -736,26 +664,26 @@ const WidgetRenderer = ({
         </div>
       );
 
-    case "Image":
+    case 'Image':
       return (
         <img
           onClick={handleClick}
-          src={widget.props.src || "https://via.placeholder.com/150"}
+          src={widget.props.src || 'https://via.placeholder.com/150'}
           alt="Widget"
-          className={cn(baseClasses, "max-w-full h-auto")}
+          className={cn(baseClasses, 'max-w-full h-auto')}
           style={{
-            objectFit: (widget.props.fit as any) || "cover",
+            objectFit: FlutterImageFitToCssObjectFit[widget.props.fit || 'cover'],
             width: widget.props.width,
             height: widget.props.height,
           }}
         />
       );
 
-    case "SizedBox":
+    case 'SizedBox':
       return (
         <div
           onClick={handleClick}
-          className={cn(baseClasses, "bg-gray-100")}
+          className={cn(baseClasses, 'bg-gray-100')}
           style={{
             width: widget.props.width || 0,
             height: widget.props.height || 0,
@@ -763,7 +691,7 @@ const WidgetRenderer = ({
         />
       );
 
-    case "Padding":
+    case 'Padding':
       return (
         <div
           ref={setNodeRef}
@@ -772,55 +700,49 @@ const WidgetRenderer = ({
           style={{ padding: widget.props.all || 16 }}
         >
           {renderChildren()}
-          {(!widget.children || widget.children.length === 0) && (
-            <DropZoneIndicator />
-          )}
+          {(!widget.children || widget.children.length === 0) && <DropZoneIndicator />}
         </div>
       );
 
-    case "Card":
+    case 'Card':
       return (
         <div
           ref={setNodeRef}
           onClick={handleClick}
-          className={cn(baseClasses, "bg-white rounded-lg p-4 min-h-[60px]")}
+          className={cn(baseClasses, 'bg-white rounded-lg p-4 min-h-[60px]')}
           style={{
-            backgroundColor: widget.props.color || "#FFFFFF",
+            backgroundColor: widget.props.color || '#FFFFFF',
             margin: widget.props.margin || 0,
             borderRadius: widget.props.borderRadius ?? 12,
             boxShadow: `0 ${(widget.props.elevation || 2) * 2}px ${(widget.props.elevation || 2) * 4}px rgba(0,0,0,0.1)`,
           }}
         >
           {renderChildren()}
-          {(!widget.children || widget.children.length === 0) && (
-            <DropZoneIndicator />
-          )}
+          {(!widget.children || widget.children.length === 0) && <DropZoneIndicator />}
         </div>
       );
 
-    case "Expanded":
+    case 'Expanded':
       return (
         <div
           ref={setNodeRef}
           onClick={handleClick}
-          className={cn(baseClasses, "min-h-[40px]")}
+          className={cn(baseClasses, 'min-h-[40px]')}
           style={{ flex: widget.props.flex || 1 }}
         >
           {renderChildren()}
-          {(!widget.children || widget.children.length === 0) && (
-            <DropZoneIndicator />
-          )}
+          {(!widget.children || widget.children.length === 0) && <DropZoneIndicator />}
         </div>
       );
 
-    case "ListView":
+    case 'ListView':
       return (
         <div
           onClick={handleClick}
-          className={cn(baseClasses, "overflow-auto")}
+          className={cn(baseClasses, 'overflow-auto')}
           style={{
             padding: widget.props.padding || 0,
-            maxHeight: widget.props.shrinkWrap ? "200px" : "none",
+            maxHeight: widget.props.shrinkWrap ? '200px' : 'none',
           }}
         >
           {(() => {
@@ -845,31 +767,23 @@ const WidgetRenderer = ({
 
             if (widget.children && widget.children.length > 0) {
               return widget.children.map((child) => (
-                <WidgetRenderer
-                  key={child.id}
-                  widget={child}
-                  depth={(depth ?? 0) + 1}
-                />
+                <WidgetRenderer key={child.id} widget={child} depth={(depth ?? 0) + 1} />
               ));
             }
 
-            return (
-              <div className="p-3 text-xs text-muted-foreground">
-                ListView is empty
-              </div>
-            );
+            return <div className="p-3 text-xs text-muted-foreground">ListView is empty</div>;
           })()}
         </div>
       );
 
-    case "Positioned":
+    case 'Positioned':
       return (
         <div
           ref={setNodeRef}
           onClick={handleClick}
-          className={cn(baseClasses, "min-h-[40px]")}
+          className={cn(baseClasses, 'min-h-[40px]')}
           style={{
-            position: "absolute",
+            position: 'absolute',
             top: widget.props.top,
             left: widget.props.left,
             right: widget.props.right,
@@ -879,9 +793,7 @@ const WidgetRenderer = ({
           }}
         >
           {renderChildren()}
-          {(!widget.children || widget.children.length === 0) && (
-            <DropZoneIndicator />
-          )}
+          {(!widget.children || widget.children.length === 0) && <DropZoneIndicator />}
         </div>
       );
 
@@ -898,87 +810,83 @@ const DropZoneIndicator = () => (
 
 const alignmentToFlex = (alignment?: string): string => {
   switch (alignment) {
-    case "start":
-      return "flex-start";
-    case "end":
-      return "flex-end";
-    case "center":
-      return "center";
-    case "spaceBetween":
-      return "space-between";
-    case "spaceAround":
-      return "space-around";
-    case "spaceEvenly":
-      return "space-evenly";
-    case "stretch":
-      return "stretch";
-    case "baseline":
-      return "baseline";
+    case 'start':
+      return 'flex-start';
+    case 'end':
+      return 'flex-end';
+    case 'center':
+      return 'center';
+    case 'spaceBetween':
+      return 'space-between';
+    case 'spaceAround':
+      return 'space-around';
+    case 'spaceEvenly':
+      return 'space-evenly';
+    case 'stretch':
+      return 'stretch';
+    case 'baseline':
+      return 'baseline';
     default:
-      return "flex-start";
+      return 'flex-start';
   }
 };
 
 const alignmentToJustify = (alignment?: string): string => {
   switch (alignment) {
-    case "topLeft":
-    case "centerLeft":
-    case "bottomLeft":
-      return "flex-start";
-    case "topRight":
-    case "centerRight":
-    case "bottomRight":
-      return "flex-end";
-    case "topCenter":
-    case "center":
-    case "bottomCenter":
-      return "center";
+    case 'topLeft':
+    case 'centerLeft':
+    case 'bottomLeft':
+      return 'flex-start';
+    case 'topRight':
+    case 'centerRight':
+    case 'bottomRight':
+      return 'flex-end';
+    case 'topCenter':
+    case 'center':
+    case 'bottomCenter':
+      return 'center';
     default:
-      return "center";
+      return 'center';
   }
 };
 
 const alignmentToAlign = (alignment?: string): string => {
   switch (alignment) {
-    case "topLeft":
-    case "topCenter":
-    case "topRight":
-      return "flex-start";
-    case "bottomLeft":
-    case "bottomCenter":
-    case "bottomRight":
-      return "flex-end";
-    case "centerLeft":
-    case "center":
-    case "centerRight":
-      return "center";
+    case 'topLeft':
+    case 'topCenter':
+    case 'topRight':
+      return 'flex-start';
+    case 'bottomLeft':
+    case 'bottomCenter':
+    case 'bottomRight':
+      return 'flex-end';
+    case 'centerLeft':
+    case 'center':
+    case 'centerRight':
+      return 'center';
     default:
-      return "center";
+      return 'center';
   }
 };
 
-const resolveContainerLayoutValue = (
-  value?: number,
-): number | "auto" | undefined => {
-  if (value == null || value === 0) return "auto";
+const resolveContainerLayoutValue = (value?: number): number | 'auto' | undefined => {
+  if (value == null || value === 0) return 'auto';
   return value;
 };
 
-const alignmentToTextAlign = (
-  alignment?: string,
-): "left" | "right" | "center" | "justify" => {
+const alignmentToTextAlign = (alignment?: string): 'left' | 'right' | 'center' | 'justify' => {
   switch (alignment) {
-    case "right":
-    case "end":
-      return "right";
-    case "center":
-      return "center";
-    case "justify":
-      return "justify";
-    case "left":
-    case "start":
+    case 'right':
+    case 'end':
+      return 'right';
+    case 'center':
+      return 'center';
+    case 'justify':
+      return 'justify';
+    case 'left':
+    case 'start':
     default:
-      return "left";
+      return 'left';
   }
 };
 
@@ -987,8 +895,8 @@ export const PhoneCanvas = () => {
   const screen = getActiveScreen();
 
   const { setNodeRef, isOver } = useDroppable({
-    id: "canvas-root",
-    data: { type: "canvas" },
+    id: 'canvas-root',
+    data: { type: 'canvas' },
   });
 
   const handleCanvasClick = () => {
@@ -1000,7 +908,7 @@ export const PhoneCanvas = () => {
       <motion.div
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        transition={{ type: "spring", stiffness: 200, damping: 20 }}
+        transition={{ type: 'spring', stiffness: 200, damping: 20 }}
         className="relative"
       >
         {/* Phone Frame */}
@@ -1010,8 +918,8 @@ export const PhoneCanvas = () => {
             ref={setNodeRef}
             onClick={handleCanvasClick}
             className={cn(
-              "w-full h-full rounded-[2.5rem] overflow-hidden bg-white relative",
-              isOver && isDragging && "ring-4 ring-primary/50",
+              'w-full h-full rounded-[2.5rem] overflow-hidden bg-white relative',
+              isOver && isDragging && 'ring-4 ring-primary/50',
             )}
           >
             {/* Status Bar */}
@@ -1020,7 +928,7 @@ export const PhoneCanvas = () => {
             </div>
 
             {/* Content */}
-            <div className={cn("h-[calc(100%-2.75rem)] overflow-y-auto")}>
+            <div className={cn('h-[calc(100%-2.75rem)] overflow-y-auto')}>
               {screen?.components.map((widget) => (
                 <WidgetRenderer key={widget.id} widget={widget} />
               ))}
@@ -1028,9 +936,7 @@ export const PhoneCanvas = () => {
                 <div className="h-full flex items-center justify-center">
                   <div className="text-center text-gray-400 p-8">
                     <p className="text-lg font-medium mb-2">Empty Screen</p>
-                    <p className="text-sm">
-                      Drag and drop widgets from the left panel
-                    </p>
+                    <p className="text-sm">Drag and drop widgets from the left panel</p>
                   </div>
                 </div>
               )}

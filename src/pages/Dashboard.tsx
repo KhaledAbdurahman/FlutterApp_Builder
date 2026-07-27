@@ -26,7 +26,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
-import { useBuilderStore } from '@/store/builderStore';
+import { useBuilderStore } from '@/stores/builder/use-builder-store';
 import { Screen } from '@/types/screen-types';
 import BrandLogo from '@/components/BrandLogo';
 

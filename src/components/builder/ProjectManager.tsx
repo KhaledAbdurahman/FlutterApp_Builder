@@ -33,7 +33,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useBuilderStore } from '@/store/builderStore';
+import { useBuilderStore } from '@/stores/builder/use-builder-store';
 import { PROJECT_SERVICE } from '@/api/projects';
 import type { IProject, IProjectId, IProjectJsonData } from '@/types/api/project-types';
 import { downloadBlob } from '@/utils/download-blob';

@@ -1,36 +1,23 @@
-import { useState, useRef } from "react";
-import { DragStartEvent, DragEndEvent, DragCancelEvent } from "@dnd-kit/core";
-import { useBuilderStore } from "@/store/builderStore";
-import { toast } from "sonner";
-import {
-  validateDrop,
-  ValidationContext,
-  DragItem,
-  DropTarget,
-} from "./validateDrop";
-import {
-  WidgetType,
-  FlutterWidget,
-  getChildConfig,
-} from "@/types/screen-types";
-import { countDirectChildren } from "./childCounts";
-import { getWidgetChildren } from "@/lib/widgetTreeUtils";
+import { useState, useRef } from 'react';
+import { DragStartEvent, DragEndEvent, DragCancelEvent } from '@dnd-kit/core';
+import { useBuilderStore } from '@/stores/builder/use-builder-store';
+import { toast } from 'sonner';
+import { validateDrop, ValidationContext, DragItem, DropTarget } from '@/dnd/validateDrop';
+import { WidgetType, FlutterWidget, getChildConfig } from '@/types/screen-types';
+import { countDirectChildren } from '@/dnd/childCounts';
+import { getWidgetChildren } from '@/lib/widgetTreeUtils';
 
-const RESERVED_SCAFFOLD_TYPES: WidgetType[] = [
-  "AppBar",
-  "Drawer",
-  "BottomNavigationBar",
-];
+const RESERVED_SCAFFOLD_TYPES: WidgetType[] = ['AppBar', 'Drawer', 'BottomNavigationBar'];
 
 const getScaffoldFromWidgets = (widgets: FlutterWidget[]) =>
-  widgets.find((w) => w.type === "Scaffold");
+  widgets.find((w) => w.type === 'Scaffold');
 
 const getScaffoldContext = (scaffold?: FlutterWidget) => {
   const children = scaffold?.children || [];
   return {
-    appBarExists: children.some((c) => c.type === "AppBar"),
-    drawerExists: children.some((c) => c.type === "Drawer"),
-    bottomNavExists: children.some((c) => c.type === "BottomNavigationBar"),
+    appBarExists: children.some((c) => c.type === 'AppBar'),
+    drawerExists: children.some((c) => c.type === 'Drawer'),
+    bottomNavExists: children.some((c) => c.type === 'BottomNavigationBar'),
   };
 };
 
@@ -40,16 +27,13 @@ const getScaffoldBodyChild = (scaffold?: FlutterWidget) => {
 };
 
 const getScaffoldSlotForType = (type: WidgetType) => {
-  if (type === "AppBar") return "appBar";
-  if (type === "Drawer") return "drawer";
-  if (type === "BottomNavigationBar") return "bottomNavigationBar";
-  return "body";
+  if (type === 'AppBar') return 'appBar';
+  if (type === 'Drawer') return 'drawer';
+  if (type === 'BottomNavigationBar') return 'bottomNavigationBar';
+  return 'body';
 };
 
-const findWidgetById = (
-  nodes: FlutterWidget[],
-  id: string,
-): FlutterWidget | null => {
+const findWidgetById = (nodes: FlutterWidget[], id: string): FlutterWidget | null => {
   for (const node of nodes) {
     if (node.id === id) return node;
     const children = getWidgetChildren(node);
@@ -62,14 +46,14 @@ const findWidgetById = (
 };
 
 const formatAllowedCount = (config?: {
-  mode: "none" | "single" | "multiple";
+  mode: 'none' | 'single' | 'multiple';
   maxChildren?: number;
 }) => {
-  if (!config) return "0";
-  if (config.mode === "none") return "0";
-  if (config.mode === "single") return "1";
+  if (!config) return '0';
+  if (config.mode === 'none') return '0';
+  if (config.mode === 'single') return '1';
   if (config.maxChildren) return `up to ${config.maxChildren}`;
-  return "unlimited";
+  return 'unlimited';
 };
 
 const findAncestorMultiTarget = (
@@ -82,15 +66,11 @@ const findAncestorMultiTarget = (
   while (currentId) {
     const parent = ctx.getParent(currentId);
     if (!parent) return null;
-    if (parent.type === "Scaffold") return null;
+    if (parent.type === 'Scaffold') return null;
 
     const config = getChildConfig(parent.type);
-    if (config?.mode === "multiple") {
-      const result = validateDrop(
-        source,
-        { id: parent.id, type: parent.type },
-        ctx,
-      );
+    if (config?.mode === 'multiple') {
+      const result = validateDrop(source, { id: parent.id, type: parent.type }, ctx);
       if (result.valid) {
         return { id: parent.id, type: parent.type };
       }
@@ -102,16 +82,10 @@ const findAncestorMultiTarget = (
   return null;
 };
 
-const showAccessibleToast = (
-  message: string,
-  variant: "info" | "error" = "info",
-) => {
+const showAccessibleToast = (message: string, variant: 'info' | 'error' = 'info') => {
   const base =
-    "pointer-events-auto rounded-md border px-3 py-2 text-sm shadow-md bg-background text-foreground";
-  const tone =
-    variant === "error"
-      ? "border-destructive text-destructive"
-      : "border-border";
+    'pointer-events-auto rounded-md border px-3 py-2 text-sm shadow-md bg-background text-foreground';
+  const tone = variant === 'error' ? 'border-destructive text-destructive' : 'border-border';
   toast.custom(
     () => (
       <div role="status" aria-live="polite" className={`${base} ${tone}`}>
@@ -135,10 +109,7 @@ export const useDnDHandlers = () => {
 
   // Snapshot mechanism (unused for simple addWidget but kept for API compliance)
   const snapshotRef = useRef<
-    Record<
-      string,
-      { components: FlutterWidget[]; selectedWidgetId: string | null }
-    >
+    Record<string, { components: FlutterWidget[]; selectedWidgetId: string | null }>
   >({});
 
   // Confirmation Modal State
@@ -215,7 +186,7 @@ export const useDnDHandlers = () => {
     const result = validateDrop(source, destination, ctx);
 
     if (result.valid) {
-      if (result.confidence === "low") {
+      if (result.confidence === 'low') {
         setIsDragging(false);
         const anchor = anchorRect
           ? {
@@ -225,9 +196,7 @@ export const useDnDHandlers = () => {
           : undefined;
         setConfirmationDialog({
           isOpen: true,
-          message:
-            result.message ||
-            "This placement might cause layout issues. Confirm placement?",
+          message: result.message || 'This placement might cause layout issues. Confirm placement?',
           onConfirm: () => {
             commitAction();
             setConfirmationDialog(null);
@@ -235,7 +204,7 @@ export const useDnDHandlers = () => {
             // TODO: Record the user's decision for heuristics.
           },
           onCancel: () => {
-            showAccessibleToast("Placement cancelled.", "info");
+            showAccessibleToast('Placement cancelled.', 'info');
             setConfirmationDialog(null);
             restoreSnapshot(dragId);
           },
@@ -246,7 +215,7 @@ export const useDnDHandlers = () => {
         if (dragId) delete snapshotRef.current[dragId];
       }
     } else {
-      showAccessibleToast(result.message || "Invalid drop operation.", "error");
+      showAccessibleToast(result.message || 'Invalid drop operation.', 'error');
       restoreSnapshot(dragId);
     }
   };
@@ -268,24 +237,24 @@ export const useDnDHandlers = () => {
     if (!activeData) return;
 
     // Case: Adding New Widget
-    if (activeData.type === "new-widget") {
+    if (activeData.type === 'new-widget') {
       const widgetType = activeData.widgetType as WidgetType;
       const source: DragItem = { type: widgetType };
 
       let targetId: string | undefined = undefined;
-      let targetType: WidgetType | "canvas" = "canvas";
-      let slot: DropTarget["slot"] = undefined;
+      let targetType: WidgetType | 'canvas' = 'canvas';
+      let slot: DropTarget['slot'] = undefined;
 
       // Resolve Target
-      if (overData?.type === "scaffold-slot") {
+      if (overData?.type === 'scaffold-slot') {
         targetId = overData.scaffoldId;
-        targetType = "Scaffold";
+        targetType = 'Scaffold';
         slot = overData.slot;
-      } else if (overData?.type === "widget") {
+      } else if (overData?.type === 'widget') {
         targetId = overData.widgetId;
         const w = getWidgetById(targetId!);
         if (w) targetType = w.type;
-      } else if (overData?.type === "canvas" || over.id === "canvas-root") {
+      } else if (overData?.type === 'canvas' || over.id === 'canvas-root') {
         // Fallback to selected widget logic if supported
         if (selectedWidgetId) {
           const selectedW = getWidgetById(selectedWidgetId);
@@ -297,27 +266,25 @@ export const useDnDHandlers = () => {
       }
 
       const screen = getActiveScreen();
-      const scaffold = screen
-        ? getScaffoldFromWidgets(screen.components)
-        : undefined;
+      const scaffold = screen ? getScaffoldFromWidgets(screen.components) : undefined;
       const scaffoldContext = getScaffoldContext(scaffold);
 
       const scaffoldBody = getScaffoldBodyChild(scaffold);
 
       if (RESERVED_SCAFFOLD_TYPES.includes(widgetType) && scaffold) {
         targetId = scaffold.id;
-        targetType = "Scaffold";
+        targetType = 'Scaffold';
         slot = getScaffoldSlotForType(widgetType);
-      } else if (targetType === "Scaffold" && !slot) {
+      } else if (targetType === 'Scaffold' && !slot) {
         if (scaffoldBody) {
           targetId = scaffoldBody.id;
           targetType = scaffoldBody.type;
           slot = undefined;
         } else {
-          slot = "body";
+          slot = 'body';
         }
       } else if (
-        overData?.type === "scaffold-slot" &&
+        overData?.type === 'scaffold-slot' &&
         !RESERVED_SCAFFOLD_TYPES.includes(widgetType)
       ) {
         if (scaffoldBody) {
@@ -325,20 +292,16 @@ export const useDnDHandlers = () => {
           targetType = scaffoldBody.type;
           slot = undefined;
         } else {
-          slot = "body";
+          slot = 'body';
         }
       }
 
       const ctx = getValidationContext();
 
-      if (targetId && targetType !== "canvas" && !slot) {
+      if (targetId && targetType !== 'canvas' && !slot) {
         const targetWidget = findWidgetById(ctx.widgets, targetId);
         const config = getChildConfig(targetType as WidgetType);
-        if (
-          targetWidget &&
-          config?.mode === "single" &&
-          countDirectChildren(targetWidget) >= 1
-        ) {
+        if (targetWidget && config?.mode === 'single' && countDirectChildren(targetWidget) >= 1) {
           const fallback = findAncestorMultiTarget(targetId, source, ctx);
           if (fallback) {
             targetId = fallback.id;
@@ -348,7 +311,7 @@ export const useDnDHandlers = () => {
             const attemptedCount = currentCount + 1;
             showAccessibleToast(
               `${targetType} allows ${formatAllowedCount(config)} children. Current: ${currentCount}, attempted: ${attemptedCount}. No multi-child component found before Scaffold.`,
-              "error",
+              'error',
             );
             restoreSnapshot(dragId);
             return;
@@ -357,7 +320,7 @@ export const useDnDHandlers = () => {
       }
 
       const destination: DropTarget = {
-        id: targetId || "root",
+        id: targetId || 'root',
         type: targetType,
         slot,
         scaffoldContext,

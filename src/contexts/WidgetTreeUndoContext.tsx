@@ -1,8 +1,8 @@
 // Placeholder to ensure context exists if needed for undo/redo snapshots
-// (Currently we use builderStore + local refs, but this file was requested)
+// Local refs stay here because undo snapshots are transient drag state, not global app state.
 
-import React, { createContext, useContext, useRef } from "react";
-import { FlutterWidget } from "@/types/screen-types";
+import React, { createContext, useContext, useRef } from 'react';
+import { FlutterWidget } from '@/types/screen-types';
 
 interface WidgetTreeUndoContextType {
   saveSnapshot: (widgets: FlutterWidget[]) => void;
@@ -10,15 +10,9 @@ interface WidgetTreeUndoContextType {
   clearSnapshot: () => void;
 }
 
-const WidgetTreeUndoContext = createContext<WidgetTreeUndoContextType | null>(
-  null,
-);
+const WidgetTreeUndoContext = createContext<WidgetTreeUndoContextType | null>(null);
 
-export const WidgetTreeUndoProvider = ({
-  children,
-}: {
-  children: React.ReactNode;
-}) => {
+export const WidgetTreeUndoProvider = ({ children }: { children: React.ReactNode }) => {
   const snapshotRef = useRef<FlutterWidget[] | null>(null);
 
   const saveSnapshot = (widgets: FlutterWidget[]) => {
@@ -33,9 +27,7 @@ export const WidgetTreeUndoProvider = ({
   };
 
   return (
-    <WidgetTreeUndoContext.Provider
-      value={{ saveSnapshot, getLastSnapshot, clearSnapshot }}
-    >
+    <WidgetTreeUndoContext.Provider value={{ saveSnapshot, getLastSnapshot, clearSnapshot }}>
       {children}
     </WidgetTreeUndoContext.Provider>
   );

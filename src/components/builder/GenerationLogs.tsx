@@ -24,7 +24,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { PROJECT_SERVICE } from '@/api/projects';
 import type { IProjectGenerationLog } from '@/types/api/project-types';
-import { useBuilderStore } from '@/store/builderStore';
+import { useBuilderStore } from '@/stores/builder/use-builder-store';
 import { format, isValid } from 'date-fns';
 
 interface GenerationLogsProps {
