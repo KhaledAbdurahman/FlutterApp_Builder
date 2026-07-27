@@ -441,7 +441,9 @@ Open testing concerns:
 6. Move global builder state from Zustand to Redux. Done: the builder slice now
    lives in `src/stores/builder/` and is mounted from `src/config/redux/store.ts`.
 7. Move routes into `src/app/router` and migrate from React Router to TanStack
-   Router.
+   Router. Done: route definitions live in `src/app/router/routes/`, the route
+   tree lives in `src/app/router/router.tsx`, and protected routes keep their
+   React-context auth guard while the router remains configuration-only.
 8. Move builder, auth, dashboard, landing, not-found, error, project-detail, and
    live-preview pages into page modules as they become part of the app.
 9. Move shared API behavior into `src/api` and page-specific API calls into page
@@ -464,7 +466,8 @@ As of this draft:
   React Router.
 - `package.json` has been moved to React 19.
 - `@/` absolute imports are already configured in `tsconfig.app.json`.
-- Current routing lives in `src/App.tsx` with `react-router-dom`.
+- Current routing lives in `src/app/router/` with TanStack Router; React Router
+  has been removed.
 - Live API calls use services in `src/api/`, backed by the shared Axios
   infrastructure in `src/config/api/`.
 - Current global builder state uses Redux in `src/stores/builder/`.

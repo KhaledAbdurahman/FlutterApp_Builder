@@ -1,47 +1,56 @@
-import { useState, useEffect } from "react";
-import { useNavigate, useSearchParams, Link } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { useAuth } from "@/contexts/AuthContext";
-import {
-  Smartphone,
-  ArrowRight,
-  Eye,
-  EyeOff,
-  Loader2,
-  AlertCircle,
-} from "lucide-react";
-import { toast } from "sonner";
+import { useState, useEffect } from 'react';
+import { Link, useLocation, useNavigate } from '@tanstack/react-router';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { useAuth } from '@/contexts/AuthContext';
+import { Smartphone, ArrowRight, Eye, EyeOff, Loader2, AlertCircle } from 'lucide-react';
+import { toast } from 'sonner';
 
 const loginSchema = z.object({
-  username: z.string().min(1, "Username is required"),
-  password: z.string().min(1, "Password is required"),
+  username: z.string().min(1, 'Username is required'),
+  password: z.string().min(1, 'Password is required'),
 });
 
 const registerSchema = z
   .object({
-    username: z.string().min(3, "Username must be at least 3 characters"),
-    email: z.string().email("Please enter a valid email"),
-    password: z.string().min(8, "Password must be at least 8 characters"),
-    password2: z.string().min(1, "Please confirm your password"),
+    username: z.string().min(3, 'Username must be at least 3 characters'),
+    email: z.string().email('Please enter a valid email'),
+    password: z.string().min(8, 'Password must be at least 8 characters'),
+    password2: z.string().min(1, 'Please confirm your password'),
   })
   .refine((data) => data.password === data.password2, {
     message: "Passwords don't match",
-    path: ["password2"],
+    path: ['password2'],
   });
 
 type LoginFormData = z.infer<typeof loginSchema>;
 type RegisterFormData = z.infer<typeof registerSchema>;
 
+const getErrorMessage = (error: unknown, fallback: string): string => {
+  if (error instanceof Error && error.message) return error.message;
+
+  if (
+    typeof error === 'object' &&
+    error !== null &&
+    'message' in error &&
+    typeof error.message === 'string' &&
+    error.message
+  ) {
+    return error.message;
+  }
+
+  return fallback;
+};
+
 export default function Auth() {
-  const [searchParams] = useSearchParams();
-  const [mode, setMode] = useState<"login" | "register">(
-    searchParams.get("mode") === "register" ? "register" : "login",
+  const location = useLocation();
+  const [mode, setMode] = useState<'login' | 'register'>(
+    location.search.mode === 'register' ? 'register' : 'login',
   );
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -52,18 +61,18 @@ export default function Auth() {
 
   useEffect(() => {
     if (isAuthenticated) {
-      navigate("/dashboard");
+      navigate({ to: '/dashboard' });
     }
   }, [isAuthenticated, navigate]);
 
   const loginForm = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { username: "", password: "" },
+    defaultValues: { username: '', password: '' },
   });
 
   const registerForm = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
-    defaultValues: { username: "", email: "", password: "", password2: "" },
+    defaultValues: { username: '', email: '', password: '', password2: '' },
   });
 
   const handleLogin = async (data: LoginFormData) => {
@@ -71,10 +80,10 @@ export default function Auth() {
     setError(null);
     try {
       await login(data.username, data.password);
-      toast.success("Welcome back!");
-      navigate("/dashboard");
-    } catch (err: any) {
-      const message = err.message || "Invalid credentials. Please try again.";
+      toast.success('Welcome back!');
+      navigate({ to: '/dashboard' });
+    } catch (error) {
+      const message = getErrorMessage(error, 'Invalid credentials. Please try again.');
       setError(message);
       toast.error(message);
     } finally {
@@ -87,10 +96,10 @@ export default function Auth() {
     setError(null);
     try {
       await register(data.username, data.email, data.password, data.password2);
-      toast.success("Account created successfully!");
-      navigate("/dashboard");
-    } catch (err: any) {
-      const message = err.message || "Registration failed. Please try again.";
+      toast.success('Account created successfully!');
+      navigate({ to: '/dashboard' });
+    } catch (error) {
+      const message = getErrorMessage(error, 'Registration failed. Please try again.');
       setError(message);
       toast.error(message);
     } finally {
@@ -108,11 +117,7 @@ export default function Auth() {
         <div className="relative z-10 flex flex-col justify-center px-16">
           <Link to="/" className="flex items-center gap-3 mb-12">
             <div className="w-35 h-10 rounded-xl flex items-center justify-center">
-              <img
-                src="/Builder.png"
-                alt="AppBuilder Logo"
-                className="w-35 h-14"
-              />
+              <img src="/Builder.png" alt="AppBuilder Logo" className="w-35 h-14" />
             </div>
           </Link>
 
@@ -122,20 +127,17 @@ export default function Auth() {
             Visually
           </h1>
           <p className="text-lg text-white/80 max-w-md">
-            Design beautiful mobile interfaces with our drag-and-drop builder.
-            Export clean, production-ready Flutter code.
+            Design beautiful mobile interfaces with our drag-and-drop builder. Export clean,
+            production-ready Flutter code.
           </p>
 
           <div className="mt-12 space-y-4">
             {[
-              "Drag & drop interface builder",
-              "Real-time phone preview",
-              "Export production-ready code",
+              'Drag & drop interface builder',
+              'Real-time phone preview',
+              'Export production-ready code',
             ].map((feature) => (
-              <div
-                key={feature}
-                className="flex items-center gap-3 text-white/90"
-              >
+              <div key={feature} className="flex items-center gap-3 text-white/90">
                 <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center">
                   <ArrowRight className="w-3 h-3" />
                 </div>
@@ -156,41 +158,35 @@ export default function Auth() {
           {/* Mobile Logo */}
           <Link to="/" className="lg:hidden flex items-center gap-3 mb-8">
             <div className="w-35 h-10 rounded-xl flex items-center justify-center">
-              <img
-                src="/Builder.png"
-                alt="AppBuilder Logo"
-                className="w-35 h-14"
-              />
+              <img src="/Builder.png" alt="AppBuilder Logo" className="w-35 h-14" />
             </div>
-            <span className="text-xl font-bold text-gradient">
-              FlutterForge
-            </span>
+            <span className="text-xl font-bold text-gradient">FlutterForge</span>
           </Link>
 
           {/* Tab Switcher */}
           <div className="flex gap-2 p-1 rounded-xl bg-muted mb-8">
             <button
               onClick={() => {
-                setMode("login");
+                setMode('login');
                 setError(null);
               }}
               className={`flex-1 py-3 px-4 rounded-lg text-sm font-medium transition-all ${
-                mode === "login"
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
+                mode === 'login'
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
               }`}
             >
               Sign In
             </button>
             <button
               onClick={() => {
-                setMode("register");
+                setMode('register');
                 setError(null);
               }}
               className={`flex-1 py-3 px-4 rounded-lg text-sm font-medium transition-all ${
-                mode === "register"
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
+                mode === 'register'
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
               }`}
             >
               Create Account
@@ -213,7 +209,7 @@ export default function Auth() {
           </AnimatePresence>
 
           <AnimatePresence mode="wait">
-            {mode === "login" ? (
+            {mode === 'login' ? (
               <motion.form
                 key="login"
                 initial={{ opacity: 0, x: 20 }}
@@ -227,7 +223,7 @@ export default function Auth() {
                   <Input
                     id="username"
                     placeholder="Enter your username"
-                    {...loginForm.register("username")}
+                    {...loginForm.register('username')}
                     className="h-12"
                   />
                   {loginForm.formState.errors.username && (
@@ -242,9 +238,9 @@ export default function Auth() {
                   <div className="relative">
                     <Input
                       id="password"
-                      type={showPassword ? "text" : "password"}
+                      type={showPassword ? 'text' : 'password'}
                       placeholder="Enter your password"
-                      {...loginForm.register("password")}
+                      {...loginForm.register('password')}
                       className="h-12 pr-12"
                     />
                     <button
@@ -252,11 +248,7 @@ export default function Auth() {
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                     >
-                      {showPassword ? (
-                        <EyeOff className="w-5 h-5" />
-                      ) : (
-                        <Eye className="w-5 h-5" />
-                      )}
+                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
                   </div>
                   {loginForm.formState.errors.password && (
@@ -295,7 +287,7 @@ export default function Auth() {
                   <Input
                     id="reg-username"
                     placeholder="Choose a username"
-                    {...registerForm.register("username")}
+                    {...registerForm.register('username')}
                     className="h-12"
                   />
                   {registerForm.formState.errors.username && (
@@ -311,7 +303,7 @@ export default function Auth() {
                     id="email"
                     type="email"
                     placeholder="Enter your email"
-                    {...registerForm.register("email")}
+                    {...registerForm.register('email')}
                     className="h-12"
                   />
                   {registerForm.formState.errors.email && (
@@ -326,9 +318,9 @@ export default function Auth() {
                   <div className="relative">
                     <Input
                       id="reg-password"
-                      type={showPassword ? "text" : "password"}
+                      type={showPassword ? 'text' : 'password'}
                       placeholder="Create a password"
-                      {...registerForm.register("password")}
+                      {...registerForm.register('password')}
                       className="h-12 pr-12"
                     />
                     <button
@@ -336,11 +328,7 @@ export default function Auth() {
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                     >
-                      {showPassword ? (
-                        <EyeOff className="w-5 h-5" />
-                      ) : (
-                        <Eye className="w-5 h-5" />
-                      )}
+                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
                   </div>
                   {registerForm.formState.errors.password && (
@@ -356,7 +344,7 @@ export default function Auth() {
                     id="password2"
                     type="password"
                     placeholder="Confirm your password"
-                    {...registerForm.register("password2")}
+                    {...registerForm.register('password2')}
                     className="h-12"
                   />
                   {registerForm.formState.errors.password2 && (
@@ -385,12 +373,12 @@ export default function Auth() {
           </AnimatePresence>
 
           <p className="mt-8 text-center text-sm text-muted-foreground">
-            {mode === "login" ? (
+            {mode === 'login' ? (
               <>
-                Don't have an account?{" "}
+                Don't have an account?{' '}
                 <button
                   onClick={() => {
-                    setMode("register");
+                    setMode('register');
                     setError(null);
                   }}
                   className="text-primary hover:underline font-medium"
@@ -400,10 +388,10 @@ export default function Auth() {
               </>
             ) : (
               <>
-                Already have an account?{" "}
+                Already have an account?{' '}
                 <button
                   onClick={() => {
-                    setMode("login");
+                    setMode('login');
                     setError(null);
                   }}
                   className="text-primary hover:underline font-medium"

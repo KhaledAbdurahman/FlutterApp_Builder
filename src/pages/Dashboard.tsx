@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link, useNavigate } from '@tanstack/react-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { PROJECT_SERVICE } from '@/api/projects';
 import type { IProject } from '@/types/api/project-types';
@@ -58,12 +58,12 @@ export default function Dashboard() {
   const handleCreateNew = () => {
     // Reset to a fresh project state by setting server project ID to null
     setServerProjectId(null);
-    navigate('/builder');
+    navigate({ to: '/builder' });
   };
 
   const handleOpenProject = (project: IProject) => {
     loadProject(project);
-    navigate('/builder');
+    navigate({ to: '/builder' });
   };
 
   const handleDeleteProject = async () => {
