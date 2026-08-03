@@ -3,6 +3,14 @@ import type { IUser } from '@/types/api/auth-types';
 const AUTH_TOKEN_KEY = 'auth_token';
 const AUTH_USER_KEY = 'auth_user';
 
+//======FOR CODE REVIEWERS========
+
+// TEMP implementation for storing auth data in localStorage
+// There is no refresh token endpoint in the backend YET,
+// so we will store the token and user data in localStorage for now.
+
+// This is not secure and should be replaced with a proper implementation in the future.
+
 const getStoredToken = (): string | null => localStorage.getItem(AUTH_TOKEN_KEY);
 
 const getStoredUser = (): IUser | null => {
