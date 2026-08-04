@@ -13,6 +13,7 @@ This module implements robust error handling and validation for the UI Builder's
 To add a new constraint (e.g., prevent a new widget `VideoPlayer` from being inside a `Button`), edit `validationRules.ts`.
 
 Example:
+
 ```typescript
 {
   parentType: "Button",
@@ -30,6 +31,7 @@ The user's choice is not currently persisted but allows them to bypass the warni
 ## Validation Logic
 
 The validator checks:
+
 1. **Type Compatibility**: Can the target accept children?
 2. **Strict Parenting**: Does the child require a specific parent (e.g., `Positioned` -> `Stack`)?
 3. **Circular Dependencies**: Is the target a descendant of the source?
@@ -38,9 +40,10 @@ The validator checks:
 ## Integration
 
 The `useDnDHandlers` hook wraps `@dnd-kit` events.
+
 - **Drag Start**: Captures a snapshot of the component tree.
 - **Drag End**:
-    - Validates the drop.
-    - If **Valid**: Commits the change.
-    - If **Invalid**: Shows error toast.
-    - If **Uncertain**: Shows confirmation dialog. On Cancel, no change is made (effectively undoing the intent).
+  - Validates the drop.
+  - If **Valid**: Commits the change.
+  - If **Invalid**: Shows error toast.
+  - If **Uncertain**: Shows confirmation dialog. On Cancel, no change is made (effectively undoing the intent).

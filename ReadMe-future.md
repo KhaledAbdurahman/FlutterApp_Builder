@@ -220,6 +220,12 @@ Infrastructure lives in `src/config/api/`:
 
 Services live in `src/api/`.
 
+The current editor has one canonical screen snapshot: `project.json_data.screens`.
+Saving, loading, live preview, and Flutter generation all operate on that same
+snapshot. The separate Screens API is reserved for a future standalone-screen
+feature and must not become a second write target until its ownership model is
+designed.
+
 Page-specific API calls can live inside `src/pages/<page-name>/api/` when they
 only belong to one page. The duplication rule is disabled for APIs: if two pages
 use the same API, move it to `src/api/` with its tests and interfaces.
@@ -445,7 +451,10 @@ Open testing concerns:
    tree lives in `src/app/router/router.tsx`, and protected routes keep their
    React-context auth guard while the router remains configuration-only.
 8. Move builder, auth, dashboard, landing, not-found, error, project-detail, and
-   live-preview pages into page modules as they become part of the app.
+   live-preview pages into page modules as they become part of the app. Done for
+   the current builder, auth, dashboard, and landing pages. The 404 route lives
+   with application error handling because it is a router-wide fallback, not a
+   product page; future product pages should begin inside their own module folder.
 9. Move shared API behavior into `src/api` and page-specific API calls into page
    folders.
 10. Replace shadcn/Radix notification usage with Mantine notification
@@ -468,6 +477,16 @@ As of this draft:
 - `@/` absolute imports are already configured in `tsconfig.app.json`.
 - Current routing lives in `src/app/router/` with TanStack Router; React Router
   has been removed.
+- Current product page entries live in
+  `src/pages/<page-name>/<page-name>-page.tsx`. The router-wide 404 fallback
+  lives in `src/app/error-handlers/page404/`.
+- Builder-only UI, live-preview hooks, and drag-and-drop behavior live inside
+  `src/pages/builder/`. They stay local because they describe the editor
+  workflow rather than reusable application UI.
+- The API ownership audit left the current services in `src/api/`: auth supports
+  the global auth context, projects serve both dashboard and builder, and the
+  remaining services do not yet have consumers. A service moves into a page
+  module only once its implementation and consumers are both page-specific.
 - Live API calls use services in `src/api/`, backed by the shared Axios
   infrastructure in `src/config/api/`.
 - Current global builder state uses Redux in `src/stores/builder/`.

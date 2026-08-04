@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getSiblingReorderIndex, resolveTreeMoveType } from '@/dnd/tree-drop-utils';
+import { getSiblingReorderIndex, resolveTreeMoveType } from '@/pages/builder/dnd/tree-drop-utils';
 
 describe('resolveTreeMoveType', () => {
   it('uses the top and bottom of a row for sibling ordering', () => {

@@ -1,10 +1,13 @@
+import type { Screen } from '@/types/screen-types';
+
 type IProjectStatus = 'draft' | 'generating' | 'completed' | 'failed';
 type IProjectId = number | string;
 
 interface IProjectJsonData {
   app_name: string;
   package_name: string;
-  screens: unknown[];
+  // The editor and generator share this snapshot so a saved project cannot load one screen tree and generate another.
+  screens: Screen[];
 }
 
 interface IProjectScreen {
@@ -24,6 +27,7 @@ interface IProject {
   description?: string;
   json_data: IProjectJsonData;
   status: IProjectStatus;
+  // Kept for the planned standalone Screens API; the current editor reads json_data.screens.
   screens: IProjectScreen[];
   created_at: string;
   updated_at: string;

@@ -1,4 +1,4 @@
-import type { TreeMoveType } from '@/dnd/treeValidationAdapters';
+import type { TreeMoveType } from '@/pages/builder/dnd/tree-validation-adapters';
 
 const resolveTreeMoveType = (
   draggedCenterY: number,

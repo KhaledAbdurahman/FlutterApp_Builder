@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Boxes, Network } from 'lucide-react';
-import { WidgetPalette } from '@/components/builder/WidgetPalette';
-import { WidgetTree } from '@/components/builder/WidgetTree';
+import { WidgetPalette } from '@/pages/builder/components/widget-palette';
+import { WidgetTree } from '@/pages/builder/components/widget-tree';
 import { cn } from '@/lib/utils';
 
 const BuilderSidebar = () => {

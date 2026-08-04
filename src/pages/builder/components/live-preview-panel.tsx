@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { useLivePreview } from '@/hooks/use-live-preview';
+import { useLivePreview } from '@/pages/builder/hooks/use-live-preview';
 import type { ILivePreviewServerStatus } from '@/types/api/live-preview-types';
 import { CalculateLivePreviewScale } from '@/utils/live-preview-utils';
 

@@ -5,8 +5,8 @@ import {
   REQUIRED_PARENTS,
   ROOT_ONLY_WIDGETS,
   canAcceptChild,
-} from '@/dnd/validationRules';
-import { countDirectChildren } from '@/dnd/childCounts';
+} from '@/pages/builder/dnd/validation-rules';
+import { countDirectChildren } from '@/pages/builder/dnd/child-counts';
 
 export interface ValidationContext {
   widgets: FlutterWidget[]; // The current tree to check ancestry

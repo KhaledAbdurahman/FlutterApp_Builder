@@ -81,7 +81,7 @@ const builderSlice = createSlice({
     },
     importProjectData(state, action: PayloadAction<IProjectJsonData>) {
       const data = action.payload;
-      const normalizedScreens = normalizeScreens((data.screens as Screen[]) || []);
+      const normalizedScreens = normalizeScreens(data.screens);
 
       return {
         ...state,
@@ -99,7 +99,7 @@ const builderSlice = createSlice({
     loadProject(state, action: PayloadAction<IProject>) {
       const savedProject = action.payload;
       const jsonData = savedProject.json_data;
-      const normalizedScreens = normalizeScreens((jsonData.screens as Screen[]) || []);
+      const normalizedScreens = normalizeScreens(jsonData.screens);
 
       return {
         ...state,

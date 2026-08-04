@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { validateDrop, ValidationContext, DragItem, DropTarget } from '@/dnd/validateDrop';
+import {
+  validateDrop,
+  ValidationContext,
+  DragItem,
+  DropTarget,
+} from '@/pages/builder/dnd/validate-drop';
 import { FlutterWidget } from '@/types/screen-types';
 
 // Mock data

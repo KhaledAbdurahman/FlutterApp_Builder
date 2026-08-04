@@ -1,3 +1,3 @@
-import NotFound from '@/pages/NotFound';
+import { NotFoundPage } from '@/app/error-handlers/page404/not-found-page';
 
-export { NotFound };
+export { NotFoundPage };

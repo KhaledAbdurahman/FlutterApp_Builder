@@ -1,12 +1,12 @@
-import { WidgetType, FlutterWidget } from "@/types/screen-types";
+import { WidgetType, FlutterWidget } from '@/types/screen-types';
 import {
   DragItem,
   DropTarget,
   validateDrop,
   ValidationContext,
-} from "./validateDrop";
+} from '@/pages/builder/dnd/validate-drop';
 
-export type TreeMoveType = "inside" | "before" | "after";
+export type TreeMoveType = 'inside' | 'before' | 'after';
 
 export interface TreeMoveIntent {
   movedWidgetId: string;
@@ -20,13 +20,7 @@ export const adaptTreeMoveToValidation = (
   intent: TreeMoveIntent,
   ctx: ValidationContext,
 ): { source: DragItem; destination: DropTarget } => {
-  const {
-    movedWidgetId,
-    movedWidgetType,
-    targetWidgetId,
-    targetWidgetType,
-    action,
-  } = intent;
+  const { movedWidgetId, movedWidgetType, targetWidgetId, targetWidgetType, action } = intent;
 
   const source: DragItem = {
     id: movedWidgetId,
@@ -35,7 +29,7 @@ export const adaptTreeMoveToValidation = (
 
   let destination: DropTarget;
 
-  if (action === "inside") {
+  if (action === 'inside') {
     // If dropping INSIDE the target, the target is the parent
     destination = {
       id: targetWidgetId,
@@ -55,21 +49,21 @@ export const adaptTreeMoveToValidation = (
       // If no parent found, we are dropping at the root (canvas level)
       // Assuming 'canvas' represents the root list container
       destination = {
-        id: "root",
-        type: "canvas", // Or "Scaffold" if the root must be scaffold, but generic "canvas" handles top-level
+        id: 'root',
+        type: 'canvas', // Or "Scaffold" if the root must be scaffold, but generic "canvas" handles top-level
       };
     }
   }
 
-  if (destination.type === "Scaffold") {
-    if (movedWidgetType === "AppBar") {
-      destination.slot = "appBar";
-    } else if (movedWidgetType === "Drawer") {
-      destination.slot = "drawer";
-    } else if (movedWidgetType === "BottomNavigationBar") {
-      destination.slot = "bottomNavigationBar";
+  if (destination.type === 'Scaffold') {
+    if (movedWidgetType === 'AppBar') {
+      destination.slot = 'appBar';
+    } else if (movedWidgetType === 'Drawer') {
+      destination.slot = 'drawer';
+    } else if (movedWidgetType === 'BottomNavigationBar') {
+      destination.slot = 'bottomNavigationBar';
     } else {
-      destination.slot = "body";
+      destination.slot = 'body';
     }
   }
 

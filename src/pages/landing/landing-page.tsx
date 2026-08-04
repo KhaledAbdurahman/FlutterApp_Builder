@@ -65,7 +65,7 @@ const itemVariants = {
   visible: { opacity: 1, y: 0 },
 };
 
-export default function Landing() {
+const LandingPage = () => {
   const { user } = useAuth();
 
   return (
@@ -312,4 +312,6 @@ export default function Landing() {
       </footer>
     </div>
   );
-}
+};
+
+export { LandingPage };

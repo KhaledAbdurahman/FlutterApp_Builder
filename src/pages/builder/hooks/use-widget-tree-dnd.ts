@@ -12,15 +12,15 @@ import {
 import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { useBuilderStore } from '@/stores/builder/use-builder-store';
 import { toast } from 'sonner';
-import { validateDrop, ValidationContext } from '@/dnd/validateDrop';
+import { validateDrop, ValidationContext } from '@/pages/builder/dnd/validate-drop';
 import {
   adaptTreeMoveToValidation,
   TreeMoveIntent,
   TreeMoveType,
-} from '@/dnd/treeValidationAdapters';
+} from '@/pages/builder/dnd/tree-validation-adapters';
 import { FlutterWidget, getWidgetDefinition } from '@/types/screen-types';
 import { getWidgetChildren } from '@/lib/widgetTreeUtils';
-import { getSiblingReorderIndex, resolveTreeMoveType } from '@/dnd/tree-drop-utils';
+import { getSiblingReorderIndex, resolveTreeMoveType } from '@/pages/builder/dnd/tree-drop-utils';
 
 // --- Utility: Recursion helpers ---
 

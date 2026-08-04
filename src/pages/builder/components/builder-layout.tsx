@@ -7,18 +7,18 @@ import {
   pointerWithin,
 } from '@dnd-kit/core';
 import { motion } from 'framer-motion';
-import { TopBar } from '@/components/builder/TopBar';
-import { BuilderSidebar } from '@/components/builder/BuilderSidebar';
-import { PhoneCanvas } from '@/components/builder/PhoneCanvas';
-import { PropertiesPanel } from '@/components/builder/PropertiesPanel';
+import { TopBar } from '@/pages/builder/components/top-bar';
+import { BuilderSidebar } from '@/pages/builder/components/builder-sidebar';
+import { PhoneCanvas } from '@/pages/builder/components/phone-canvas';
+import { PropertiesPanel } from '@/pages/builder/components/properties-panel';
 import { WidgetType, getWidgetDefinition } from '@/types/screen-types';
 import { useState } from 'react';
 import * as LucideIcons from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { useDnDHandlers } from '@/dnd/dndHandlers';
+import { useDnDHandlers } from '@/pages/builder/dnd/dnd-handlers';
 import { Button } from '@/components/ui/button';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
-import { LivePreviewPanel } from '@/components/builder/live-preview-panel';
+import { LivePreviewPanel } from '@/pages/builder/components/live-preview-panel';
 
 export const BuilderLayout = () => {
   const [activeType, setActiveType] = useState<WidgetType | null>(null);

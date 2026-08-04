@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { DndContext, DragOverlay, pointerWithin, useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { useWidgetTreeDnD } from '@/hooks/useWidgetTreeDnD';
+import { useWidgetTreeDnD } from '@/pages/builder/hooks/use-widget-tree-dnd';
 import { useBuilderStore } from '@/stores/builder/use-builder-store';
 import { FlutterWidget, getChildConfig, getWidgetDefinition } from '@/types/screen-types';
 import type { LucideIcon } from 'lucide-react';
@@ -18,7 +18,11 @@ import * as LucideIcons from 'lucide-react';
 import { ChevronRight, ChevronDown, Layers, GripVertical, ArrowUp, ArrowDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { REQUIRED_PARENTS, ROOT_ONLY_WIDGETS, VALIDATION_RULES } from '@/dnd/validationRules';
+import {
+  REQUIRED_PARENTS,
+  ROOT_ONLY_WIDGETS,
+  VALIDATION_RULES,
+} from '@/pages/builder/dnd/validation-rules';
 
 interface ITreeNodeProps {
   widget: FlutterWidget;

@@ -1,11 +1,11 @@
 import { createRoute } from '@tanstack/react-router';
 import { rootRoute } from '@/app/router/routes/root-route';
-import Landing from '@/pages/Landing';
+import { LandingPage } from '@/pages/landing/landing-page';
 
 const landingRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',
-  component: Landing,
+  component: LandingPage,
 });
 
 export { landingRoute };

@@ -32,57 +32,6 @@ interface GenerationLogsProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const getStatusIcon = (status?: string) => {
-  switch ((status || 'info').toLowerCase()) {
-    case 'error':
-      return <AlertCircle className="w-4 h-4 text-destructive" />;
-    case 'warning':
-      return <AlertTriangle className="w-4 h-4 text-amber-500" />;
-    case 'success':
-      return <CheckCircle className="w-4 h-4 text-emerald-500" />;
-    default:
-      return <Info className="w-4 h-4 text-blue-500" />;
-  }
-};
-
-const getStatusBadge = (status?: string) => {
-  const value = (status || 'info').toLowerCase();
-  switch (value) {
-    case 'error':
-      return <Badge variant="destructive">{value}</Badge>;
-    case 'warning':
-      return <Badge className="bg-amber-500">{value}</Badge>;
-    case 'success':
-      return <Badge className="bg-emerald-500">{value}</Badge>;
-    default:
-      return <Badge variant="secondary">{value}</Badge>;
-  }
-};
-
-const getStepIcon = (step?: string) => {
-  const normalized = (step || '').toLowerCase();
-  if (normalized.includes('start')) {
-    return <Play className="w-4 h-4 text-muted-foreground" />;
-  }
-  if (normalized.includes('build_apk')) {
-    return <Package className="w-4 h-4 text-muted-foreground" />;
-  }
-  if (normalized.includes('preview')) {
-    return <Monitor className="w-4 h-4 text-muted-foreground" />;
-  }
-  if (normalized.includes('generate')) {
-    return <FileText className="w-4 h-4 text-muted-foreground" />;
-  }
-  return <Info className="w-4 h-4 text-muted-foreground" />;
-};
-
-const formatTimestamp = (timestamp?: string) => {
-  if (!timestamp) return 'Unknown time';
-  const date = new Date(timestamp);
-  if (!isValid(date)) return 'Unknown time';
-  return format(date, 'PPp');
-};
-
 export const GenerationLogs = ({ open, onOpenChange }: GenerationLogsProps) => {
   const { serverProjectId } = useBuilderStore();
 
@@ -200,4 +149,55 @@ export const GenerationLogs = ({ open, onOpenChange }: GenerationLogsProps) => {
       </DialogContent>
     </Dialog>
   );
+};
+
+const getStatusIcon = (status?: string) => {
+  switch ((status || 'info').toLowerCase()) {
+    case 'error':
+      return <AlertCircle className="w-4 h-4 text-destructive" />;
+    case 'warning':
+      return <AlertTriangle className="w-4 h-4 text-amber-500" />;
+    case 'success':
+      return <CheckCircle className="w-4 h-4 text-emerald-500" />;
+    default:
+      return <Info className="w-4 h-4 text-blue-500" />;
+  }
+};
+
+const getStatusBadge = (status?: string) => {
+  const value = (status || 'info').toLowerCase();
+  switch (value) {
+    case 'error':
+      return <Badge variant="destructive">{value}</Badge>;
+    case 'warning':
+      return <Badge className="bg-amber-500">{value}</Badge>;
+    case 'success':
+      return <Badge className="bg-emerald-500">{value}</Badge>;
+    default:
+      return <Badge variant="secondary">{value}</Badge>;
+  }
+};
+
+const getStepIcon = (step?: string) => {
+  const normalized = (step || '').toLowerCase();
+  if (normalized.includes('start')) {
+    return <Play className="w-4 h-4 text-muted-foreground" />;
+  }
+  if (normalized.includes('build_apk')) {
+    return <Package className="w-4 h-4 text-muted-foreground" />;
+  }
+  if (normalized.includes('preview')) {
+    return <Monitor className="w-4 h-4 text-muted-foreground" />;
+  }
+  if (normalized.includes('generate')) {
+    return <FileText className="w-4 h-4 text-muted-foreground" />;
+  }
+  return <Info className="w-4 h-4 text-muted-foreground" />;
+};
+
+const formatTimestamp = (timestamp?: string) => {
+  if (!timestamp) return 'Unknown time';
+  const date = new Date(timestamp);
+  if (!isValid(date)) return 'Unknown time';
+  return format(date, 'PPp');
 };

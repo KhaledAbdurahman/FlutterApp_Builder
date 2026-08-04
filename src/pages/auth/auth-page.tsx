@@ -48,7 +48,7 @@ const getErrorMessage = (error: unknown, fallback: string): string => {
   return fallback;
 };
 
-export default function Auth() {
+const AuthPage = () => {
   const location = useLocation();
   const [mode, setMode] = useState<'login' | 'register'>(
     location.search.mode === 'register' ? 'register' : 'login',
@@ -401,4 +401,6 @@ export default function Auth() {
       </div>
     </div>
   );
-}
+};
+
+export { AuthPage };

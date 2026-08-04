@@ -27,10 +27,9 @@ import {
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { useBuilderStore } from '@/stores/builder/use-builder-store';
-import { Screen } from '@/types/screen-types';
 import BrandLogo from '@/components/BrandLogo';
 
-export default function Dashboard() {
+const DashboardPage = () => {
   const navigate = useNavigate();
   const [projects, setProjects] = useState<IProject[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -91,8 +90,7 @@ export default function Dashboard() {
   };
 
   const getScreenCount = (project: IProject): number => {
-    const screens = project.json_data?.screens as Screen[] | undefined;
-    return screens?.length || 0;
+    return project.json_data.screens.length;
   };
 
   return (
@@ -226,4 +224,6 @@ export default function Dashboard() {
       </AlertDialog>
     </div>
   );
-}
+};
+
+export { DashboardPage };

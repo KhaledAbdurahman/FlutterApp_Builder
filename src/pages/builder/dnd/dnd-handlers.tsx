@@ -2,7 +2,12 @@ import { useState, useRef } from 'react';
 import { DragStartEvent, DragEndEvent, DragCancelEvent } from '@dnd-kit/core';
 import { useBuilderStore } from '@/stores/builder/use-builder-store';
 import { toast } from 'sonner';
-import { validateDrop, ValidationContext, DragItem, DropTarget } from '@/dnd/validateDrop';
+import {
+  validateDrop,
+  ValidationContext,
+  DragItem,
+  DropTarget,
+} from '@/pages/builder/dnd/validate-drop';
 import { WidgetType, FlutterWidget } from '@/types/screen-types';
 import { getWidgetChildren } from '@/lib/widgetTreeUtils';
 

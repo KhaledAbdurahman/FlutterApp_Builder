@@ -38,8 +38,8 @@ import {
 } from '@/components/ui/dialog';
 import { useBuilderStore } from '@/stores/builder/use-builder-store';
 import { toast } from 'sonner';
-import { ProjectManager } from '@/components/builder/ProjectManager';
-import { GenerationLogs } from '@/components/builder/GenerationLogs';
+import { ProjectManager } from '@/pages/builder/components/project-manager';
+import { GenerationLogs } from '@/pages/builder/components/generation-logs';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { UserProfileMenu } from '@/components/UserProfileMenu';
 import BrandLogo from '@/components/BrandLogo';
@@ -55,7 +55,11 @@ import {
   getChildConfig,
   resolveWidgetProps,
 } from '@/types/screen-types';
-import { REQUIRED_PARENTS, ROOT_ONLY_WIDGETS, VALIDATION_RULES } from '@/dnd/validationRules';
+import {
+  REQUIRED_PARENTS,
+  ROOT_ONLY_WIDGETS,
+  VALIDATION_RULES,
+} from '@/pages/builder/dnd/validation-rules';
 import { v4 as uuidv4 } from 'uuid';
 
 const allowedWidgetTypes = new Set(WIDGET_DEFINITIONS.map((definition) => definition.type));

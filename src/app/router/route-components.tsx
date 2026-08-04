@@ -1,16 +1,16 @@
 import { ProtectedRoute } from '@/components/ProtectedRoute';
-import Builder from '@/pages/Builder';
-import Dashboard from '@/pages/Dashboard';
+import { BuilderPage } from '@/pages/builder/builder-page';
+import { DashboardPage } from '@/pages/dashboard/dashboard-page';
 
 const ProtectedBuilderRoute = () => (
   <ProtectedRoute>
-    <Builder />
+    <BuilderPage />
   </ProtectedRoute>
 );
 
 const ProtectedDashboardRoute = () => (
   <ProtectedRoute>
-    <Dashboard />
+    <DashboardPage />
   </ProtectedRoute>
 );
 
