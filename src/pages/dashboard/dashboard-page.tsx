@@ -1,33 +1,25 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from '@tanstack/react-router';
-import { useAuth } from '@/contexts/AuthContext';
+import {
+  Button,
+  Container,
+  Group,
+  Loader,
+  Modal,
+  SimpleGrid,
+  Stack,
+  Text,
+  Title,
+} from '@mantine/core';
+import { Calendar, FolderOpen, LayoutGrid, Plus, Smartphone, Trash2 } from 'lucide-react';
 import { PROJECT_SERVICE } from '@/api/projects';
-import type { IProject } from '@/types/api/project-types';
+import BrandLogo from '@/components/BrandLogo';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { UserProfileMenu } from '@/components/UserProfileMenu';
-import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { Plus, FolderOpen, Trash2, Loader2, Smartphone, Calendar, LayoutGrid } from 'lucide-react';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { toast } from 'sonner';
+import { ChooseNotification } from '@/lib/choose-notification';
 import { useBuilderStore } from '@/stores/builder/use-builder-store';
-import BrandLogo from '@/components/BrandLogo';
+import type { IProject } from '@/types/api/project-types';
+import styles from '@/pages/dashboard/dashboard-page.module.css';
 
 const DashboardPage = () => {
   const navigate = useNavigate();
@@ -35,193 +27,155 @@ const DashboardPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [deleteConfirm, setDeleteConfirm] = useState<IProject | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-
   const { loadProject, setServerProjectId } = useBuilderStore();
-
-  useEffect(() => {
-    fetchProjects();
-  }, []);
 
   const fetchProjects = async () => {
     try {
       setIsLoading(true);
-      const data = await PROJECT_SERVICE.getAll();
-      setProjects(data);
-    } catch (error) {
-      toast.error('Failed to load projects');
+      setProjects(await PROJECT_SERVICE.getAll());
+    } catch {
+      ChooseNotification.failure({ message: 'Failed to load projects' });
     } finally {
       setIsLoading(false);
     }
   };
 
+  useEffect(() => {
+    fetchProjects();
+  }, []);
+
   const handleCreateNew = () => {
-    // Reset to a fresh project state by setting server project ID to null
     setServerProjectId(null);
     navigate({ to: '/builder' });
   };
-
   const handleOpenProject = (project: IProject) => {
     loadProject(project);
     navigate({ to: '/builder' });
   };
+  const formatDate = (value: string) =>
+    new Date(value).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
 
   const handleDeleteProject = async () => {
     if (!deleteConfirm) return;
-
     try {
       setIsDeleting(true);
       await PROJECT_SERVICE.delete(deleteConfirm.id);
-      setProjects(projects.filter((p) => p.id !== deleteConfirm.id));
-      toast.success('Project deleted successfully');
-    } catch (error) {
-      toast.error('Failed to delete project');
+      setProjects((currentProjects) =>
+        currentProjects.filter((project) => project.id !== deleteConfirm.id),
+      );
+      ChooseNotification.success({ message: 'Project deleted successfully' });
+    } catch {
+      ChooseNotification.failure({ message: 'Failed to delete project' });
     } finally {
       setIsDeleting(false);
       setDeleteConfirm(null);
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
-  };
-
-  const getScreenCount = (project: IProject): number => {
-    return project.json_data.screens.length;
-  };
-
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link to="/" className="flex items-center gap-3">
-              <BrandLogo />
-            </Link>
-          </div>
-
-          <div className="flex items-center gap-3">
+    <div className={styles.page}>
+      <header className={styles.header}>
+        <Container size="lg" className={styles.headerContent}>
+          <Link to="/" aria-label="AppBuilder home">
+            <BrandLogo />
+          </Link>
+          <Group gap="xs">
             <ThemeToggle />
             <UserProfileMenu />
-          </div>
-        </div>
+          </Group>
+        </Container>
       </header>
-
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold mb-2">My Projects</h1>
-            <p className="text-muted-foreground">Manage your Flutter app projects</p>
+      <main>
+        <Container size="lg" className={styles.content}>
+          <div className={styles.pageHeading}>
+            <div>
+              <Title order={1}>My projects</Title>
+              <Text>Manage the Flutter applications in your workspace.</Text>
+            </div>
+            <Button leftSection={<Plus size={18} />} onClick={handleCreateNew}>
+              New project
+            </Button>
           </div>
-          <Button onClick={handleCreateNew} className="gap-2">
-            <Plus className="w-4 h-4" />
-            New Project
-          </Button>
-        </div>
-
-        {isLoading ? (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          </div>
-        ) : projects.length === 0 ? (
-          <Card className="border-dashed">
-            <CardContent className="flex flex-col items-center justify-center py-16">
-              <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
-                <LayoutGrid className="w-8 h-8 text-muted-foreground" />
-              </div>
-              <h3 className="text-lg font-semibold mb-2">No projects yet</h3>
-              <p className="text-muted-foreground text-center mb-6 max-w-sm">
-                Start building your first Flutter app by creating a new project.
-              </p>
-              <Button onClick={handleCreateNew} className="gap-2">
-                <Plus className="w-4 h-4" />
-                Create Your First Project
+          {isLoading ? (
+            <div className={styles.loading}>
+              <Loader />
+            </div>
+          ) : projects.length === 0 ? (
+            <section className={styles.emptyState}>
+              <LayoutGrid size={30} />
+              <Title order={2}>No projects yet</Title>
+              <Text>Create a project to begin designing your Flutter app.</Text>
+              <Button leftSection={<Plus size={18} />} onClick={handleCreateNew}>
+                Create your first project
               </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {projects.map((project) => (
-              <Card
-                key={project.id}
-                className="group hover:shadow-lg transition-all duration-200 hover:border-primary/50"
-              >
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
-                      <Smartphone className="w-4 h-4 text-primary" />
+            </section>
+          ) : (
+            <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="md">
+              {projects.map((project) => (
+                <article key={project.id} className={styles.projectCard}>
+                  <div className={styles.projectTitle}>
+                    <div className={styles.projectIcon}>
+                      <Smartphone size={18} />
                     </div>
-                    <span className="truncate">{project.name}</span>
-                  </CardTitle>
-                  {project.description && (
-                    <CardDescription className="line-clamp-2">
-                      {project.description}
-                    </CardDescription>
-                  )}
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <Calendar className="w-3.5 h-3.5" />
-                      <span>{formatDate(project.updated_at)}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <LayoutGrid className="w-3.5 h-3.5" />
-                      <span>{getScreenCount(project)} screens</span>
-                    </div>
+                    <Title order={2}>{project.name}</Title>
                   </div>
-                </CardContent>
-                <CardFooter className="flex gap-2">
-                  <Button className="flex-1 gap-2" onClick={() => handleOpenProject(project)}>
-                    <FolderOpen className="w-4 h-4" />
-                    Open
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                    onClick={() => setDeleteConfirm(project)}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </CardFooter>
-              </Card>
-            ))}
-          </div>
-        )}
+                  {project.description && (
+                    <Text className={styles.description}>{project.description}</Text>
+                  )}
+                  <Group gap="md" className={styles.metadata}>
+                    <span>
+                      <Calendar size={14} />
+                      {formatDate(project.updated_at)}
+                    </span>
+                    <span>
+                      <LayoutGrid size={14} />
+                      {project.json_data.screens.length} screens
+                    </span>
+                  </Group>
+                  <Group grow className={styles.cardActions}>
+                    <Button
+                      leftSection={<FolderOpen size={16} />}
+                      onClick={() => handleOpenProject(project)}
+                    >
+                      Open
+                    </Button>
+                    <Button
+                      variant="default"
+                      color="red"
+                      aria-label={`Delete ${project.name}`}
+                      onClick={() => setDeleteConfirm(project)}
+                    >
+                      <Trash2 size={16} />
+                    </Button>
+                  </Group>
+                </article>
+              ))}
+            </SimpleGrid>
+          )}
+        </Container>
       </main>
-
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Project</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete "{deleteConfirm?.name}"? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteProject}
-              disabled={isDeleting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {isDeleting ? (
-                <Loader2 className="w-4 h-4 animate-spin mr-2" />
-              ) : (
-                <Trash2 className="w-4 h-4 mr-2" />
-              )}
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <Modal
+        opened={Boolean(deleteConfirm)}
+        onClose={() => setDeleteConfirm(null)}
+        title="Delete project"
+        centered
+      >
+        <Stack gap="lg">
+          <Text>Delete “{deleteConfirm?.name}”? This action cannot be undone.</Text>
+          <Group justify="flex-end">
+            <Button variant="default" onClick={() => setDeleteConfirm(null)} disabled={isDeleting}>
+              Cancel
+            </Button>
+            <Button color="red" loading={isDeleting} onClick={handleDeleteProject}>
+              Delete project
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
     </div>
   );
 };

@@ -1,17 +1,8 @@
 import { useNavigate } from '@tanstack/react-router';
 import { LogOut, User, LayoutDashboard } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { ActionIcon, Avatar, Menu, Text } from '@mantine/core';
 import { useAuth } from '@/contexts/AuthContext';
-import { toast } from 'sonner';
+import { ChooseNotification } from '@/lib/choose-notification';
 
 export function UserProfileMenu() {
   const navigate = useNavigate();
@@ -20,7 +11,7 @@ export function UserProfileMenu() {
   const handleLogout = async () => {
     await logout();
     navigate({ to: '/' });
-    toast.success('Logged out successfully');
+    ChooseNotification.success({ message: 'Logged out successfully' });
   };
 
   const getInitials = (name: string) => {
@@ -33,39 +24,37 @@ export function UserProfileMenu() {
   };
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="relative h-9 w-9 rounded-full">
-          <Avatar className="h-9 w-9">
-            <AvatarFallback className="bg-primary/10 text-primary">
-              {user?.username ? getInitials(user.username) : <User className="h-4 w-4" />}
-            </AvatarFallback>
+    <Menu shadow="md" width={224} position="bottom-end">
+      <Menu.Target>
+        <ActionIcon variant="subtle" color="gray" size="lg" radius="xl" aria-label="Open user menu">
+          <Avatar color="indigo" radius="xl" size="sm">
+            {user?.username ? getInitials(user.username) : <User size={16} />}
           </Avatar>
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-56" align="end" forceMount>
-        <DropdownMenuLabel className="font-normal">
-          <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">{user?.username}</p>
-            {user?.email && (
-              <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
-            )}
-          </div>
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => navigate({ to: '/dashboard' })}>
-          <LayoutDashboard className="mr-2 h-4 w-4" />
-          Dashboard
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          onClick={handleLogout}
-          className="text-destructive focus:text-destructive"
+        </ActionIcon>
+      </Menu.Target>
+      <Menu.Dropdown>
+        <Menu.Label>
+          <Text size="sm" fw={600}>
+            {user?.username}
+          </Text>
+          {user?.email && (
+            <Text size="xs" c="dimmed">
+              {user.email}
+            </Text>
+          )}
+        </Menu.Label>
+        <Menu.Divider />
+        <Menu.Item
+          leftSection={<LayoutDashboard size={16} />}
+          onClick={() => navigate({ to: '/dashboard' })}
         >
-          <LogOut className="mr-2 h-4 w-4" />
+          Dashboard
+        </Menu.Item>
+        <Menu.Divider />
+        <Menu.Item color="red" leftSection={<LogOut size={16} />} onClick={handleLogout}>
           Log out
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+        </Menu.Item>
+      </Menu.Dropdown>
+    </Menu>
   );
 }

@@ -17,27 +17,21 @@ import {
   Upload,
   MonitorPlay,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-} from '@/components/ui/dropdown-menu';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
+  ActionIcon,
+  Button,
+  Divider,
+  Group,
+  Menu,
+  Modal,
+  Stack,
+  Text,
+  Textarea,
+  TextInput,
+  Tooltip,
+} from '@mantine/core';
 import { useBuilderStore } from '@/stores/builder/use-builder-store';
-import { toast } from 'sonner';
+import { ChooseNotification } from '@/lib/choose-notification';
 import { ProjectManager } from '@/pages/builder/components/project-manager';
 import { GenerationLogs } from '@/pages/builder/components/generation-logs';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -61,6 +55,7 @@ import {
   VALIDATION_RULES,
 } from '@/pages/builder/dnd/validation-rules';
 import { v4 as uuidv4 } from 'uuid';
+import styles from '@/pages/builder/components/top-bar.module.css';
 
 const allowedWidgetTypes = new Set(WIDGET_DEFINITIONS.map((definition) => definition.type));
 
@@ -280,12 +275,14 @@ export const TopBar = ({ isPreviewOpen, onLaunchPreview }: ITopBarProps) => {
         });
         setAutoSaveState('saved');
         if (showToast) {
-          toast.success('Project saved');
+          ChooseNotification.success({ message: 'Project saved' });
         }
       } catch (error) {
         setAutoSaveState('error');
         if (showToast) {
-          toast.error(error instanceof Error ? error.message : 'Failed to save project');
+          ChooseNotification.failure({
+            message: error instanceof Error ? error.message : 'Failed to save project',
+          });
         }
       } finally {
         setIsAutoSaving(false);
@@ -314,15 +311,14 @@ export const TopBar = ({ isPreviewOpen, onLaunchPreview }: ITopBarProps) => {
       addScreen(newScreenName.trim());
       setNewScreenName('');
       setAddScreenDialogOpen(false);
-      toast.success('Screen created!');
+      ChooseNotification.success({ message: 'Screen created' });
     }
   };
 
   const handleOpenAddScreenDialog = () => {
     setScreenMenuOpen(false);
 
-    // Radix must release the menu focus lock before the dialog claims it.
-    window.setTimeout(() => setAddScreenDialogOpen(true), 0);
+    setAddScreenDialogOpen(true);
   };
 
   const handleExport = () => {
@@ -336,14 +332,14 @@ export const TopBar = ({ isPreviewOpen, onLaunchPreview }: ITopBarProps) => {
     a.download = `${project.app_name}_spec.json`;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success('Project exported!');
+    ChooseNotification.success({ message: 'Project exported' });
   };
 
   const handleSaveSettings = () => {
     setProjectName(tempProjectName);
     setPackageName(tempPackageName);
     setSettingsOpen(false);
-    toast.success('Settings saved!');
+    ChooseNotification.success({ message: 'Settings saved' });
   };
 
   const validateImportedScreens = useCallback(() => {
@@ -568,7 +564,7 @@ export const TopBar = ({ isPreviewOpen, onLaunchPreview }: ITopBarProps) => {
       package_name: importPackageName.trim() || 'com.example.app',
       screens: importScreens,
     });
-    toast.success('Screens imported to canvas.');
+    ChooseNotification.success({ message: 'Screens imported to canvas' });
     setImportOpen(false);
   }, [importScreens, importErrors.length, importProjectData, importAppName, importPackageName]);
 
@@ -586,10 +582,12 @@ export const TopBar = ({ isPreviewOpen, onLaunchPreview }: ITopBarProps) => {
         json_data: payload,
       });
       loadProject(saved);
-      toast.success('Project imported and saved.');
+      ChooseNotification.success({ message: 'Project imported and saved' });
       setImportOpen(false);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to save imported project');
+      ChooseNotification.failure({
+        message: error instanceof Error ? error.message : 'Failed to save imported project',
+      });
     }
   }, [importScreens, importErrors.length, importAppName, importPackageName, loadProject]);
 
@@ -615,19 +613,18 @@ export const TopBar = ({ isPreviewOpen, onLaunchPreview }: ITopBarProps) => {
       downloadBlob(blob, `${project.app_name}.zip`);
 
       setHasGeneratedProject(true);
-      toast.success('Flutter app generated and downloaded!');
+      ChooseNotification.success({ message: 'Flutter app generated and downloaded' });
     } catch (error) {
       console.error('Generation error:', error);
 
       if (error instanceof TypeError && error.message === 'Failed to fetch') {
-        toast.error(
-          'Cannot connect to backend. This could be a CORS issue or the server is not running. ' +
-            'Ensure Django has CORS headers enabled for this origin.',
-          { duration: 6000 },
-        );
+        ChooseNotification.failure({
+          message:
+            'Cannot connect to backend. This could be a CORS issue or the server is not running. Ensure Django has CORS headers enabled for this origin.',
+        });
       } else {
-        toast.error(error instanceof Error ? error.message : 'Failed to generate app.', {
-          duration: 5000,
+        ChooseNotification.failure({
+          message: error instanceof Error ? error.message : 'Failed to generate app.',
         });
       }
     } finally {
@@ -637,13 +634,11 @@ export const TopBar = ({ isPreviewOpen, onLaunchPreview }: ITopBarProps) => {
 
   const handleBuildApk = async () => {
     setIsBuildingApk(true);
-    const toastId = 'build-apk';
+    const notificationId = ChooseNotification.loader({ message: 'Generating Flutter project...' });
     try {
       if (!serverProjectId) {
         throw new Error('Please save the project before building APK.');
       }
-
-      toast.loading('Generating Flutter project...', { id: toastId });
 
       // Always generate before building
       const generateResult = await PROJECT_SERVICE.generateFlutterApplication(serverProjectId);
@@ -656,7 +651,7 @@ export const TopBar = ({ isPreviewOpen, onLaunchPreview }: ITopBarProps) => {
         }
       }
 
-      toast.loading('Building APK...', { id: toastId });
+      ChooseNotification.loading({ id: notificationId, message: 'Building APK...' });
 
       const result = await PROJECT_SERVICE.buildAndroidApplicationPackage(serverProjectId);
 
@@ -665,11 +660,11 @@ export const TopBar = ({ isPreviewOpen, onLaunchPreview }: ITopBarProps) => {
         const message = result.message;
 
         if (status === 'building') {
-          toast.info(message || 'APK build started. This may take a few minutes...', {
-            duration: 5000,
+          ChooseNotification.loadingToSuccess({
+            id: notificationId,
+            message: message || 'APK build started. This may take a few minutes...',
           });
           // Poll or wait for completion - for now show message
-          toast.dismiss(toastId);
           setIsBuildingApk(false);
           return;
         }
@@ -683,389 +678,457 @@ export const TopBar = ({ isPreviewOpen, onLaunchPreview }: ITopBarProps) => {
 
       downloadBlob(blob, `${project.app_name}.apk`);
       setHasGeneratedProject(true);
-      toast.success('APK built and downloaded!', { id: toastId });
+      ChooseNotification.loadingToSuccess({
+        id: notificationId,
+        message: 'APK built and downloaded!',
+      });
     } catch (error) {
       console.error('APK build error:', error);
 
       if (error instanceof TypeError && error.message === 'Failed to fetch') {
-        toast.error(
-          'Cannot connect to backend. This could be a CORS issue or the server is not running.',
-          { duration: 6000 },
-        );
+        ChooseNotification.loadingToFailure({
+          id: notificationId,
+          message:
+            'Cannot connect to backend. This could be a CORS issue or the server is not running.',
+        });
       } else {
-        toast.error(error instanceof Error ? error.message : 'Failed to build APK.', {
-          duration: 5000,
+        ChooseNotification.loadingToFailure({
+          id: notificationId,
+          message: error instanceof Error ? error.message : 'Failed to build APK.',
         });
       }
     } finally {
-      toast.dismiss(toastId);
       setIsBuildingApk(false);
     }
   };
 
   return (
-    <motion.header
-      initial={{ y: -20, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      className="h-14 border-b border-border bg-card flex items-center justify-between px-4"
-    >
-      <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2">
-          <BrandLogo className="h-10" />
-          {/* <span className="font-semibold text-lg">{project.app_name}</span> */}
-        </div>
-
-        <div className="h-6 w-px bg-border" />
-
-        <DropdownMenu modal={false} open={screenMenuOpen} onOpenChange={setScreenMenuOpen}>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="gap-2">
-              <span className="text-muted-foreground text-sm">Screen:</span>
-              <span className="font-medium">{activeScreen?.name || 'Select'}</span>
-              <ChevronDown className="w-4 h-4 text-muted-foreground" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-72 max-w-[calc(100vw-2rem)]">
-            {project.screens.map((screen) => (
-              <DropdownMenuItem
-                key={screen.id}
-                onClick={() => setActiveScreen(screen.id)}
-                className="flex items-center justify-between"
+    <>
+      <motion.header
+        initial={{ y: -20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        className={styles.topBar}
+      >
+        <div className={styles.identityGroup}>
+          <BrandLogo className={styles.logo} />
+          <Divider orientation="vertical" className={styles.divider} />
+          <Menu
+            opened={screenMenuOpen}
+            onChange={setScreenMenuOpen}
+            shadow="md"
+            width={288}
+            position="bottom-start"
+          >
+            <Menu.Target>
+              <Button
+                variant="subtle"
+                color="gray"
+                className={styles.screenSelector}
+                rightSection={<ChevronDown size={16} />}
               >
-                <span className="min-w-0 flex-1 truncate">{screen.name}</span>
-                <div className="flex shrink-0 items-center gap-2">
-                  {screen.is_home && <span className="text-xs text-primary">Home</span>}
-                  {screen.id === activeScreenId && <Check className="w-4 h-4 text-primary" />}
-                </div>
-              </DropdownMenuItem>
-            ))}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onSelect={handleOpenAddScreenDialog}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Screen
-            </DropdownMenuItem>
-            {project.screens.length > 1 && activeScreen && !activeScreen.is_home && (
-              <>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={() => deleteScreen(activeScreenId)}
-                  className="text-destructive focus:text-destructive"
+                <span className={styles.screenLabel}>Screen:</span>
+                <span className={styles.screenName}>{activeScreen?.name || 'Select'}</span>
+              </Button>
+            </Menu.Target>
+            <Menu.Dropdown>
+              {project.screens.map((screen) => (
+                <Menu.Item
+                  key={screen.id}
+                  onClick={() => setActiveScreen(screen.id)}
+                  rightSection={
+                    <span className={styles.screenMenuMeta}>
+                      {screen.is_home && <span className={styles.homeLabel}>Home</span>}
+                      {screen.id === activeScreenId && <Check size={16} />}
+                    </span>
+                  }
                 >
-                  <X className="w-4 h-4 mr-2" />
-                  Delete Current Screen
-                </DropdownMenuItem>
-              </>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
+                  {screen.name}
+                </Menu.Item>
+              ))}
+              <Menu.Divider />
+              <Menu.Item leftSection={<Plus size={16} />} onClick={handleOpenAddScreenDialog}>
+                Add Screen
+              </Menu.Item>
+              {project.screens.length > 1 && activeScreen && !activeScreen.is_home && (
+                <>
+                  <Menu.Divider />
+                  <Menu.Item
+                    color="red"
+                    leftSection={<X size={16} />}
+                    onClick={() => deleteScreen(activeScreenId)}
+                  >
+                    Delete Current Screen
+                  </Menu.Item>
+                </>
+              )}
+            </Menu.Dropdown>
+          </Menu>
 
-        <Dialog
-          open={addScreenDialogOpen}
-          onOpenChange={(open) => {
-            setAddScreenDialogOpen(open);
-            if (!open) setNewScreenName('');
-          }}
-        >
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Add Screen</DialogTitle>
-              <DialogDescription className="sr-only">
-                Create a screen by entering its name.
-              </DialogDescription>
-            </DialogHeader>
+          <Modal
+            opened={addScreenDialogOpen}
+            onClose={() => {
+              setAddScreenDialogOpen(false);
+              setNewScreenName('');
+            }}
+            title="Add Screen"
+            centered
+            radius="md"
+            classNames={{ content: styles.modalContent, header: styles.modalHeader }}
+          >
             <form
-              className="space-y-5"
               onSubmit={(event) => {
                 event.preventDefault();
                 handleAddScreen();
               }}
             >
-              <div className="space-y-2">
-                <label htmlFor="new-screen-name" className="text-sm font-medium">
-                  Screen name
-                </label>
-                <Input
-                  id="new-screen-name"
+              <Stack gap="lg">
+                <TextInput
+                  label="Screen name"
                   value={newScreenName}
                   onChange={(event) => setNewScreenName(event.target.value)}
                   placeholder="Checkout"
-                  className="h-10 w-full"
                   autoFocus
                 />
-              </div>
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setNewScreenName('');
-                    setAddScreenDialogOpen(false);
-                  }}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={!newScreenName.trim()}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Create Screen
-                </Button>
-              </DialogFooter>
+                <Group justify="flex-end">
+                  <Button
+                    variant="light"
+                    type="button"
+                    radius="md"
+                    className={styles.modalSecondaryButton}
+                    onClick={() => setAddScreenDialogOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    variant="light"
+                    color="indigo"
+                    radius="md"
+                    className={styles.modalPrimaryButton}
+                    leftSection={<Plus size={16} />}
+                    disabled={!newScreenName.trim()}
+                  >
+                    Create Screen
+                  </Button>
+                </Group>
+              </Stack>
             </form>
-          </DialogContent>
-        </Dialog>
-      </div>
+          </Modal>
+        </div>
 
-      <div className="flex items-center gap-3">
-        <ThemeToggle />
-        <Dialog open={schemaOpen} onOpenChange={setSchemaOpen}>
-          <DialogTrigger asChild>
-            <Button variant="ghost" size="sm" className="gap-2">
-              <BookOpen className="w-4 h-4" />
+        <div className={styles.actions}>
+          <ThemeToggle />
+          <Tooltip label="Open component and screen specification">
+            <Button
+              variant="subtle"
+              color="gray"
+              size="sm"
+              className={styles.ghostButton}
+              leftSection={<BookOpen size={16} />}
+              onClick={() => setSchemaOpen(true)}
+            >
               Spec
             </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-3xl">
-            <DialogHeader>
-              <DialogTitle>Component & Screen Specification</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-3">
+          </Tooltip>
+          <Tooltip label="Import external screen JSON">
+            <Button
+              variant="subtle"
+              color="gray"
+              size="sm"
+              className={styles.ghostButton}
+              leftSection={<Upload size={16} />}
+              onClick={() => setImportOpen(true)}
+            >
+              Import Screens
+            </Button>
+          </Tooltip>
+          <Divider orientation="vertical" className={styles.divider} />
+          <Modal
+            opened={schemaOpen}
+            onClose={() => setSchemaOpen(false)}
+            title="Component and screen specification"
+            size="xl"
+            centered
+            radius="md"
+            classNames={{ content: styles.modalContent, header: styles.modalHeader }}
+          >
+            <Stack gap="sm">
               <Textarea
                 value={schemaDocument}
                 readOnly
-                className="min-h-[360px] font-mono text-xs"
+                autosize
+                minRows={18}
+                classNames={{ input: styles.codeArea }}
               />
-              <div className="flex justify-end gap-2">
+              <Group justify="flex-end">
                 <Button
-                  variant="outline"
+                  variant="light"
+                  color="indigo"
+                  radius="md"
+                  className={styles.modalPrimaryButton}
                   onClick={() => {
                     navigator.clipboard.writeText(schemaDocument);
-                    toast.success('Specification copied.');
+                    ChooseNotification.success({ message: 'Specification copied' });
                   }}
                 >
                   Copy
                 </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-        <Dialog open={importOpen} onOpenChange={setImportOpen}>
-          <DialogTrigger asChild>
-            <Button variant="ghost" size="sm" className="gap-2">
-              <Upload className="w-4 h-4" />
-              Import Screens
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-4xl">
-            <DialogHeader>
-              <DialogTitle>Import External Screens</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Screens JSON</label>
-                <Textarea
-                  value={importText}
-                  onChange={(event) => setImportText(event.target.value)}
-                  placeholder='Paste an array of screens: [{"id":"...","name":"Home","route":"/","is_home":true,"components":[]}]'
-                  className="min-h-[180px] font-mono text-xs"
-                />
-                <Button variant="outline" onClick={validateImportedScreens}>
-                  Validate & Normalize
-                </Button>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Validation Report</label>
+              </Group>
+            </Stack>
+          </Modal>
+          <Modal
+            opened={importOpen}
+            onClose={() => setImportOpen(false)}
+            title="Import external screens"
+            size="xl"
+            centered
+            radius="md"
+            classNames={{ content: styles.modalContent, header: styles.modalHeader }}
+          >
+            <Stack gap="md">
+              <Textarea
+                label="Screens JSON"
+                value={importText}
+                onChange={(event) => setImportText(event.target.value)}
+                placeholder='Paste an array of screens: [{"id":"...","name":"Home","route":"/","is_home":true,"components":[]}]'
+                autosize
+                minRows={9}
+                classNames={{ input: styles.codeArea }}
+              />
+              <Button
+                variant="light"
+                color="blue"
+                radius="md"
+                className={styles.modalPrimaryButton}
+                onClick={validateImportedScreens}
+              >
+                Validate and normalize
+              </Button>
+              <div className={styles.importGrid}>
+                <Stack gap="xs">
                   <Textarea
+                    label="Validation report"
                     value={importReport}
                     readOnly
-                    className="min-h-[160px] font-mono text-xs"
+                    autosize
+                    minRows={8}
                     placeholder="Run validation to see errors and warnings."
+                    classNames={{ input: styles.codeArea }}
                   />
                   <Button
-                    variant="outline"
+                    variant="light"
+                    size="xs"
+                    radius="md"
+                    color="violet"
+                    className={styles.modalSecondaryButton}
                     onClick={() => {
                       if (!importReport) return;
                       navigator.clipboard.writeText(importReport);
-                      toast.success('Report copied.');
+                      ChooseNotification.success({ message: 'Report copied' });
                     }}
                   >
-                    Copy Report
+                    Copy report
                   </Button>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Normalized Output</label>
+                </Stack>
+                <Stack gap="xs">
                   <Textarea
+                    label="Normalized output"
                     value={importScreens ? JSON.stringify(importScreens, null, 2) : ''}
                     readOnly
-                    className="min-h-[160px] font-mono text-xs"
+                    autosize
+                    minRows={8}
                     placeholder="Normalized screens will appear here."
+                    classNames={{ input: styles.codeArea }}
                   />
                   <Button
-                    variant="outline"
+                    variant="light"
+                    size="xs"
+                    radius="md"
+                    color="violet"
+                    className={styles.modalSecondaryButton}
                     onClick={() => {
                       if (!importScreens) return;
                       navigator.clipboard.writeText(JSON.stringify(importScreens, null, 2));
-                      toast.success('Normalized screens copied.');
+                      ChooseNotification.success({ message: 'Normalized screens copied' });
                     }}
                   >
-                    Copy Output
+                    Copy output
                   </Button>
-                </div>
+                </Stack>
               </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">App Name</label>
-                  <Input
-                    value={importAppName}
-                    onChange={(event) => setImportAppName(event.target.value)}
-                    placeholder="My App"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Package Name</label>
-                  <Input
-                    value={importPackageName}
-                    onChange={(event) => setImportPackageName(event.target.value)}
-                    placeholder="com.example.myapp"
-                  />
-                </div>
-              </div>
-
-              <div className="flex flex-wrap justify-end gap-2">
-                <span className="text-xs text-muted-foreground self-center">
-                  {importErrors.length} errors, {importWarnings.length} warnings
-                </span>
-                <Button
-                  variant="outline"
-                  onClick={applyImportedScreens}
-                  disabled={!importScreens || importErrors.length > 0}
-                >
-                  Apply to Canvas
-                </Button>
-                <Button
-                  onClick={saveImportedProject}
-                  disabled={!importScreens || importErrors.length > 0}
-                >
-                  Save Project
-                </Button>
-              </div>
-              {importErrors.length > 0 && (
-                <p className="text-xs text-destructive">
-                  Fix validation errors before applying or saving.
-                </p>
-              )}
-            </div>
-          </DialogContent>
-        </Dialog>
-        <div className="h-6 w-px bg-border" />
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setProjectManagerOpen(true)}
-          className="gap-2"
-        >
-          <FolderOpen className="w-4 h-4" />
-          Projects
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => performSave(true)}
-          className="gap-2"
-          disabled={!serverProjectId || isAutoSaving}
-        >
-          {isAutoSaving ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <Save className="w-4 h-4" />
-          )}
-          {isAutoSaving ? 'Saving...' : autoSaveState === 'saved' ? 'Saved' : 'Save'}
-        </Button>
-        <Button
-          variant={isPreviewOpen ? 'secondary' : 'ghost'}
-          size="sm"
-          onClick={onLaunchPreview}
-          className="gap-2"
-        >
-          <MonitorPlay className="h-4 w-4" />
-          {isPreviewOpen ? 'Preview Open' : 'Launch Preview'}
-        </Button>
-        {serverProjectId && (
-          <Button variant="ghost" size="sm" onClick={() => setLogsOpen(true)} className="gap-2">
-            <FileText className="w-4 h-4" />
-            Logs
-          </Button>
-        )}
-        <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
-          <DialogTrigger asChild>
-            <Button variant="ghost" size="icon">
-              <Settings className="w-4 h-4" />
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Project Settings</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">App Name</label>
-                <Input
-                  value={tempProjectName}
-                  onChange={(e) => setTempProjectName(e.target.value)}
-                  placeholder="my_flutter_app"
+              <div className={styles.importGrid}>
+                <TextInput
+                  label="App name"
+                  value={importAppName}
+                  onChange={(event) => setImportAppName(event.target.value)}
+                  placeholder="My App"
                 />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Package Name</label>
-                <Input
-                  value={tempPackageName}
-                  onChange={(e) => setTempPackageName(e.target.value)}
+                <TextInput
+                  label="Package name"
+                  value={importPackageName}
+                  onChange={(event) => setImportPackageName(event.target.value)}
                   placeholder="com.example.myapp"
                 />
               </div>
-              <Button onClick={handleSaveSettings} className="w-full">
-                Save Settings
+              <Group justify="space-between">
+                <Text size="xs" c={importErrors.length > 0 ? 'red' : 'dimmed'}>
+                  {importErrors.length} errors, {importWarnings.length} warnings
+                </Text>
+                <Group gap="xs">
+                  <Button
+                    variant="light"
+                    radius="md"
+                    color="teal"
+                    className={styles.modalSecondaryButton}
+                    onClick={applyImportedScreens}
+                    disabled={!importScreens || importErrors.length > 0}
+                  >
+                    Apply to canvas
+                  </Button>
+                  <Button
+                    variant="light"
+                    color="indigo"
+                    radius="md"
+                    className={styles.modalPrimaryButton}
+                    onClick={saveImportedProject}
+                    disabled={!importScreens || importErrors.length > 0}
+                  >
+                    Save project
+                  </Button>
+                </Group>
+              </Group>
+            </Stack>
+          </Modal>
+          <Button
+            variant="subtle"
+            color="gray"
+            size="sm"
+            className={styles.ghostButton}
+            leftSection={<FolderOpen size={16} />}
+            onClick={() => setProjectManagerOpen(true)}
+          >
+            Projects
+          </Button>
+          <Button
+            variant="subtle"
+            color="green"
+            size="sm"
+            className={styles.ghostButton}
+            leftSection={
+              isAutoSaving ? <Loader2 size={16} className={styles.spinning} /> : <Save size={16} />
+            }
+            onClick={() => performSave(true)}
+            disabled={!serverProjectId || isAutoSaving}
+          >
+            {isAutoSaving ? 'Saving...' : autoSaveState === 'saved' ? 'Saved' : 'Save'}
+          </Button>
+          <Button
+            variant={isPreviewOpen ? 'light' : 'subtle'}
+            size="sm"
+            className={isPreviewOpen ? styles.previewButton : styles.ghostButton}
+            leftSection={<MonitorPlay size={16} />}
+            onClick={onLaunchPreview}
+          >
+            {isPreviewOpen ? 'Preview Open' : 'Launch Preview'}
+          </Button>
+          {serverProjectId && (
+            <Button
+              variant="subtle"
+              color="gray"
+              size="sm"
+              className={styles.ghostButton}
+              leftSection={<FileText size={16} />}
+              onClick={() => setLogsOpen(true)}
+            >
+              Logs
+            </Button>
+          )}
+          <Tooltip label="Project settings">
+            <ActionIcon
+              variant="subtle"
+              color="gray"
+              size="lg"
+              className={styles.settingsButton}
+              onClick={() => setSettingsOpen(true)}
+              aria-label="Project settings"
+            >
+              <Settings size={17} />
+            </ActionIcon>
+          </Tooltip>
+          <Modal
+            opened={settingsOpen}
+            onClose={() => setSettingsOpen(false)}
+            title="Project settings"
+            centered
+            radius="md"
+            classNames={{ content: styles.modalContent, header: styles.modalHeader }}
+          >
+            <Stack gap="md">
+              <TextInput
+                label="App name"
+                value={tempProjectName}
+                onChange={(event) => setTempProjectName(event.target.value)}
+                placeholder="my_flutter_app"
+              />
+              <TextInput
+                label="Package name"
+                value={tempPackageName}
+                onChange={(event) => setTempPackageName(event.target.value)}
+                placeholder="com.example.myapp"
+              />
+              <Button
+                variant="light"
+                color="indigo"
+                radius="md"
+                className={styles.modalPrimaryButton}
+                onClick={handleSaveSettings}
+              >
+                Save settings
               </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-        <Button variant="outline" size="sm" onClick={handleExport} className="gap-2">
-          <Download className="w-4 h-4" />
-          Export JSON
-        </Button>
-        <Button
-          size="sm"
-          className="gap-2 gradient-primary hover:opacity-90 text-primary-foreground border-0"
-          onClick={handleGenerateApp}
-          disabled={isGenerating || isBuildingApk}
-        >
-          {isGenerating ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <Play className="w-4 h-4" />
-          )}
-          {isGenerating ? 'Generating...' : 'Generate App'}
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          className="gap-2"
-          onClick={handleBuildApk}
-          disabled={isGenerating || isBuildingApk}
-        >
-          {isBuildingApk ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <Package className="w-4 h-4" />
-          )}
-          {isBuildingApk ? 'Building...' : 'Build APK'}
-        </Button>
-        <UserProfileMenu />
-      </div>
+            </Stack>
+          </Modal>
+          <Button
+            variant="default"
+            size="sm"
+            className={styles.outlineButton}
+            leftSection={<Download size={16} />}
+            onClick={handleExport}
+          >
+            Export JSON
+          </Button>
+          <Button
+            size="sm"
+            className={styles.generateButton}
+            leftSection={
+              isGenerating ? <Loader2 size={16} className={styles.spinning} /> : <Play size={16} />
+            }
+            onClick={handleGenerateApp}
+            disabled={isGenerating || isBuildingApk}
+          >
+            {isGenerating ? 'Generating...' : 'Generate App'}
+          </Button>
+          <Button
+            size="sm"
+            variant="default"
+            className={styles.outlineButton}
+            leftSection={
+              isBuildingApk ? (
+                <Loader2 size={16} className={styles.spinning} />
+              ) : (
+                <Package size={16} />
+              )
+            }
+            onClick={handleBuildApk}
+            disabled={isGenerating || isBuildingApk}
+          >
+            {isBuildingApk ? 'Building...' : 'Build APK'}
+          </Button>
+          <UserProfileMenu />
+        </div>
 
-      <ProjectManager open={projectManagerOpen} onOpenChange={setProjectManagerOpen} />
-      <GenerationLogs open={logsOpen} onOpenChange={setLogsOpen} />
-    </motion.header>
+        <ProjectManager open={projectManagerOpen} onOpenChange={setProjectManagerOpen} />
+        <GenerationLogs open={logsOpen} onOpenChange={setLogsOpen} />
+      </motion.header>
+    </>
   );
 };

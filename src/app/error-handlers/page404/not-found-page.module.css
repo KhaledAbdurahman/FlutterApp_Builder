@@ -1,0 +1,14 @@
+.page {
+  min-height: 100dvh;
+  padding: var(--space-6);
+  background: var(--color-page-background);
+}
+.content {
+  text-align: center;
+}
+.code {
+  color: var(--color-accent);
+  font-size: clamp(4rem, 15vw, 9rem);
+  font-weight: 700;
+  line-height: 1;
+}

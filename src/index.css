@@ -1,12 +1,38 @@
-@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap");
+@import url('https://fonts.googleapis.com/css2?family=Inconsolata:wght@400;500;600&family=Inter:wght@400;500;600;700;800&family=Open+Sans:wght@400;500;600;700&display=swap');
+@import '@mantine/core/styles.css';
+@import '@mantine/notifications/styles.css';
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Flutter App Builder - Dark Professional Theme */
-
 @layer base {
   :root {
+    --color-page-background: #f4f4f1;
+    --color-surface: #ffffff;
+    --color-surface-muted: #ecece8;
+    --color-text: #0c0c09;
+    --color-text-muted: #5d5d58;
+    --color-border: #d7d7d1;
+    --color-accent: #312c85;
+    --color-accent-strong: #211d63;
+    --color-danger: #dc2626;
+    --color-success: #16a34a;
+    --color-warning: #d97706;
+    --font-sans: 'Open Sans', Arial, sans-serif;
+    --font-display: Inter, 'Open Sans', Arial, sans-serif;
+    --font-mono: Inconsolata, monospace;
+    --space-1: 0.25rem;
+    --space-2: 0.5rem;
+    --space-3: 0.75rem;
+    --space-4: 1rem;
+    --space-5: 1.25rem;
+    --space-6: 1.5rem;
+    --space-8: 2rem;
+    --radius-control: 0.375rem;
+    --radius-surface: 0.5rem;
+    --shadow-surface: 0 12px 32px rgb(30 41 56 / 0.08);
+    --shadow-focus: 0 0 0 3px rgb(23 105 211 / 0.18);
+
     --background: 0 0% 100%;
     --foreground: 222 47% 11%;
 
@@ -46,11 +72,7 @@
     --glow-accent: 263 70% 55%;
 
     /* Gradients */
-    --gradient-primary: linear-gradient(
-      135deg,
-      hsl(217 91% 50%),
-      hsl(263 70% 55%)
-    );
+    --gradient-primary: linear-gradient(135deg, hsl(217 91% 50%), hsl(263 70% 55%));
     --gradient-dark: linear-gradient(180deg, hsl(220 14% 96%), hsl(0 0% 100%));
     --gradient-card: linear-gradient(145deg, hsl(0 0% 100%), hsl(220 14% 96%));
 
@@ -69,57 +91,76 @@
     --sidebar-ring: 217 91% 50%;
   }
 
-  .dark {
-    --background: 222 47% 6%;
-    --foreground: 210 40% 96%;
-    --card: 222 47% 9%;
-    --card-foreground: 210 40% 96%;
-    --popover: 222 47% 8%;
-    --popover-foreground: 210 40% 96%;
+  .dark,
+  [data-mantine-color-scheme='dark'] {
+    --color-page-background: #0e1a2b;
+    --color-surface: #121f31;
+    --color-surface-muted: #172943;
+    --color-text: #edf3ff;
+    --color-text-muted: #aebdd2;
+    --color-border: #2a3d59;
+    --color-accent: #78a9ff;
+    --color-accent-strong: #afcbff;
+    --color-danger: #f87171;
+    --color-success: #4ade80;
+    --color-warning: #fbbf24;
+    --shadow-surface: 0 16px 36px rgb(4 16 36 / 0.32);
+    --shadow-focus: 0 0 0 3px rgb(91 156 255 / 0.25);
+
+    --background: 222 47% 10%;
+    --foreground: 216 50% 96%;
+    --card: 222 47% 13%;
+    --card-foreground: 216 50% 96%;
+    --popover: 222 45% 15%;
+    --popover-foreground: 216 50% 96%;
     --primary: 217 91% 60%;
-    --primary-foreground: 222 47% 6%;
-    --secondary: 222 47% 14%;
-    --secondary-foreground: 210 40% 96%;
-    --muted: 222 47% 12%;
-    --muted-foreground: 215 20% 55%;
+    --primary-foreground: 222 47% 10%;
+    --secondary: 222 38% 19%;
+    --secondary-foreground: 216 50% 96%;
+    --muted: 222 38% 17%;
+    --muted-foreground: 216 25% 70%;
     --accent: 263 70% 58%;
-    --accent-foreground: 210 40% 98%;
+    --accent-foreground: 216 50% 98%;
     --destructive: 0 72% 51%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 222 47% 18%;
-    --input: 222 47% 16%;
+    --destructive-foreground: 216 50% 98%;
+    --border: 222 35% 27%;
+    --input: 222 35% 22%;
     --ring: 217 91% 60%;
 
     /* Custom tokens */
     --success: 142 71% 45%;
     --warning: 38 92% 50%;
-    --canvas: 222 47% 4%;
-    --panel: 222 47% 10%;
+    --canvas: 222 42% 15%;
+    --panel: 222 47% 13%;
     --glow-primary: 217 91% 60%;
     --glow-accent: 263 70% 58%;
 
     /* Gradients */
-    --gradient-primary: linear-gradient(
-      135deg,
-      hsl(217 91% 60%),
-      hsl(263 70% 58%)
-    );
-    --gradient-dark: linear-gradient(180deg, hsl(222 47% 10%), hsl(222 47% 6%));
-    --gradient-card: linear-gradient(145deg, hsl(222 47% 12%), hsl(222 47% 8%));
+    --gradient-primary: linear-gradient(135deg, hsl(217 91% 60%), hsl(263 70% 58%));
+    --gradient-dark: linear-gradient(180deg, hsl(222 47% 15%), hsl(222 47% 10%));
+    --gradient-card: linear-gradient(145deg, hsl(222 47% 17%), hsl(222 47% 12%));
 
     /* Shadows */
     --shadow-glow: 0 0 20px hsl(217 91% 60% / 0.3);
-    --shadow-card: 0 4px 24px hsl(222 47% 4% / 0.5);
-    --shadow-elevated: 0 8px 32px hsl(222 47% 2% / 0.6);
+    --shadow-card: 0 4px 24px rgb(4 16 36 / 0.4);
+    --shadow-elevated: 0 8px 32px rgb(4 16 36 / 0.55);
 
-    --sidebar-background: 222 47% 8%;
-    --sidebar-foreground: 210 40% 96%;
+    --sidebar-background: 222 47% 13%;
+    --sidebar-foreground: 216 50% 96%;
     --sidebar-primary: 217 91% 60%;
-    --sidebar-primary-foreground: 222 47% 6%;
-    --sidebar-accent: 222 47% 14%;
-    --sidebar-accent-foreground: 210 40% 96%;
-    --sidebar-border: 222 47% 16%;
+    --sidebar-primary-foreground: 222 47% 10%;
+    --sidebar-accent: 222 38% 19%;
+    --sidebar-accent-foreground: 216 50% 96%;
+    --sidebar-border: 222 35% 27%;
     --sidebar-ring: 217 91% 60%;
+
+    --mantine-color-body: hsl(var(--background));
+    --mantine-color-text: hsl(var(--foreground));
+    --mantine-color-dimmed: hsl(var(--muted-foreground));
+    --mantine-color-default: hsl(var(--secondary));
+    --mantine-color-default-hover: hsl(var(--muted));
+    --mantine-color-default-color: hsl(var(--secondary-foreground));
+    --mantine-color-default-border: hsl(var(--border));
   }
 }
 
@@ -130,12 +171,12 @@
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
-    font-family: "Space Grotesk", system-ui, sans-serif;
+    font-family: var(--font-sans);
   }
 
   code,
   pre {
-    font-family: "JetBrains Mono", monospace;
+    font-family: var(--font-mono);
   }
 }
 

@@ -1,6 +1,6 @@
 import type { IProjectJsonData } from '@/types/api/project-types';
 
-const LOCAL_PREVIEW_HOSTS = new Set(['0.0.0.0', '127.0.0.1', 'localhost']);
+const LOCAL_PREVIEW_HOSTS = new Set(['127.0.0.1', 'localhost']);
 
 const CreateLivePreviewProjectSignature = (
   projectName: string,

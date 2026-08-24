@@ -18,6 +18,20 @@
     <link rel="icon" type="image/png" sizes="64x64" href="/favicon-64x64.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
+    <script>
+      (() => {
+        const savedScheme = localStorage.getItem('mantine-color-scheme-value') || 'dark';
+        const colorScheme =
+          savedScheme === 'auto'
+            ? window.matchMedia('(prefers-color-scheme: dark)').matches
+              ? 'dark'
+              : 'light'
+            : savedScheme;
+
+        document.documentElement.dataset.mantineColorScheme = colorScheme;
+        document.documentElement.classList.toggle('dark', colorScheme === 'dark');
+      })();
+    </script>
 
     <meta property="og:title" content="Flutter Builder - Visual App Development" />
     <meta

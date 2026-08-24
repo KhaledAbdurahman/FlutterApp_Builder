@@ -458,9 +458,11 @@ Open testing concerns:
 9. Move shared API behavior into `src/api` and page-specific API calls into page
    folders.
 10. Replace shadcn/Radix notification usage with Mantine notification
-    controller.
+    controller. In progress: `ChooseNotification` owns new notification calls;
+    Sonner remains mounted while existing pages are migrated.
 11. Replace Tailwind classes and shadcn UI components with Mantine UI,
-    CSS Modules, and CSS variables.
+    CSS Modules, and CSS variables. In progress: global tokens and Mantine are
+    available, and auth is the first completed page-level styling migration.
 12. Refactor pages page by page, and refactor the editor section by section
     after listing its sections.
 13. Add tests at the end of each page refactor.
@@ -490,7 +492,8 @@ As of this draft:
 - Live API calls use services in `src/api/`, backed by the shared Axios
   infrastructure in `src/config/api/`.
 - Current global builder state uses Redux in `src/stores/builder/`.
-- Current styling is Tailwind plus global CSS.
+- Styling migration is page-by-page: the auth page uses Mantine and a CSS Module;
+  Tailwind remains temporarily for unmigrated pages and builder sections.
 - `src/dnd/validateDrop.test.ts` already exists, so the project has at least one
   test surface started.
 - After the React 19 upgrade, `next-themes`, `react-day-picker`, and `vaul` were

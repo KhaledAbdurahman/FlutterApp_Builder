@@ -1,0 +1,51 @@
+.builder {
+  display: flex;
+  height: 100dvh;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--color-page-background);
+}
+.panelGroup {
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
+}
+.resizeHandle {
+  position: relative;
+  width: 0.5rem;
+  background: var(--color-border);
+}
+.resizeHandle:hover,
+.resizeHandle[data-resize-handle-active] {
+  background: var(--color-accent);
+}
+.workspace {
+  display: flex;
+  min-width: 0;
+  height: 100%;
+  overflow: hidden;
+}
+.dragOverlay {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-surface);
+  cursor: grabbing;
+}
+.dragIcon {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  border-radius: var(--radius-control);
+  background: var(--color-accent);
+  color: white;
+}
+.confirmation {
+  width: 18rem;
+  padding: var(--space-4);
+}

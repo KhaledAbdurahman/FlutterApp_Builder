@@ -1,0 +1,324 @@
+.page {
+  min-height: 100dvh;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(24rem, 1fr);
+  background: var(--color-page-background);
+  color: var(--color-text);
+}
+
+.brandPanel {
+  display: flex;
+  align-items: center;
+  background: var(--gradient-primary);
+  color: #ffffff;
+  padding: var(--space-8);
+  box-shadow: inset -1px 0 rgb(255 255 255 / 0.16);
+  position: relative;
+  overflow: hidden;
+}
+
+.brandPanel::before {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgb(255 255 255 / 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(255 255 255 / 0.08) 1px, transparent 1px);
+  background-size: 42px 42px;
+  content: '';
+  opacity: 0.5;
+}
+
+.brandContent {
+  width: min(100%, 32rem);
+  margin-inline: auto;
+  padding: var(--space-6);
+  position: relative;
+  z-index: 1;
+}
+
+.brandLink,
+.mobileBrandLink {
+  display: inline-flex;
+  align-items: center;
+}
+
+.brandLogo {
+  height: 3.5rem;
+}
+
+.brandMessage {
+  margin-top: 4rem;
+}
+.brandEyebrow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: rgb(255 255 255 / 0.82);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+.brandTitle {
+  margin: var(--space-4) 0 var(--space-5);
+  color: inherit;
+  font-size: clamp(2.5rem, 4vw, 3.75rem);
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.brandDescription {
+  max-width: 29rem;
+  color: rgb(255 255 255 / 0.8);
+  font-size: 1.0625rem;
+  line-height: 1.65;
+}
+
+.featureList {
+  display: grid;
+  gap: var(--space-4);
+  margin: 2.5rem 0 0;
+  padding: 0;
+  list-style: none;
+  color: rgb(255 255 255 / 0.9);
+}
+
+.featureList li {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+.featureList svg {
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+.featureList span {
+  display: grid;
+  gap: 3px;
+  color: rgb(255 255 255 / 0.78);
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+.featureList strong {
+  color: white;
+}
+.sessionCard {
+  margin-top: 2.5rem;
+  padding: var(--space-4);
+  border: 1px solid rgb(255 255 255 / 0.22);
+  border-radius: var(--radius-surface);
+  background: rgb(9 9 32 / 0.16);
+  backdrop-filter: blur(8px);
+}
+.sessionCard > div:first-child {
+  display: grid;
+  gap: 3px;
+}
+.sessionCard span {
+  color: rgb(255 255 255 / 0.66);
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+.sessionCard strong {
+  font-size: 0.9375rem;
+}
+.sessionCard small {
+  color: rgb(255 255 255 / 0.7);
+  font-size: 0.75rem;
+}
+.sessionProgress {
+  display: flex;
+  gap: 6px;
+  margin: var(--space-4) 0 var(--space-2);
+}
+.sessionProgress i {
+  width: 2rem;
+  height: 4px;
+  border-radius: 4px;
+  background: rgb(255 255 255 / 0.28);
+}
+.sessionProgress i:first-child,
+.sessionProgress i:nth-child(2) {
+  background: #bdb9ff;
+}
+
+.formArea {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-page-background);
+  padding: clamp(var(--space-6), 7vw, 5rem);
+}
+
+.formPanel {
+  width: min(100%, 28rem);
+  padding: clamp(var(--space-6), 4vw, 2.75rem);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-surface);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-surface);
+  position: relative;
+  overflow: hidden;
+}
+.formPanel::after {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 3px;
+  background: var(--gradient-primary);
+  content: '';
+}
+
+.mobileBrandLink {
+  display: none;
+  margin-bottom: var(--space-8);
+}
+
+.mobileBrandLogo {
+  height: 3rem;
+}
+
+.formHeading {
+  margin-bottom: var(--space-6);
+}
+
+.formTitle {
+  color: var(--color-text);
+  font-family: var(--font-display);
+  font-size: 1.875rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.formSubtitle {
+  margin-top: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: 0.9375rem;
+  line-height: 1.55;
+}
+
+.modeSwitcher {
+  margin-bottom: var(--space-6);
+}
+
+.error {
+  margin-bottom: var(--space-5);
+}
+
+.form {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.form :global(.mantine-Button-root) {
+  min-height: 3rem;
+  margin-top: var(--space-1);
+  background: var(--color-accent);
+  border-radius: var(--radius-control);
+  font-weight: 600;
+  box-shadow: 0 8px 16px color-mix(in srgb, var(--color-accent) 22%, transparent);
+}
+
+.form :global(.mantine-Button-root:hover) {
+  background: var(--color-accent-strong);
+}
+
+.formPanel :global(.mantine-SegmentedControl-root) {
+  padding: var(--space-1);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface-muted);
+}
+
+.formPanel :global(.mantine-SegmentedControl-indicator) {
+  border-radius: calc(var(--radius-control) - 2px);
+  background: var(--color-surface);
+  box-shadow: 0 1px 3px rgb(30 41 56 / 0.18);
+}
+
+.formPanel :global(.mantine-SegmentedControl-label) {
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+
+.formPanel :global(.mantine-SegmentedControl-label[data-active]) {
+  color: var(--color-text);
+}
+
+.formPanel :global(.mantine-Input-label) {
+  margin-bottom: var(--space-1);
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.formPanel :global(.mantine-Input-input) {
+  min-height: 3rem;
+  border-color: var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-page-background);
+  color: var(--color-text);
+}
+
+.formPanel :global(.mantine-Input-input:focus) {
+  border-color: var(--color-accent);
+  box-shadow: var(--shadow-focus);
+}
+
+.formPanel :global(.mantine-Input-input::placeholder) {
+  color: var(--color-text-muted);
+  opacity: 0.82;
+}
+
+.modePrompt {
+  margin-top: var(--space-8);
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+  text-align: center;
+}
+
+.modeLink {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-accent);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+}
+
+.modeLink:hover {
+  text-decoration: underline;
+}
+
+.modeLink:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+@media (max-width: 64rem) {
+  .page {
+    display: block;
+  }
+
+  .brandPanel {
+    display: none;
+  }
+
+  .mobileBrandLink {
+    display: inline-flex;
+  }
+}
+
+@media (max-width: 30rem) {
+  .formArea {
+    align-items: flex-start;
+    padding: var(--space-6) var(--space-4);
+  }
+
+  .formPanel {
+    padding: var(--space-5);
+  }
+}

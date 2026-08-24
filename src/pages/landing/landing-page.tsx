@@ -1,314 +1,364 @@
-import { motion } from 'framer-motion';
 import { Link } from '@tanstack/react-router';
-import { Button } from '@/components/ui/button';
+import { motion, useReducedMotion } from 'framer-motion';
+import { Button, Container, Group, Text, Title } from '@mantine/core';
+import {
+  ArrowRight,
+  Bot,
+  Box,
+  Code2,
+  Download,
+  Github,
+  Layers,
+  Palette,
+  Play,
+  Sparkles,
+  Workflow,
+} from 'lucide-react';
+import BrandLogo from '@/components/BrandLogo';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { UserProfileMenu } from '@/components/UserProfileMenu';
 import { useAuth } from '@/contexts/AuthContext';
-import {
-  Zap,
-  Code2,
-  Layers,
-  ArrowRight,
-  Sparkles,
-  Box,
-  Palette,
-  Download,
-  Github,
-} from 'lucide-react';
-import BrandLogo from '@/components/BrandLogo';
+import styles from '@/pages/landing/landing-page.module.css';
 
-const features = [
+const BuilderSteps = [
   {
-    icon: Layers,
-    title: 'Drag & Drop Builder',
-    description:
-      'Build beautiful Flutter UIs with an intuitive drag-and-drop interface. No coding required.',
+    number: '01',
+    title: 'Shape the first screens',
+    text: 'Drag supported Flutter widgets into a real screen flow.',
   },
   {
-    icon: Code2,
-    title: 'Clean Code Generation',
-    description:
-      'Export production-ready Flutter code that follows best practices and conventions.',
+    number: '02',
+    title: 'Use AI for the visual direction',
+    text: 'Get help with the interface, not a black-box project manager.',
   },
   {
-    icon: Palette,
-    title: 'Theme Customization',
-    description: 'Customize colors, typography, and styles to match your brand identity.',
-  },
-  {
-    icon: Zap,
-    title: 'Instant Preview',
-    description: 'See your changes in real-time with our live phone preview canvas.',
-  },
-  {
-    icon: Box,
-    title: '20+ Widgets',
-    description: 'Access a comprehensive library of Flutter widgets ready to use.',
-  },
-  {
-    icon: Download,
-    title: 'Export & Download',
-    description: 'Download your complete Flutter project as a ready-to-run application.',
+    number: '03',
+    title: 'Export a project developers recognise',
+    text: 'Hand the team a neat Flutter project they can extend with confidence.',
   },
 ];
 
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.1 },
-  },
-};
+const HERO_TITLE = 'Build the product story before you build the whole product.';
 
-const itemVariants = {
+const HeroWordVariants = {
   hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0 },
+  visible: (index: number) => ({ opacity: 1, y: 0, transition: { delay: index * 0.045 } }),
 };
 
 const LandingPage = () => {
   const { user } = useAuth();
+  const prefersReducedMotion = useReducedMotion();
 
   return (
-    <div className="min-h-screen bg-background overflow-hidden">
-      {/* Navbar */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-3">
+    <div className={styles.page}>
+      <header className={styles.header}>
+        <Container size="lg" className={styles.headerContent}>
+          <Link to="/" aria-label="AppBuilder home">
             <BrandLogo />
           </Link>
-
-          <div className="flex items-center gap-4">
+          <Group gap="xs">
             <ThemeToggle />
             {user ? (
               <UserProfileMenu />
             ) : (
               <>
-                <Link to="/auth">
-                  <Button variant="ghost" size="sm">
-                    Sign In
-                  </Button>
-                </Link>
-                <Link to="/auth" search={{ mode: 'register' }}>
-                  <Button size="sm" className="gradient-primary glow-primary">
-                    Get Started
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </Button>
-                </Link>
+                <Button component={Link} to="/auth" variant="subtle" color="gray">
+                  Sign in
+                </Button>
+                <Button component={Link} to="/auth" search={{ mode: 'register' }}>
+                  Get started
+                </Button>
               </>
             )}
-          </div>
-        </div>
-      </nav>
+          </Group>
+        </Container>
+      </header>
 
-      {/* Hero Section */}
-      <section className="relative pt-32 pb-20 px-6">
-        {/* Background Effects */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-3xl" />
-          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-accent/20 rounded-full blur-3xl" />
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,hsl(var(--background))_70%)]" />
-        </div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-          className="relative max-w-5xl mx-auto text-center"
-        >
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.2 }}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-8"
-          >
-            <Sparkles className="w-4 h-4 text-primary" />
-            <span className="text-sm text-primary font-medium">Visual Flutter Development</span>
-          </motion.div>
-
-          <h1 className="text-5xl md:text-7xl font-bold mb-6 leading-tight">
-            Build Flutter Apps
-            <br />
-            <span className="text-gradient">Without Code</span>
-          </h1>
-
-          <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10">
-            Design beautiful mobile interfaces with our drag-and-drop builder. Export clean,
-            production-ready Flutter code in seconds.
-          </p>
-
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link to="/auth" search={{ mode: 'register' }}>
-              <Button size="lg" className="gradient-primary glow-primary text-lg px-8 py-6">
-                Start Building Free
-                <ArrowRight className="w-5 h-5 ml-2" />
-              </Button>
-            </Link>
-            <a
-              href="https://github.com/NabilDev0/FlutterApp_Builder_Project"
-              target="_blank"
-              rel="noopener noreferrer"
+      <main>
+        <section className={styles.hero}>
+          <Container size="lg" className={styles.heroGrid}>
+            <motion.div
+              initial={{ opacity: 0, y: 18 }}
+              animate={{ opacity: 1, y: 0 }}
+              className={styles.heroContent}
             >
-              <Button size="lg" variant="outline" className="text-lg px-8 py-6">
-                <Github className="w-5 h-5 mr-2" />
-                View on GitHub
-              </Button>
-            </a>
-          </div>
-        </motion.div>
+              <Text className={styles.eyebrow}>
+                <Sparkles size={14} /> Flutter MVPs, without the prompt marathon
+              </Text>
+              <motion.h1
+                className={styles.heroTitle}
+                initial="hidden"
+                animate="visible"
+                aria-label={HERO_TITLE}
+              >
+                {HERO_TITLE.split(' ').map((word, index) => (
+                  <motion.span
+                    key={`${word}-${index}`}
+                    custom={index}
+                    variants={HeroWordVariants}
+                    animate={prefersReducedMotion ? { opacity: 1, y: 0 } : undefined}
+                  >
+                    {word}
+                  </motion.span>
+                ))}
+              </motion.h1>
+              <Text className={styles.heroCopy}>
+                AI can accelerate developers, but it does not give everyday founders a dependable
+                route to a working MVP. AppBuilder turns one focused session into a Flutter app your
+                team can continue to own.
+              </Text>
+              <Group gap="sm" className={styles.heroActions}>
+                <Button
+                  component={Link}
+                  to="/auth"
+                  search={{ mode: 'register' }}
+                  size="md"
+                  rightSection={<ArrowRight size={18} />}
+                >
+                  Build an MVP
+                </Button>
+                <Button
+                  component="a"
+                  href="https://github.com/NabilDev0/FlutterApp_Builder_Project"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  size="md"
+                  variant="default"
+                  leftSection={<Github size={18} />}
+                >
+                  See the project
+                </Button>
+              </Group>
+              <Text className={styles.heroNote}>
+                Start with the interface. Keep control of the codebase.
+              </Text>
+            </motion.div>
 
-        {/* Hero Preview */}
-        <motion.div
-          initial={{ opacity: 0, y: 60 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5, duration: 0.8 }}
-          className="relative max-w-6xl mx-auto mt-16"
-        >
-          <div className="relative rounded-2xl border border-border bg-card/50 backdrop-blur-sm p-2 shadow-elevated">
-            <div className="flex items-center gap-2 px-4 py-3 border-b border-border">
-              <div className="flex gap-2">
-                <div className="w-3 h-3 rounded-full bg-destructive/60" />
-                <div className="w-3 h-3 rounded-full bg-warning/60" />
-                <div className="w-3 h-3 rounded-full bg-success/60" />
+            <motion.div
+              initial={{ opacity: 0, x: 22 }}
+              animate={
+                prefersReducedMotion ? { opacity: 1, x: 0 } : { opacity: 1, x: 0, y: [0, -5, 0] }
+              }
+              transition={
+                prefersReducedMotion
+                  ? { delay: 0.12 }
+                  : { delay: 0.12, y: { duration: 4.5, repeat: Infinity, ease: 'easeInOut' } }
+              }
+              className={styles.productPreview}
+            >
+              <div className={styles.previewBar}>
+                <span>AppBuilder workspace</span>
+                <div>
+                  <i />
+                  <i />
+                  <i />
+                </div>
               </div>
-              <span className="text-sm text-muted-foreground ml-4">AppBuilder</span>
-            </div>
-            <div className="aspect-[16/9] bg-gradient-to-br from-muted to-background rounded-b-xl flex items-center justify-center">
-              <div className="flex items-center gap-8">
-                {/* Widget Palette Preview */}
-                <div className="w-48 h-80 rounded-xl bg-card border border-border p-4 space-y-3">
-                  <div className="text-xs font-semibold text-muted-foreground mb-4">WIDGETS</div>
-                  {['Container', 'Text', 'Button', 'Image', 'Column'].map((w) => (
-                    <div
-                      key={w}
-                      className="p-3 rounded-lg bg-muted/50 border border-border text-sm"
-                    >
-                      {w}
-                    </div>
+              <div className={styles.previewWorkspace}>
+                <div className={styles.previewSidebar}>
+                  <Text>WIDGETS</Text>
+                  {['Container', 'Text', 'Button', 'Image'].map((widget) => (
+                    <div key={widget}>{widget}</div>
                   ))}
                 </div>
-
-                {/* Phone Preview */}
-                <div className="w-64 h-[500px] rounded-[3rem] bg-background border-4 border-muted p-3 relative">
-                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-24 h-6 bg-muted rounded-b-2xl" />
-                  <div className="w-full h-full rounded-[2.5rem] bg-gradient-to-b from-primary/20 to-accent/10 flex flex-col items-center justify-center p-6">
-                    <div className="w-16 h-16 rounded-2xl gradient-primary mb-4" />
-                    <div className="w-32 h-4 rounded bg-foreground/20 mb-2" />
-                    <div className="w-24 h-3 rounded bg-foreground/10" />
+                <div className={styles.previewCanvas}>
+                  <div className={styles.phone}>
+                    <div className={styles.phoneNotch} />
+                    <div className={styles.phoneScreen}>
+                      <span>Welcome back</span>
+                      <small>Your next idea, ready to build.</small>
+                      <button type="button">Get started</button>
+                      <div className={styles.phoneTabs}>
+                        <i />
+                        <i />
+                        <i />
+                      </div>
+                    </div>
                   </div>
                 </div>
-
-                {/* Properties Preview */}
-                <div className="w-48 h-80 rounded-xl bg-card border border-border p-4 space-y-4">
-                  <div className="text-xs font-semibold text-muted-foreground mb-4">PROPERTIES</div>
-                  <div className="space-y-2">
-                    <div className="text-xs text-muted-foreground">Width</div>
-                    <div className="h-8 rounded bg-muted/50 border border-border" />
-                  </div>
-                  <div className="space-y-2">
-                    <div className="text-xs text-muted-foreground">Color</div>
-                    <div className="h-8 rounded gradient-primary" />
-                  </div>
-                  <div className="space-y-2">
-                    <div className="text-xs text-muted-foreground">Padding</div>
-                    <div className="h-8 rounded bg-muted/50 border border-border" />
-                  </div>
+                <div className={styles.previewProperties}>
+                  <Text>PROPERTIES</Text>
+                  <label>
+                    Title
+                    <input value="Welcome back" readOnly />
+                  </label>
+                  <label>
+                    Color
+                    <span className={styles.colorSwatch} />
+                  </label>
+                  <label>
+                    Padding
+                    <input value="24" readOnly />
+                  </label>
                 </div>
               </div>
+              <div className={styles.previewFooter}>
+                <span>
+                  <Play size={14} /> Live preview ready
+                </span>
+                <span>main.dart</span>
+              </div>
+            </motion.div>
+          </Container>
+        </section>
+
+        <section className={styles.proof}>
+          <Container size="lg">
+            <Text>
+              Made for founders who need momentum and engineering teams who need a clean handoff.
+            </Text>
+          </Container>
+        </section>
+
+        <section className={styles.path}>
+          <Container size="lg">
+            <div className={styles.sectionHeading}>
+              <Text className={styles.eyebrow}>One focused session</Text>
+              <Title order={2}>
+                From rough idea to a Flutter project worth opening in an editor.
+              </Title>
             </div>
-          </div>
+            <div className={styles.steps}>
+              {BuilderSteps.map((step) => (
+                <article key={step.number} className={styles.step}>
+                  <Text>{step.number}</Text>
+                  <Title order={3}>{step.title}</Title>
+                  <Text>{step.text}</Text>
+                </article>
+              ))}
+            </div>
+          </Container>
+        </section>
 
-          {/* Glow effect */}
-          <div className="absolute -inset-px rounded-2xl bg-gradient-to-r from-primary/50 via-accent/50 to-primary/50 -z-10 blur-xl opacity-30" />
-        </motion.div>
-      </section>
-
-      {/* Features Section */}
-      <section className="py-24 px-6 relative">
-        <div className="max-w-7xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-center mb-16"
-          >
-            <h2 className="text-4xl md:text-5xl font-bold mb-4">
-              Everything You Need to
-              <span className="text-gradient"> Build Apps</span>
-            </h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              A complete toolkit for designing and exporting Flutter applications
-            </p>
-          </motion.div>
-
-          <motion.div
-            variants={containerVariants}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-          >
-            {features.map((feature) => (
-              <motion.div
-                key={feature.title}
-                variants={itemVariants}
-                className="group p-6 rounded-2xl border border-border bg-card/50 hover:bg-card hover:border-primary/30 transition-all duration-300"
-              >
-                <div className="w-12 h-12 rounded-xl gradient-primary flex items-center justify-center mb-4 group-hover:shadow-glow transition-shadow">
-                  <feature.icon className="w-6 h-6 text-primary-foreground" />
+        <section className={styles.bentoSection}>
+          <Container size="lg">
+            <div className={styles.sectionHeading}>
+              <Text className={styles.eyebrow}>Intentional assistance</Text>
+              <Title order={2}>
+                AI is a design collaborator, not your replacement engineering department.
+              </Title>
+            </div>
+            <div className={styles.bentoGrid}>
+              <article className={`${styles.bentoCard} ${styles.aiCard}`} tabIndex={0}>
+                <Bot size={28} />
+                <Title order={3}>Ask AI for UI direction</Title>
+                <Text>
+                  Explore visual treatments and interface choices while the decisions remain visible
+                  and editable in the builder.
+                </Text>
+                <div className={styles.chatLines}>
+                  <span>“Make this onboarding screen clearer.”</span>
+                  <span>Suggested: reduce choices and lead with one action.</span>
                 </div>
-                <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
-                <p className="text-muted-foreground">{feature.description}</p>
-              </motion.div>
-            ))}
-          </motion.div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-24 px-6">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          whileInView={{ opacity: 1, scale: 1 }}
-          viewport={{ once: true }}
-          className="max-w-4xl mx-auto"
-        >
-          <div className="relative rounded-3xl gradient-primary p-px">
-            <div className="rounded-3xl bg-background/95 backdrop-blur-xl p-12 text-center">
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">Ready to Build Your App?</h2>
-              <p className="text-lg text-muted-foreground mb-8 max-w-xl mx-auto">
-                Join thousands of developers who are building Flutter apps faster with AppBuilder.
-              </p>
-              <Link to="/auth" search={{ mode: 'register' }}>
-                <Button size="lg" className="gradient-primary glow-primary text-lg px-10 py-6">
-                  Get Started Now
-                  <ArrowRight className="w-5 h-5 ml-2" />
-                </Button>
-              </Link>
+              </article>
+              <article className={`${styles.bentoCard} ${styles.dragCard}`} tabIndex={0}>
+                <Layers size={28} />
+                <Title order={3}>Build by arranging, not prompting</Title>
+                <Text>
+                  Use the drag-and-drop canvas to create the screens that make an MVP
+                  understandable.
+                </Text>
+                <div className={styles.dragStack}>
+                  <span>
+                    <Box size={15} /> Header
+                  </span>
+                  <span>
+                    <Box size={15} /> Content
+                  </span>
+                  <span>
+                    <Box size={15} /> Primary action
+                  </span>
+                </div>
+              </article>
+              <article className={`${styles.bentoCard} ${styles.codeCard}`} tabIndex={0}>
+                <Code2 size={28} />
+                <Title order={3}>Export without leaving a mess behind</Title>
+                <Text>
+                  Choose the structure that fits the software engineering needs of the team that
+                  inherits the work.
+                </Text>
+                <pre>lib/ features/ shared/ main.dart</pre>
+              </article>
             </div>
-          </div>
-        </motion.div>
-      </section>
+          </Container>
+        </section>
 
-      {/* Footer */}
-      <footer className="border-t border-border py-12 px-6">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-3">
-            <BrandLogo />
-          </div>
-          <p className="text-sm text-muted-foreground">
-            © 2026 AppBuilder. Built with ❤️ for Flutter developers.
-          </p>
-          <div className="flex items-center gap-6">
-            <a
-              href="https://github.com/NabilDev0/FlutterApp_Builder_Project"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-muted-foreground hover:text-foreground transition-colors"
+        <section className={styles.developerSection}>
+          <Container size="lg" className={styles.developerGrid}>
+            <div>
+              <Text className={styles.eyebrow}>A better handoff</Text>
+              <Title order={2}>
+                Your developers should thank you, not spend a week untangling the first prototype.
+              </Title>
+              <Text>
+                AppBuilder exports developer-friendly Flutter projects with a deliberate structure.
+                The team can choose the architecture that matches its conventions, then carry the
+                MVP forward instead of rewriting it from scratch.
+              </Text>
+            </div>
+            <div className={styles.architectureList}>
+              <div>
+                <Workflow size={20} />
+                <span>
+                  <strong>Flexible architecture</strong>Choose a project shape that fits the team.
+                </span>
+              </div>
+              <div>
+                <Palette size={20} />
+                <span>
+                  <strong>Visible UI decisions</strong>Every screen begins as something the team can
+                  inspect.
+                </span>
+              </div>
+              <div>
+                <Download size={20} />
+                <span>
+                  <strong>Clean export</strong>Download a working Flutter project when the MVP is
+                  ready.
+                </span>
+              </div>
+            </div>
+          </Container>
+        </section>
+
+        <section className={styles.callout}>
+          <Container size="lg" className={styles.calloutContent}>
+            <div>
+              <Text className={styles.eyebrow}>Make the first session count</Text>
+              <Title order={2}>Turn a useful idea into a Flutter MVP today.</Title>
+              <Text>
+                Build the interface, review it on a device frame, then give developers a project
+                they can respect.
+              </Text>
+            </div>
+            <Button
+              component={Link}
+              to="/auth"
+              search={{ mode: 'register' }}
+              size="md"
+              rightSection={<ArrowRight size={18} />}
             >
-              <Github className="w-5 h-5" />
-            </a>
-          </div>
-        </div>
+              Create an account
+            </Button>
+          </Container>
+        </section>
+      </main>
+
+      <footer className={styles.footer}>
+        <Container size="lg" className={styles.footerContent}>
+          <BrandLogo />
+          <Text size="sm" c="dimmed">
+            Copyright 2026 AppBuilder
+          </Text>
+          <a
+            href="https://github.com/NabilDev0/FlutterApp_Builder_Project"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="AppBuilder on GitHub"
+          >
+            <Github size={20} />
+          </a>
+        </Container>
       </footer>
     </div>
   );

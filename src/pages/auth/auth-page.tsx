@@ -1,23 +1,22 @@
-import { useState, useEffect } from 'react';
-import { Link, useLocation, useNavigate } from '@tanstack/react-router';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useForm } from 'react-hook-form';
+import { useEffect, useState } from 'react';
+import { Link, useNavigate } from '@tanstack/react-router';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { Alert, Button, PasswordInput, SegmentedControl, Text, TextInput } from '@mantine/core';
+import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { useAuth } from '@/contexts/AuthContext';
-import { Smartphone, ArrowRight, Eye, EyeOff, Loader2, AlertCircle } from 'lucide-react';
-import { toast } from 'sonner';
+import { AlertCircle, ArrowRight, Bot, Code2, Layers, Sparkles } from 'lucide-react';
 import BrandLogo from '@/components/BrandLogo';
+import { useAuth } from '@/contexts/AuthContext';
+import { ChooseNotification } from '@/lib/choose-notification';
+import styles from '@/pages/auth/auth-page.module.css';
 
-const loginSchema = z.object({
+const LOGIN_SCHEMA = z.object({
   username: z.string().min(1, 'Username is required'),
   password: z.string().min(1, 'Password is required'),
 });
 
-const registerSchema = z
+const REGISTER_SCHEMA = z
   .object({
     username: z.string().min(3, 'Username must be at least 3 characters'),
     email: z.string().email('Please enter a valid email'),
@@ -29,8 +28,14 @@ const registerSchema = z
     path: ['password2'],
   });
 
-type LoginFormData = z.infer<typeof loginSchema>;
-type RegisterFormData = z.infer<typeof registerSchema>;
+type ILoginFormData = z.infer<typeof LOGIN_SCHEMA>;
+type IRegisterFormData = z.infer<typeof REGISTER_SCHEMA>;
+type IAuthMode = 'login' | 'register';
+
+const AuthFeatureVariants = {
+  hidden: { opacity: 0, x: -12 },
+  visible: (index: number) => ({ opacity: 1, x: 0, transition: { delay: 0.2 + index * 0.11 } }),
+};
 
 const getErrorMessage = (error: unknown, fallback: string): string => {
   if (error instanceof Error && error.message) return error.message;
@@ -49,16 +54,13 @@ const getErrorMessage = (error: unknown, fallback: string): string => {
 };
 
 const AuthPage = () => {
-  const location = useLocation();
-  const [mode, setMode] = useState<'login' | 'register'>(
-    location.search.mode === 'register' ? 'register' : 'login',
-  );
-  const [showPassword, setShowPassword] = useState(false);
+  const [mode, setMode] = useState<IAuthMode>('register');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const navigate = useNavigate();
   const { login, register, isAuthenticated } = useAuth();
+  const prefersReducedMotion = useReducedMotion();
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -66,140 +68,178 @@ const AuthPage = () => {
     }
   }, [isAuthenticated, navigate]);
 
-  const loginForm = useForm<LoginFormData>({
-    resolver: zodResolver(loginSchema),
+  const loginForm = useForm<ILoginFormData>({
+    resolver: zodResolver(LOGIN_SCHEMA),
     defaultValues: { username: '', password: '' },
   });
 
-  const registerForm = useForm<RegisterFormData>({
-    resolver: zodResolver(registerSchema),
+  const registerForm = useForm<IRegisterFormData>({
+    resolver: zodResolver(REGISTER_SCHEMA),
     defaultValues: { username: '', email: '', password: '', password2: '' },
   });
 
-  const handleLogin = async (data: LoginFormData) => {
+  const changeMode = (nextMode: string) => {
+    setMode(nextMode as IAuthMode);
+    setError(null);
+  };
+
+  const handleLogin = async (data: ILoginFormData) => {
     setIsSubmitting(true);
     setError(null);
+
     try {
       await login(data.username, data.password);
-      toast.success('Welcome back!');
+      ChooseNotification.success({ message: 'Welcome back!' });
       navigate({ to: '/dashboard' });
-    } catch (error) {
-      const message = getErrorMessage(error, 'Invalid credentials. Please try again.');
+    } catch (requestError) {
+      const message = getErrorMessage(requestError, 'Invalid credentials. Please try again.');
       setError(message);
-      toast.error(message);
+      ChooseNotification.failure({ message });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleRegister = async (data: RegisterFormData) => {
+  const handleRegister = async (data: IRegisterFormData) => {
     setIsSubmitting(true);
     setError(null);
+
     try {
       await register(data.username, data.email, data.password, data.password2);
-      toast.success('Account created successfully!');
+      ChooseNotification.success({ message: 'Account created successfully!' });
       navigate({ to: '/dashboard' });
-    } catch (error) {
-      const message = getErrorMessage(error, 'Registration failed. Please try again.');
+    } catch (requestError) {
+      const message = getErrorMessage(requestError, 'Registration failed. Please try again.');
       setError(message);
-      toast.error(message);
+      ChooseNotification.failure({ message });
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-background flex">
-      {/* Left Panel - Branding */}
-      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
-        <div className="absolute inset-0 gradient-primary opacity-90" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,transparent_0%,hsl(var(--background)/0.5)_100%)]" />
-
-        <div className="relative z-10 flex flex-col justify-center px-16">
-          <Link to="/" className="flex items-center gap-3 mb-12">
-            <BrandLogo variant="white" className="h-14" />
+    <div className={styles.page}>
+      <aside className={styles.brandPanel}>
+        <div className={styles.brandContent}>
+          <Link to="/" className={styles.brandLink}>
+            <BrandLogo variant="white" className={styles.brandLogo} />
           </Link>
 
-          <h1 className="text-4xl font-bold text-white mb-4">
-            Build Flutter Apps
-            <br />
-            Visually
-          </h1>
-          <p className="text-lg text-white/80 max-w-md">
-            Design beautiful mobile interfaces with our drag-and-drop builder. Export clean,
-            production-ready Flutter code.
-          </p>
-
-          <div className="mt-12 space-y-4">
-            {[
-              'Drag & drop interface builder',
-              'Real-time phone preview',
-              'Export production-ready code',
-            ].map((feature) => (
-              <div key={feature} className="flex items-center gap-3 text-white/90">
-                <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center">
-                  <ArrowRight className="w-3 h-3" />
-                </div>
-                {feature}
-              </div>
-            ))}
+          <div className={styles.brandMessage}>
+            <Text className={styles.brandEyebrow}>
+              <Sparkles size={15} /> Your next MVP starts here
+            </Text>
+            <Text component="h1" className={styles.brandTitle}>
+              Finish your first Flutter MVP in one focused session.
+            </Text>
+            <Text component="p" className={styles.brandDescription}>
+              Design the product experience visually, use AI to sharpen the interface, and hand your
+              developers a project they can build on.
+            </Text>
           </div>
-        </div>
-      </div>
 
-      {/* Right Panel - Forms */}
-      <div className="flex-1 flex items-center justify-center p-8">
+          <motion.ul initial="hidden" animate="visible" className={styles.featureList}>
+            <motion.li
+              custom={0}
+              variants={AuthFeatureVariants}
+              animate={prefersReducedMotion ? { opacity: 1, x: 0 } : undefined}
+              whileHover={prefersReducedMotion ? undefined : { x: 4 }}
+            >
+              <Layers size={18} />
+              <span>
+                <strong>Arrange the screens</strong>Use drag and drop to make the MVP real.
+              </span>
+            </motion.li>
+            <motion.li
+              custom={1}
+              variants={AuthFeatureVariants}
+              animate={prefersReducedMotion ? { opacity: 1, x: 0 } : undefined}
+              whileHover={prefersReducedMotion ? undefined : { x: 4 }}
+            >
+              <Bot size={18} />
+              <span>
+                <strong>Ask AI about the UI</strong>Keep design choices clear and editable.
+              </span>
+            </motion.li>
+            <motion.li
+              custom={2}
+              variants={AuthFeatureVariants}
+              animate={prefersReducedMotion ? { opacity: 1, x: 0 } : undefined}
+              whileHover={prefersReducedMotion ? undefined : { x: 4 }}
+            >
+              <Code2 size={18} />
+              <span>
+                <strong>Export for developers</strong>Start the handoff with a neat codebase.
+              </span>
+            </motion.li>
+          </motion.ul>
+
+          <motion.div
+            className={styles.sessionCard}
+            animate={prefersReducedMotion ? { y: 0 } : { y: [0, -4, 0] }}
+            transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+          >
+            <div>
+              <span>SESSION GOAL</span>
+              <strong>Onboarding flow</strong>
+            </div>
+            <div className={styles.sessionProgress}>
+              <i />
+              <i />
+              <i />
+            </div>
+            <small>Screen flow ready to export</small>
+          </motion.div>
+        </div>
+      </aside>
+
+      <main className={styles.formArea}>
         <motion.div
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
-          className="w-full max-w-md"
+          className={styles.formPanel}
         >
-          {/* Mobile Logo */}
-          <Link to="/" className="lg:hidden flex items-center gap-3 mb-8">
-            <BrandLogo className="h-12" />
+          <Link to="/" className={styles.mobileBrandLink}>
+            <BrandLogo className={styles.mobileBrandLogo} />
           </Link>
 
-          {/* Tab Switcher */}
-          <div className="flex gap-2 p-1 rounded-xl bg-muted mb-8">
-            <button
-              onClick={() => {
-                setMode('login');
-                setError(null);
-              }}
-              className={`flex-1 py-3 px-4 rounded-lg text-sm font-medium transition-all ${
-                mode === 'login'
-                  ? 'bg-background text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              Sign In
-            </button>
-            <button
-              onClick={() => {
-                setMode('register');
-                setError(null);
-              }}
-              className={`flex-1 py-3 px-4 rounded-lg text-sm font-medium transition-all ${
-                mode === 'register'
-                  ? 'bg-background text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              Create Account
-            </button>
+          <div className={styles.formHeading}>
+            <Text component="h2" className={styles.formTitle}>
+              {mode === 'login' ? 'Welcome back' : 'Create your workspace'}
+            </Text>
+            <Text component="p" className={styles.formSubtitle}>
+              {mode === 'login'
+                ? 'Sign in to continue building your Flutter project.'
+                : 'Start designing your Flutter app in a visual workspace.'}
+            </Text>
           </div>
 
-          {/* Error Display */}
+          <SegmentedControl
+            value={mode}
+            onChange={changeMode}
+            data={[
+              { label: 'Sign In', value: 'login' },
+              { label: 'Create Account', value: 'register' },
+            ]}
+            fullWidth
+            classNames={{ root: styles.modeSwitcher }}
+          />
+
           <AnimatePresence mode="wait">
             {error && (
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
-                className="mb-6 p-4 rounded-lg bg-destructive/10 border border-destructive/20 flex items-start gap-3"
               >
-                <AlertCircle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
-                <p className="text-sm text-destructive">{error}</p>
+                <Alert
+                  icon={<AlertCircle size={18} />}
+                  color="red"
+                  variant="light"
+                  className={styles.error}
+                >
+                  {error}
+                </Alert>
               </motion.div>
             )}
           </AnimatePresence>
@@ -212,61 +252,26 @@ const AuthPage = () => {
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
                 onSubmit={loginForm.handleSubmit(handleLogin)}
-                className="space-y-5"
+                className={styles.form}
               >
-                <div className="space-y-2">
-                  <Label htmlFor="username">Username</Label>
-                  <Input
-                    id="username"
-                    placeholder="Enter your username"
-                    {...loginForm.register('username')}
-                    className="h-12"
-                  />
-                  {loginForm.formState.errors.username && (
-                    <p className="text-sm text-destructive">
-                      {loginForm.formState.errors.username.message}
-                    </p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
-                  <div className="relative">
-                    <Input
-                      id="password"
-                      type={showPassword ? 'text' : 'password'}
-                      placeholder="Enter your password"
-                      {...loginForm.register('password')}
-                      className="h-12 pr-12"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    >
-                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                    </button>
-                  </div>
-                  {loginForm.formState.errors.password && (
-                    <p className="text-sm text-destructive">
-                      {loginForm.formState.errors.password.message}
-                    </p>
-                  )}
-                </div>
-
+                <TextInput
+                  label="Username"
+                  placeholder="Enter your username"
+                  {...loginForm.register('username')}
+                  error={loginForm.formState.errors.username?.message}
+                />
+                <PasswordInput
+                  label="Password"
+                  placeholder="Enter your password"
+                  {...loginForm.register('password')}
+                  error={loginForm.formState.errors.password?.message}
+                />
                 <Button
                   type="submit"
-                  disabled={isSubmitting}
-                  className="w-full h-12 gradient-primary glow-primary"
+                  loading={isSubmitting}
+                  rightSection={<ArrowRight size={18} />}
                 >
-                  {isSubmitting ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : (
-                    <>
-                      Sign In
-                      <ArrowRight className="w-5 h-5 ml-2" />
-                    </>
-                  )}
+                  Sign In
                 </Button>
               </motion.form>
             ) : (
@@ -276,129 +281,56 @@ const AuthPage = () => {
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
                 onSubmit={registerForm.handleSubmit(handleRegister)}
-                className="space-y-5"
+                className={styles.form}
               >
-                <div className="space-y-2">
-                  <Label htmlFor="reg-username">Username</Label>
-                  <Input
-                    id="reg-username"
-                    placeholder="Choose a username"
-                    {...registerForm.register('username')}
-                    className="h-12"
-                  />
-                  {registerForm.formState.errors.username && (
-                    <p className="text-sm text-destructive">
-                      {registerForm.formState.errors.username.message}
-                    </p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="Enter your email"
-                    {...registerForm.register('email')}
-                    className="h-12"
-                  />
-                  {registerForm.formState.errors.email && (
-                    <p className="text-sm text-destructive">
-                      {registerForm.formState.errors.email.message}
-                    </p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="reg-password">Password</Label>
-                  <div className="relative">
-                    <Input
-                      id="reg-password"
-                      type={showPassword ? 'text' : 'password'}
-                      placeholder="Create a password"
-                      {...registerForm.register('password')}
-                      className="h-12 pr-12"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    >
-                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                    </button>
-                  </div>
-                  {registerForm.formState.errors.password && (
-                    <p className="text-sm text-destructive">
-                      {registerForm.formState.errors.password.message}
-                    </p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="password2">Confirm Password</Label>
-                  <Input
-                    id="password2"
-                    type="password"
-                    placeholder="Confirm your password"
-                    {...registerForm.register('password2')}
-                    className="h-12"
-                  />
-                  {registerForm.formState.errors.password2 && (
-                    <p className="text-sm text-destructive">
-                      {registerForm.formState.errors.password2.message}
-                    </p>
-                  )}
-                </div>
-
+                <TextInput
+                  label="Username"
+                  placeholder="Choose a username"
+                  {...registerForm.register('username')}
+                  error={registerForm.formState.errors.username?.message}
+                />
+                <TextInput
+                  label="Email"
+                  type="email"
+                  placeholder="Enter your email"
+                  {...registerForm.register('email')}
+                  error={registerForm.formState.errors.email?.message}
+                />
+                <PasswordInput
+                  label="Password"
+                  placeholder="Create a password"
+                  {...registerForm.register('password')}
+                  error={registerForm.formState.errors.password?.message}
+                />
+                <PasswordInput
+                  label="Confirm Password"
+                  placeholder="Confirm your password"
+                  {...registerForm.register('password2')}
+                  error={registerForm.formState.errors.password2?.message}
+                />
                 <Button
                   type="submit"
-                  disabled={isSubmitting}
-                  className="w-full h-12 gradient-primary glow-primary"
+                  loading={isSubmitting}
+                  rightSection={<ArrowRight size={18} />}
                 >
-                  {isSubmitting ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : (
-                    <>
-                      Create Account
-                      <ArrowRight className="w-5 h-5 ml-2" />
-                    </>
-                  )}
+                  Create Account
                 </Button>
               </motion.form>
             )}
           </AnimatePresence>
 
-          <p className="mt-8 text-center text-sm text-muted-foreground">
-            {mode === 'login' ? (
-              <>
-                Don't have an account?{' '}
-                <button
-                  onClick={() => {
-                    setMode('register');
-                    setError(null);
-                  }}
-                  className="text-primary hover:underline font-medium"
-                >
-                  Sign up for free
-                </button>
-              </>
-            ) : (
-              <>
-                Already have an account?{' '}
-                <button
-                  onClick={() => {
-                    setMode('login');
-                    setError(null);
-                  }}
-                  className="text-primary hover:underline font-medium"
-                >
-                  Sign in
-                </button>
-              </>
-            )}
-          </p>
+          <Text component="p" className={styles.modePrompt}>
+            {mode === 'login' ? "Don't have an account?" : 'Already have an account?'}{' '}
+            <button
+              type="button"
+              onClick={() => changeMode(mode === 'login' ? 'register' : 'login')}
+              className={styles.modeLink}
+            >
+              {mode === 'login' ? 'Sign up for free' : 'Sign in'}
+            </button>
+          </Text>
         </motion.div>
-      </div>
+      </main>
     </div>
   );
 };

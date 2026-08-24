@@ -1,54 +1,43 @@
 import { useState } from 'react';
 import { Boxes, Network } from 'lucide-react';
+import { SegmentedControl } from '@mantine/core';
 import { WidgetPalette } from '@/pages/builder/components/widget-palette';
 import { WidgetTree } from '@/pages/builder/components/widget-tree';
-import { cn } from '@/lib/utils';
+import styles from '@/pages/builder/components/builder-sidebar.module.css';
 
 const BuilderSidebar = () => {
   const [activeView, setActiveView] = useState<'widgets' | 'tree'>('widgets');
 
   return (
-    <aside className="flex h-full w-full min-w-0 flex-col bg-card">
-      <div className="border-b border-border px-3 py-3">
-        <div
-          className="flex h-9 items-center bg-muted p-1"
-          role="tablist"
-          aria-label="Builder sidebar"
-        >
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeView === 'widgets'}
-            onClick={() => setActiveView('widgets')}
-            className={cn(
-              'flex h-full flex-1 items-center justify-center gap-2 text-xs font-medium transition-colors',
-              activeView === 'widgets'
-                ? 'bg-background text-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground',
-            )}
-          >
-            <Boxes className="h-3.5 w-3.5" />
-            Widgets
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeView === 'tree'}
-            onClick={() => setActiveView('tree')}
-            className={cn(
-              'flex h-full flex-1 items-center justify-center gap-2 text-xs font-medium transition-colors',
-              activeView === 'tree'
-                ? 'bg-background text-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground',
-            )}
-          >
-            <Network className="h-3.5 w-3.5" />
-            Tree
-          </button>
-        </div>
+    <aside className={styles.sidebar}>
+      <div className={styles.tabs}>
+        <SegmentedControl
+          value={activeView}
+          onChange={(value) => setActiveView(value as 'widgets' | 'tree')}
+          fullWidth
+          data={[
+            {
+              value: 'widgets',
+              label: (
+                <span className={styles.tabLabel}>
+                  <Boxes size={15} />
+                  Widgets
+                </span>
+              ),
+            },
+            {
+              value: 'tree',
+              label: (
+                <span className={styles.tabLabel}>
+                  <Network size={15} />
+                  Tree
+                </span>
+              ),
+            },
+          ]}
+        />
       </div>
-
-      <div className="min-h-0 flex-1">
+      <div className={styles.content}>
         {activeView === 'widgets' ? <WidgetPalette embedded /> : <WidgetTree embedded />}
       </div>
     </aside>

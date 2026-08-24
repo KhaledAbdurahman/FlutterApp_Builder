@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, type KeyboardEvent } from 'react';
+import { useCallback, useMemo, useState, type CSSProperties, type KeyboardEvent } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DndContext, DragOverlay, pointerWithin, useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
@@ -16,13 +16,14 @@ import {
 import { cn } from '@/lib/utils';
 import * as LucideIcons from 'lucide-react';
 import { ChevronRight, ChevronDown, Layers, GripVertical, ArrowUp, ArrowDown } from 'lucide-react';
-import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
+import { Button, Group, Modal, Text } from '@mantine/core';
+import { ChooseNotification } from '@/lib/choose-notification';
 import {
   REQUIRED_PARENTS,
   ROOT_ONLY_WIDGETS,
   VALIDATION_RULES,
 } from '@/pages/builder/dnd/validation-rules';
+import styles from '@/pages/builder/components/widget-tree.module.css';
 
 interface ITreeNodeProps {
   widget: FlutterWidget;
@@ -70,14 +71,13 @@ const SlotTreeNode = ({
   });
 
   return (
-    <div ref={setNodeRef} style={{ paddingLeft: `${depth * 16 + 28}px` }}>
-      <div
-        className={cn(
-          'relative flex items-center gap-2 py-2 px-2 rounded-md text-xs uppercase tracking-wide text-muted-foreground',
-          isOver && 'bg-primary/10 ring-1 ring-primary/30',
-        )}
-      >
-        <span className="w-4" />
+    <div
+      ref={setNodeRef}
+      className={styles.slotNode}
+      style={{ '--tree-indent': `${depth * 16 + 28}px` } as CSSProperties}
+    >
+      <div className={cn(styles.slotRow, isOver && styles.slotRowOver)}>
+        <span className={styles.iconSpacer} />
         <span>itemTemplate</span>
       </div>
       {slot.child ? (
@@ -93,8 +93,8 @@ const SlotTreeNode = ({
         />
       ) : (
         <div
-          className="text-xs text-muted-foreground/70 italic"
-          style={{ paddingLeft: `${(depth + 1) * 16 + 28}px` }}
+          className={styles.emptySlot}
+          style={{ '--tree-indent': `${(depth + 1) * 16 + 28}px` } as CSSProperties}
         >
           Empty
         </div>
@@ -126,8 +126,8 @@ const SortableTreeNode = ({
   const style = {
     transform: CSS.Translate.toString(transform),
     transition,
-    paddingLeft: `${depth * 16 + 28}px`,
-  };
+    '--tree-indent': `${depth * 16 + 28}px`,
+  } as CSSProperties;
 
   const { selectedWidgetId, setSelectedWidget } = useBuilderStore();
   const isSelected = selectedWidgetId === widget.id;
@@ -153,35 +153,31 @@ const SortableTreeNode = ({
   const activeDropAction = dropTargetId === widget.id ? dropAction : undefined;
 
   return (
-    <div ref={setNodeRef} style={style} className="relative">
-      {activeDropAction === 'before' && (
-        <div className="pointer-events-none absolute left-7 right-1 top-0 z-10 h-0.5 bg-primary" />
-      )}
+    <div ref={setNodeRef} style={style} className={styles.treeNode}>
+      {activeDropAction === 'before' && <div className={styles.dropIndicatorBefore} />}
       <motion.div
         initial={{ opacity: 0, x: -10 }}
         animate={{ opacity: 1, x: 0 }}
         className={cn(
-          'relative flex items-center gap-2 py-2 px-2 rounded-md cursor-pointer transition-colors text-sm group w-full min-w-max',
-          isSelected ? 'bg-primary/20 text-primary' : 'hover:bg-muted text-foreground',
-          isDragging && 'opacity-50',
-          activeDropAction === 'inside' && 'bg-primary/10 ring-1 ring-primary/50',
-          isEmptyContainer && 'border border-dashed border-muted-foreground/30',
+          styles.treeRow,
+          isSelected ? styles.treeRowSelected : styles.treeRowIdle,
+          isDragging && styles.treeRowDragging,
+          activeDropAction === 'inside' && styles.treeRowInsideTarget,
+          isEmptyContainer && styles.treeRowEmptyContainer,
         )}
         onClick={() => setSelectedWidget(widget.id)}
       >
-        <span className="absolute left-1 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">
-          {depth + 1}
-        </span>
+        <span className={styles.depthLabel}>{depth + 1}</span>
         <button
           ref={setActivatorNodeRef}
           type="button"
-          className="cursor-grab touch-none rounded p-0.5 text-muted-foreground/60 hover:bg-muted hover:text-muted-foreground active:cursor-grabbing"
+          className={styles.dragHandle}
           aria-label={`Move ${widget.type}`}
           onClick={(event) => event.stopPropagation()}
           {...attributes}
           {...listeners}
         >
-          <GripVertical className="h-3.5 w-3.5" />
+          <GripVertical size={14} />
         </button>
         {hasChildren ? (
           <button
@@ -189,34 +185,24 @@ const SortableTreeNode = ({
               e.stopPropagation();
               setIsExpanded(!isExpanded);
             }}
-            className="p-0.5 hover:bg-muted rounded"
+            className={styles.expandButton}
             onPointerDown={(e) => e.stopPropagation()}
           >
-            {isExpanded ? (
-              <ChevronDown className="w-3 h-3 text-muted-foreground" />
-            ) : (
-              <ChevronRight className="w-3 h-3 text-muted-foreground" />
-            )}
+            {isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
           </button>
         ) : (
-          <div className="w-4" />
+          <div className={styles.iconSpacer} />
         )}
 
-        <IconComponent className="w-4 h-4 text-muted-foreground group-hover:text-foreground" />
-        <span className="truncate">{widget.type}</span>
-        {widgetText && (
-          <span className="text-xs text-muted-foreground truncate max-w-[80px] opacity-70">
-            "{widgetText}"
-          </span>
-        )}
-        <span className="ml-auto text-[10px] font-medium uppercase tracking-wide text-muted-foreground/70">
-          {placementLabel}
-        </span>
+        <IconComponent className={styles.widgetIcon} size={16} />
+        <span className={styles.widgetType}>{widget.type}</span>
+        {widgetText && <span className={styles.widgetText}>"{widgetText}"</span>}
+        <span className={styles.placementLabel}>{placementLabel}</span>
         {isSelected && (
-          <div className="flex items-center gap-1">
+          <div className={styles.reorderControls}>
             <button
               type="button"
-              className="p-1 rounded hover:bg-muted"
+              className={styles.reorderButton}
               onClick={(event) => {
                 event.stopPropagation();
                 if (index > 0) onMove(widget.id, parentId, index - 1);
@@ -224,11 +210,11 @@ const SortableTreeNode = ({
               aria-label="Move up"
               disabled={index === 0}
             >
-              <ArrowUp className="w-3 h-3" />
+              <ArrowUp size={12} />
             </button>
             <button
               type="button"
-              className="p-1 rounded hover:bg-muted"
+              className={styles.reorderButton}
               onClick={(event) => {
                 event.stopPropagation();
                 if (index < siblingCount - 1) {
@@ -238,7 +224,7 @@ const SortableTreeNode = ({
               aria-label="Move down"
               disabled={index >= siblingCount - 1}
             >
-              <ArrowDown className="w-3 h-3" />
+              <ArrowDown size={12} />
             </button>
           </div>
         )}
@@ -250,7 +236,7 @@ const SortableTreeNode = ({
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            className="flex flex-col"
+            className={styles.treeChildren}
           >
             {(() => {
               const actualChildren = childNodes.filter(
@@ -286,9 +272,7 @@ const SortableTreeNode = ({
           </motion.div>
         )}
       </AnimatePresence>
-      {activeDropAction === 'after' && (
-        <div className="pointer-events-none absolute bottom-0 left-7 right-1 z-10 h-0.5 bg-primary" />
-      )}
+      {activeDropAction === 'after' && <div className={styles.dropIndicatorAfter} />}
     </div>
   );
 };
@@ -449,7 +433,7 @@ export const WidgetTree = ({ embedded = false }: IWidgetTreeProps) => {
         }
 
         if (error) {
-          toast.error(error);
+          ChooseNotification.failure({ message: error });
           return;
         }
 
@@ -521,26 +505,15 @@ export const WidgetTree = ({ embedded = false }: IWidgetTreeProps) => {
   );
 
   return (
-    <div
-      className={cn(
-        'flex h-full flex-col overflow-hidden bg-card',
-        !embedded && 'w-80 shrink-0 border-r border-border',
-      )}
-    >
+    <div className={cn(styles.tree, !embedded && styles.standalone)}>
       {!embedded && (
-        <div className="flex items-center gap-2 border-b border-border p-4">
-          <Layers className="h-4 w-4 text-muted-foreground" />
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-            Widget Tree
-          </h2>
+        <div className={styles.treeHeader}>
+          <Layers size={16} />
+          <h2>Widget Tree</h2>
         </div>
       )}
 
-      <div
-        className="flex-1 overflow-auto p-2 scrollbar-thin"
-        tabIndex={0}
-        onKeyDown={handleKeyDown}
-      >
+      <div className={styles.treeContent} tabIndex={0} onKeyDown={handleKeyDown}>
         <DndContext
           sensors={sensors}
           collisionDetection={pointerWithin}
@@ -566,21 +539,19 @@ export const WidgetTree = ({ embedded = false }: IWidgetTreeProps) => {
           </SortableContext>
 
           <DragOverlay>
-            <div className="bg-primary/90 text-primary-foreground p-2 rounded shadow-lg text-sm">
-              Moving Widget...
-            </div>
+            <div className={styles.dragOverlay}>Moving Widget...</div>
           </DragOverlay>
         </DndContext>
 
         {(!screen?.components || screen.components.length === 0) && (
-          <p className="text-muted-foreground text-sm text-center p-4">No widgets yet</p>
+          <p className={styles.emptyTree}>No widgets yet</p>
         )}
       </div>
 
       {confirmDialog && (
-        <div className="fixed inset-0 z-50 pointer-events-none">
+        <div className={styles.anchoredDialogLayer}>
           <div
-            className="pointer-events-auto"
+            className={styles.anchoredDialogPosition}
             style={{
               position: 'absolute',
               top: confirmDialog.anchor?.y ?? 24,
@@ -590,31 +561,28 @@ export const WidgetTree = ({ embedded = false }: IWidgetTreeProps) => {
             role="dialog"
             aria-live="polite"
           >
-            <div className="rounded-md border bg-popover p-4 shadow-md w-72">
-              <p className="text-sm font-medium mb-1">Confirm Placement</p>
-              <p className="text-xs text-muted-foreground mb-3">{confirmDialog.message}</p>
-              <div className="flex items-center justify-end gap-2">
+            <div className={styles.anchoredDialog}>
+              <Text size="sm" fw={600}>
+                Confirm Placement
+              </Text>
+              <Text size="xs" c="dimmed" mt={4} mb="sm">
+                {confirmDialog.message}
+              </Text>
+              <Group justify="flex-end" gap="xs">
                 <Button
                   size="sm"
-                  variant="outline"
+                  variant="default"
+                  radius="md"
                   onClick={() => {
                     cancelPendingMove();
-                    toast.custom(() => (
-                      <div
-                        role="status"
-                        aria-live="polite"
-                        className="pointer-events-auto rounded-md border px-3 py-2 text-sm shadow-md bg-background text-foreground"
-                      >
-                        Move cancelled
-                      </div>
-                    ));
-                    toast.dismiss('widget-tree-dnd');
+                    ChooseNotification.info({ message: 'Move cancelled' });
                   }}
                 >
                   Cancel
                 </Button>
                 <Button
                   size="sm"
+                  radius="md"
                   onClick={() => {
                     confirmPendingMove(confirmDialog.intent);
                     // TODO: Record the user's decision for heuristics.
@@ -622,41 +590,47 @@ export const WidgetTree = ({ embedded = false }: IWidgetTreeProps) => {
                 >
                   Confirm Move
                 </Button>
-              </div>
+              </Group>
             </div>
           </div>
         </div>
       )}
 
       {nestDialog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/40" />
-          <div className="relative z-10 rounded-md border bg-popover p-4 shadow-md w-80">
-            <p className="text-sm font-medium mb-1">Nest component</p>
-            <p className="text-xs text-muted-foreground mb-3">
-              Move {nestDialog.widgetLabel} inside {nestDialog.targetLabel}?
-            </p>
-            {nestDialog.error && (
-              <p className="text-xs text-destructive mb-3">{nestDialog.error}</p>
-            )}
-            <div className="flex items-center justify-end gap-2">
-              <Button size="sm" variant="outline" onClick={() => setNestDialog(null)}>
-                Cancel
-              </Button>
-              <Button
-                size="sm"
-                onClick={() => {
-                  if (nestDialog.error) return;
-                  moveWidget(nestDialog.widgetId, nestDialog.targetId);
-                  setNestDialog(null);
-                }}
-                disabled={!!nestDialog.error}
-              >
-                Confirm
-              </Button>
-            </div>
-          </div>
-        </div>
+        <Modal
+          opened
+          onClose={() => setNestDialog(null)}
+          title="Nest component"
+          centered
+          radius="md"
+          classNames={{ content: styles.modalContent, header: styles.modalHeader }}
+        >
+          <Text size="sm" c="dimmed" mb="sm">
+            Move {nestDialog.widgetLabel} inside {nestDialog.targetLabel}?
+          </Text>
+          {nestDialog.error && (
+            <Text size="xs" c="red" mb="sm">
+              {nestDialog.error}
+            </Text>
+          )}
+          <Group justify="flex-end" gap="xs">
+            <Button size="sm" variant="default" radius="md" onClick={() => setNestDialog(null)}>
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              radius="md"
+              onClick={() => {
+                if (nestDialog.error) return;
+                moveWidget(nestDialog.widgetId, nestDialog.targetId);
+                setNestDialog(null);
+              }}
+              disabled={!!nestDialog.error}
+            >
+              Confirm
+            </Button>
+          </Group>
+        </Modal>
       )}
     </div>
   );

@@ -1,0 +1,175 @@
+.topBar {
+  display: flex;
+  height: 3.5rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-inline: 1rem;
+  border-bottom: 1px solid hsl(var(--border));
+  background: hsl(var(--card));
+}
+
+.identityGroup,
+.actions {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+}
+
+.identityGroup {
+  gap: 1rem;
+}
+
+.actions {
+  gap: 0.75rem;
+}
+
+.logo {
+  height: 2.5rem;
+}
+
+.divider {
+  height: 1.5rem;
+  border-color: hsl(var(--border));
+}
+
+.screenSelector {
+  gap: 0.5rem;
+  min-width: 0;
+  color: hsl(var(--foreground));
+}
+
+.screenSelector :global(.mantine-Button-label) {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.screenLabel {
+  flex: none;
+  color: hsl(var(--muted-foreground));
+  font-size: 0.875rem;
+}
+
+.screenName {
+  overflow: hidden;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.screenMenuMeta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: hsl(var(--primary));
+}
+
+.homeLabel {
+  font-size: 0.75rem;
+}
+
+.ghostButton {
+  gap: 0.5rem;
+  color: hsl(var(--foreground));
+}
+
+.ghostButton:hover {
+  background: hsl(var(--accent) / 0.12);
+}
+
+.previewButton {
+  gap: 0.5rem;
+  background: hsl(var(--secondary));
+  color: hsl(var(--secondary-foreground));
+}
+
+.settingsButton {
+  color: hsl(var(--foreground));
+}
+
+.settingsButton:hover {
+  background: hsl(var(--accent) / 0.12);
+}
+
+.outlineButton {
+  gap: 0.5rem;
+  border-color: hsl(var(--border));
+  background: transparent;
+  color: hsl(var(--foreground));
+}
+
+.outlineButton:hover {
+  background: hsl(var(--accent) / 0.12);
+}
+
+.generateButton {
+  gap: 0.5rem;
+  border: 0;
+  background: var(--gradient-primary);
+  color: hsl(var(--primary-foreground));
+}
+
+.generateButton:hover {
+  opacity: 0.9;
+}
+
+.modalContent {
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--card));
+  box-shadow: var(--shadow-elevated);
+}
+
+.modalHeader {
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+.modalPrimaryButton,
+.modalSecondaryButton {
+  box-shadow: 0 4px 12px hsl(var(--foreground) / 0.08);
+}
+
+.modalPrimaryButton:hover,
+.modalSecondaryButton:hover {
+  box-shadow: 0 6px 16px hsl(var(--foreground) / 0.12);
+}
+
+.spinning {
+  animation: spin 0.8s linear infinite;
+}
+
+.codeArea {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.importGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 75rem) {
+  .topBar {
+    overflow-x: auto;
+  }
+
+  .identityGroup,
+  .actions {
+    flex: none;
+  }
+}
+
+@media (max-width: 38rem) {
+  .importGrid {
+    grid-template-columns: 1fr;
+  }
+}

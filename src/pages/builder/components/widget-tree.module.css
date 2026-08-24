@@ -1,0 +1,306 @@
+.tree {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--color-surface);
+}
+
+.standalone {
+  width: 20rem;
+  flex: 0 0 auto;
+  border-right: 1px solid var(--color-border);
+}
+
+.treeHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+}
+
+.treeHeader h2 {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.treeContent {
+  min-height: 0;
+  flex: 1;
+  overflow: auto;
+  padding: var(--space-2);
+}
+
+.treeContent:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
+}
+
+.treeContent::-webkit-scrollbar {
+  width: 0.375rem;
+  height: 0.375rem;
+}
+
+.treeContent::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: var(--color-border);
+}
+
+.slotNode {
+  --tree-indent: 0px;
+}
+
+.slotRow {
+  display: flex;
+  min-height: 2rem;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: var(--tree-indent);
+  padding: var(--space-2);
+  border-radius: var(--radius-control);
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.slotRowOver {
+  background: hsl(var(--primary) / 0.12);
+  box-shadow: inset 0 0 0 1px hsl(var(--primary) / 0.35);
+}
+
+.emptySlot {
+  padding-left: var(--tree-indent);
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  font-style: italic;
+  opacity: 0.7;
+}
+
+.treeNode {
+  --tree-indent: 0px;
+  position: relative;
+}
+
+.treeRow {
+  position: relative;
+  display: flex;
+  min-width: max-content;
+  min-height: 2.25rem;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: var(--tree-indent);
+  padding: var(--space-2);
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  cursor: pointer;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease;
+}
+
+.treeRowIdle {
+  color: var(--color-text);
+}
+
+.treeRowIdle:hover {
+  background: var(--color-surface-muted);
+}
+
+.treeRowSelected {
+  background: hsl(var(--primary) / 0.18);
+  color: hsl(var(--primary));
+}
+
+.treeRowDragging {
+  opacity: 0.5;
+}
+
+.treeRowInsideTarget {
+  background: hsl(var(--primary) / 0.12);
+  box-shadow: inset 0 0 0 1px hsl(var(--primary) / 0.5);
+}
+
+.treeRowEmptyContainer {
+  border-style: dashed;
+  border-color: hsl(var(--muted-foreground) / 0.35);
+}
+
+.depthLabel {
+  position: absolute;
+  top: 50%;
+  left: var(--space-1);
+  color: var(--color-text-muted);
+  font-size: 0.625rem;
+  transform: translateY(-50%);
+}
+
+.dragHandle,
+.expandButton,
+.reorderButton {
+  display: inline-grid;
+  place-items: center;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--color-text-muted);
+}
+
+.dragHandle {
+  padding: 0.125rem;
+  cursor: grab;
+  opacity: 0.7;
+  touch-action: none;
+}
+
+.dragHandle:active {
+  cursor: grabbing;
+}
+
+.dragHandle:hover,
+.expandButton:hover,
+.reorderButton:hover {
+  background: var(--color-surface-muted);
+  color: var(--color-text);
+}
+
+.expandButton,
+.reorderButton {
+  padding: 0.125rem;
+  cursor: pointer;
+}
+
+.reorderButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
+}
+
+.iconSpacer {
+  display: inline-block;
+  width: 1rem;
+  flex: 0 0 1rem;
+}
+
+.widgetIcon {
+  flex: 0 0 auto;
+  color: var(--color-text-muted);
+}
+
+.treeRow:hover .widgetIcon {
+  color: var(--color-text);
+}
+
+.widgetType {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.widgetText {
+  max-width: 5rem;
+  overflow: hidden;
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  opacity: 0.7;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.placementLabel {
+  margin-left: auto;
+  color: var(--color-text-muted);
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  opacity: 0.75;
+  text-transform: uppercase;
+}
+
+.reorderControls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.treeChildren {
+  display: flex;
+  flex-direction: column;
+}
+
+.dropIndicatorBefore,
+.dropIndicatorAfter {
+  position: absolute;
+  right: var(--space-1);
+  left: calc(var(--tree-indent) + 1.75rem);
+  z-index: 10;
+  height: 0.125rem;
+  background: hsl(var(--primary));
+  pointer-events: none;
+}
+
+.dropIndicatorBefore {
+  top: 0;
+}
+
+.dropIndicatorAfter {
+  bottom: 0;
+}
+
+.dragOverlay {
+  padding: var(--space-2);
+  border-radius: var(--radius-control);
+  background: hsl(var(--primary) / 0.9);
+  box-shadow: var(--shadow-elevated);
+  color: hsl(var(--primary-foreground));
+  font-size: 0.875rem;
+}
+
+.emptyTree {
+  margin: 0;
+  padding: var(--space-4);
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+  text-align: center;
+}
+
+.anchoredDialogLayer {
+  position: fixed;
+  z-index: 50;
+  inset: 0;
+  pointer-events: none;
+}
+
+.anchoredDialogPosition {
+  pointer-events: auto;
+}
+
+.anchoredDialog,
+.modalContent {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-elevated);
+}
+
+.anchoredDialog {
+  width: 18rem;
+  padding: var(--space-4);
+  border-radius: var(--radius-surface);
+}
+
+.modalHeader {
+  border-bottom: 1px solid var(--color-border);
+}
+
+@media (max-width: 48rem) {
+  .standalone {
+    width: 100%;
+  }
+}
