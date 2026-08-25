@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { DragStartEvent, DragEndEvent, DragCancelEvent } from '@dnd-kit/core';
 import { useBuilderStore } from '@/stores/builder/use-builder-store';
-import { toast } from 'sonner';
+import { ChooseNotification } from '@/lib/choose-notification';
 import {
   validateDrop,
   ValidationContext,
@@ -38,17 +38,12 @@ const getScaffoldSlotForType = (type: WidgetType) => {
 };
 
 const showAccessibleToast = (message: string, variant: 'info' | 'error' = 'info') => {
-  const base =
-    'pointer-events-auto rounded-md border px-3 py-2 text-sm shadow-md bg-background text-foreground';
-  const tone = variant === 'error' ? 'border-destructive text-destructive' : 'border-border';
-  toast.custom(
-    () => (
-      <div role="status" aria-live="polite" className={`${base} ${tone}`}>
-        {message}
-      </div>
-    ),
-    { duration: 2000 },
-  );
+  if (variant === 'error') {
+    ChooseNotification.failure({ message, position: 'top-center' });
+    return;
+  }
+
+  ChooseNotification.info({ message, position: 'top-center' });
 };
 
 export const useDnDHandlers = () => {

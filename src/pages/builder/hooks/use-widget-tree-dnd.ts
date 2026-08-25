@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import {
   DragStartEvent,
   DragEndEvent,
@@ -11,7 +11,7 @@ import {
 } from '@dnd-kit/core';
 import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { useBuilderStore } from '@/stores/builder/use-builder-store';
-import { toast } from 'sonner';
+import { ChooseNotification } from '@/lib/choose-notification';
 import { validateDrop, ValidationContext } from '@/pages/builder/dnd/validate-drop';
 import {
   adaptTreeMoveToValidation,
@@ -63,18 +63,12 @@ const buildValidationContextLookup = (widgets: FlutterWidget[]): ValidationConte
 const DND_TOAST_ID = 'widget-tree-dnd';
 
 const showAccessibleToast = (message: string, variant: 'info' | 'error' = 'info') => {
-  const base =
-    'pointer-events-auto rounded-md border px-3 py-2 text-sm shadow-md bg-background text-foreground';
-  const tone = variant === 'error' ? 'border-destructive text-destructive' : 'border-border';
-  toast.custom(
-    () =>
-      React.createElement(
-        'div',
-        { role: 'status', 'aria-live': 'polite', className: `${base} ${tone}` },
-        message,
-      ),
-    { duration: 2000 },
-  );
+  if (variant === 'error') {
+    ChooseNotification.failure({ message, position: 'top-center' });
+    return;
+  }
+
+  ChooseNotification.info({ message, position: 'top-center' });
 };
 
 const getWidgetLabel = (widget?: FlutterWidget | null) => {
@@ -130,19 +124,20 @@ export const useWidgetTreeDnD = ({ onCommit }: UseWidgetTreeDnDProps = {}) => {
 
   const dndToastMessageRef = useRef<string | null>(null);
 
-  const showDndToast = useCallback((message: string, duration = 1600) => {
+  const showDndToast = useCallback((message: string) => {
     if (dndToastMessageRef.current === message) return;
     dndToastMessageRef.current = message;
-    toast.message(message, {
+    ChooseNotification.transientInfo({
       id: DND_TOAST_ID,
+      message,
+      title: 'Drag and drop',
       position: 'top-center',
-      duration,
     });
   }, []);
 
   const dismissDndToast = useCallback(() => {
     dndToastMessageRef.current = null;
-    toast.dismiss(DND_TOAST_ID);
+    ChooseNotification.dismiss(DND_TOAST_ID);
   }, []);
 
   // Snapshot for undo
@@ -171,7 +166,6 @@ export const useWidgetTreeDnD = ({ onCommit }: UseWidgetTreeDnDProps = {}) => {
         const parentWidget = getParentWidget(nodes, sourceMeta.widget.id);
         showDndToast(
           `Dragging ${getWidgetLabel(sourceMeta.widget)} from ${getWidgetLabel(parentWidget)}`,
-          2000,
         );
       }
     }
@@ -202,7 +196,6 @@ export const useWidgetTreeDnD = ({ onCommit }: UseWidgetTreeDnDProps = {}) => {
       setDropIndicator({ targetId: overData.parentId, action: 'inside' });
       showDndToast(
         `Drop ${getWidgetLabel(sourceMeta.widget)} into itemTemplate of ${getWidgetLabel(parentMeta.widget)}`,
-        1200,
       );
       return;
     }
@@ -226,7 +219,6 @@ export const useWidgetTreeDnD = ({ onCommit }: UseWidgetTreeDnDProps = {}) => {
     const verb = action === 'inside' ? 'into' : action;
     showDndToast(
       `Drop ${getWidgetLabel(sourceMeta.widget)} ${verb} ${getWidgetLabel(targetMeta.widget)}`,
-      1200,
     );
   };
 
@@ -258,15 +250,15 @@ export const useWidgetTreeDnD = ({ onCommit }: UseWidgetTreeDnDProps = {}) => {
       }
 
       if (sourceParentId !== destinationParentId) {
-        showDndToast(
-          `Moved ${getWidgetLabel(sourceMeta.widget)} from ${getWidgetLabel(sourceParentWidget)} to ${getWidgetLabel(destinationParentWidget)}`,
-          2000,
-        );
+        ChooseNotification.success({
+          message: `Moved ${getWidgetLabel(sourceMeta.widget)} from ${getWidgetLabel(sourceParentWidget)} to ${getWidgetLabel(destinationParentWidget)}`,
+          position: 'top-center',
+        });
       } else {
-        showDndToast(
-          `Reordered ${getWidgetLabel(sourceMeta.widget)} in ${getWidgetLabel(sourceParentWidget)}`,
-          1600,
-        );
+        ChooseNotification.success({
+          message: `Reordered ${getWidgetLabel(sourceMeta.widget)} in ${getWidgetLabel(sourceParentWidget)}`,
+          position: 'top-center',
+        });
       }
     }
 
@@ -294,6 +286,7 @@ export const useWidgetTreeDnD = ({ onCommit }: UseWidgetTreeDnDProps = {}) => {
     setOverId(null);
     setDropIndicator(null);
     setIsDragging(false);
+    dismissDndToast();
     const dragId = active.id?.toString();
 
     if (!over) {

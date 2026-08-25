@@ -186,7 +186,10 @@ Static assets should live in `public/`, not in `src/assets/`.
 
 ## Styling Direction
 
-Tailwind should be replaced with CSS Modules and global CSS variables.
+Tailwind has been replaced with CSS Modules and global CSS variables. Mantine
+provides the shared control behavior; CSS Modules provide the product-specific
+layout and visual language. This separation keeps a control-library change from
+forcing every page to inherit a library's styling conventions.
 
 Target styling layers:
 
@@ -194,6 +197,9 @@ Target styling layers:
 - `*.module.css` files own component and page styling.
 - Global tokens should describe meaning instead of raw colors where possible.
 - Components should avoid hardcoded values when a token exists.
+- The project should not reintroduce Tailwind utility classes, shadcn
+  components, Radix primitives, or Sonner notifications without a deliberate
+  architecture decision.
 
 Example token categories:
 
@@ -362,54 +368,12 @@ These are the real stable credentials for the local test environment.
 Use a notification controller that wraps Mantine notifications behind a small
 project-owned API.
 
-The controller should provide success, failure, loader, and loading-state
-transitions. The point is to keep product language, positions, colors, and
-timings consistent while avoiding direct Mantine calls throughout the app.
-
-Draft shape:
-
-```ts
-type NotificationPosition =
-  'top-left' | 'top-right' | 'top-center' | 'bottom-left' | 'bottom-right' | 'bottom-center';
-
-interface NotificationOptions {
-  message: string;
-  title?: string;
-  position?: NotificationPosition;
-}
-
-interface LoadingNotificationOptions extends NotificationOptions {
-  loadingMessage?: string;
-}
-
-const DEFAULT_POSITION: NotificationPosition = 'bottom-right';
-const DEFAULT_AUTO_CLOSE = 3000;
-const DEFAULT_LOADING_MESSAGE = 'Please wait...';
-
-export const ChooseNotification = {
-  success({ message, title = 'Success', position = DEFAULT_POSITION }: NotificationOptions): void {
-    notifications.show({
-      title,
-      message,
-      color: 'green',
-      position,
-      autoClose: DEFAULT_AUTO_CLOSE,
-    });
-  },
-
-  failure({ message, title = 'Error', position = DEFAULT_POSITION }: NotificationOptions): void {
-    notifications.show({
-      title,
-      message,
-      color: 'red',
-      position,
-      autoClose: DEFAULT_AUTO_CLOSE + 2000,
-    });
-  },
-};
-
-// write the other props like  loader, loading to success , loading to failure, info, warning
-```
+`ChooseNotification` is the only notification API used by product code. It
+provides success, failure, information, warning, loader, and loading-state
+transitions. It also provides transient updates for drag-and-drop feedback,
+where one message must change in place rather than stack while the pointer
+moves. The controller keeps product language, positions, colors, and timings
+consistent while avoiding direct UI-library calls throughout the app.
 
 ## Testing Direction
 
@@ -457,14 +421,16 @@ Open testing concerns:
    product page; future product pages should begin inside their own module folder.
 9. Move shared API behavior into `src/api` and page-specific API calls into page
    folders.
-10. Replace shadcn/Radix notification usage with Mantine notification
-    controller. In progress: `ChooseNotification` owns new notification calls;
-    Sonner remains mounted while existing pages are migrated.
+10. Replace shadcn/Radix notification usage with the Mantine notification
+    controller. Done: `ChooseNotification` owns application feedback, including
+    drag-and-drop status messages; Sonner has been removed.
 11. Replace Tailwind classes and shadcn UI components with Mantine UI,
-    CSS Modules, and CSS variables. In progress: global tokens and Mantine are
-    available, and auth is the first completed page-level styling migration.
+    CSS Modules, and CSS variables. Done: the visible product pages and builder
+    surfaces use the new styling approach; Tailwind, shadcn, and Radix have
+    been removed from the build and dependency graph.
 12. Refactor pages page by page, and refactor the editor section by section
-    after listing its sections.
+    after listing its sections. Done for the current product surfaces; future
+    editor additions must follow the same local-module approach.
 13. Add tests at the end of each page refactor.
 14. Update `README.md` only after the implemented project matches the future
     architecture.
@@ -492,17 +458,15 @@ As of this draft:
 - Live API calls use services in `src/api/`, backed by the shared Axios
   infrastructure in `src/config/api/`.
 - Current global builder state uses Redux in `src/stores/builder/`.
-- Styling migration is page-by-page: the auth page uses Mantine and a CSS Module;
-  Tailwind remains temporarily for unmigrated pages and builder sections.
-- `src/dnd/validateDrop.test.ts` already exists, so the project has at least one
-  test surface started.
-- After the React 19 upgrade, `next-themes`, `react-day-picker`, and `vaul` were
-  updated to versions with React 19 peer compatibility.
+- Styling migration is complete for the current product surfaces: landing,
+  auth, dashboard, error handling, and the builder use Mantine, CSS Modules,
+  and global design tokens. Tailwind, shadcn, Radix, and Sonner have been
+  removed after confirming they had no remaining product consumers.
+- `src/pages/builder/dnd/validate-drop.test.ts` already exists, so the project
+  has at least one test surface started.
 
 ## Open Decisions
 
-- Which packages are required by the final builder experience, and which are
-  template leftovers?
 - What backend fixtures, seed data, or test users are required for real endpoint
   API tests?
 
@@ -522,5 +486,7 @@ As of this draft:
 - Custom API actions should live as public async service methods.
 - API tests should use real API endpoints and should be added after each page
   refactor.
+- The unused shadcn, Radix, Sonner, and Tailwind template layer has been
+  removed; Mantine and CSS Modules are the current UI foundation.
 - Target routes include landing, auth, dashboard, builder, project detail,
   not-found, and probably error and live-preview pages.

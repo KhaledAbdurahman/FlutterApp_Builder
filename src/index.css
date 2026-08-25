@@ -1,9 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Inconsolata:wght@400;500;600&family=Inter:wght@400;500;600;700;800&family=Open+Sans:wght@400;500;600;700&display=swap');
 @import '@mantine/core/styles.css';
 @import '@mantine/notifications/styles.css';
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
 
 @layer base {
   :root {
@@ -172,12 +169,16 @@
 
 @layer base {
   * {
-    @apply border-border;
+    border-color: hsl(var(--border));
   }
 
   body {
-    @apply bg-background text-foreground font-sans antialiased;
+    margin: 0;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
     font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   html {
@@ -212,45 +213,5 @@
   code,
   pre {
     font-family: var(--font-mono);
-  }
-}
-
-@layer utilities {
-  .glow-primary {
-    box-shadow: var(--shadow-glow);
-  }
-
-  .gradient-primary {
-    background: var(--gradient-primary);
-  }
-
-  .gradient-card {
-    background: var(--gradient-card);
-  }
-
-  .text-gradient {
-    background: var(--gradient-primary);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-
-  .scrollbar-thin::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-  }
-
-  .scrollbar-thin::-webkit-scrollbar-track {
-    background: var(--color-scrollbar-track);
-    border-radius: 3px;
-  }
-
-  .scrollbar-thin::-webkit-scrollbar-thumb {
-    background: var(--color-scrollbar-thumb);
-    border-radius: 3px;
-  }
-
-  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-    background: var(--color-scrollbar-thumb-hover);
   }
 }
