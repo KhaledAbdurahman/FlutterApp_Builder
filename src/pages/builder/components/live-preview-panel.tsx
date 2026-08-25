@@ -11,20 +11,12 @@ import {
   Square,
   Wifi,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Slider } from '@/components/ui/slider';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { ActionIcon, Button, Progress, Select, Slider, Tooltip } from '@mantine/core';
 import { useLivePreview } from '@/pages/builder/hooks/use-live-preview';
 import type { ILivePreviewServerStatus } from '@/types/api/live-preview-types';
 import { CalculateLivePreviewScale } from '@/utils/live-preview-utils';
+import { cn } from '@/lib/utils';
+import styles from '@/pages/builder/components/live-preview-panel.module.css';
 
 const PHONE_BEZEL_HORIZONTAL = 20;
 const PHONE_BEZEL_VERTICAL = 20;
@@ -256,212 +248,154 @@ const LivePreviewPanel = ({ open, onClose }: ILivePreviewPanelProps) => {
   if (!open) return null;
 
   return (
-    <section
-      className="flex min-w-0 flex-1 flex-col overflow-hidden bg-background"
-      aria-label="Live Flutter preview"
-    >
-      <div className="shrink-0 border-b bg-card px-4 py-2">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border bg-background">
-              <Wifi className="h-4 w-4 text-primary" />
+    <section className={styles.panel} aria-label="Live Flutter preview">
+      <div className={styles.header}>
+        <div className={styles.headerContent}>
+          <div className={styles.previewIdentity}>
+            <div className={styles.previewIcon}>
+              <Wifi size={16} />
             </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <h2 className="text-sm font-semibold">Live Preview</h2>
+            <div className={styles.previewTitleGroup}>
+              <div className={styles.titleRow}>
+                <h2>Live Preview</h2>
                 <span
-                  className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
+                  className={cn(
+                    styles.phaseBadge,
                     phase === 'ready'
-                      ? 'bg-emerald-500/12 text-emerald-700 dark:text-emerald-300'
+                      ? styles.phaseReady
                       : phase === 'error'
-                        ? 'bg-destructive/10 text-destructive'
-                        : 'bg-muted text-muted-foreground'
-                  }`}
+                        ? styles.phaseError
+                        : styles.phasePending,
+                  )}
                 >
                   {phase === 'ready' ? (
-                    <CheckCircle2 className="h-3 w-3" />
+                    <CheckCircle2 size={12} />
                   ) : phase !== 'error' ? (
-                    <Loader2 className="h-3 w-3 animate-spin" />
+                    <Loader2 size={12} className={styles.spinning} />
                   ) : null}
                   {isUpdating && phase === 'ready' ? 'Updating' : phaseDetails.label}
                 </span>
               </div>
-              <p className="truncate text-xs text-muted-foreground">
-                Interactive Flutter web preview
-              </p>
+              <p>Interactive Flutter web preview</p>
             </div>
           </div>
 
-          <TooltipProvider delayDuration={300}>
-            <div className="flex flex-wrap items-center justify-end gap-2">
-              <Select
-                value={deviceId}
-                onValueChange={(value) => setDeviceId(value as IPreviewDeviceId)}
-              >
-                <SelectTrigger className="h-8 w-40" aria-label="Preview device">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(PreviewDevices).map(([id, preset]) => (
-                    <SelectItem key={id} value={id}>
-                      {preset.label} ({preset.width}x{preset.height})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          <div className={styles.controls}>
+            <Select
+              value={deviceId}
+              onChange={(value) => value && setDeviceId(value as IPreviewDeviceId)}
+              data={Object.entries(PreviewDevices).map(([id, preset]) => ({
+                value: id,
+                label: `${preset.label} (${preset.width}x${preset.height})`,
+              }))}
+              className={styles.deviceSelect}
+              aria-label="Preview device"
+            />
 
-              <div className="flex h-8 items-center rounded-md border bg-background">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7"
-                      onClick={() => ChangeZoom(-ZOOM_STEP)}
-                      disabled={!fitToScreen && zoomPercent <= MINIMUM_ZOOM}
-                      aria-label="Zoom out"
-                    >
-                      <Minus />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Zoom out</TooltipContent>
-                </Tooltip>
-                <Slider
-                  value={[fitToScreen ? Math.round(fitScale * 100) : zoomPercent]}
-                  min={MINIMUM_ZOOM}
-                  max={MAXIMUM_ZOOM}
-                  step={ZOOM_STEP}
-                  onValueChange={([value]) => {
-                    setFitToScreen(false);
-                    setZoomPercent(value);
-                  }}
-                  className="mx-2 w-20"
-                  aria-label="Preview zoom"
-                />
-                <span className="w-10 text-center text-xs tabular-nums text-muted-foreground">
-                  {Math.round(scale * 100)}%
-                </span>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7"
-                      onClick={() => ChangeZoom(ZOOM_STEP)}
-                      disabled={!fitToScreen && zoomPercent >= MAXIMUM_ZOOM}
-                      aria-label="Zoom in"
-                    >
-                      <Plus />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Zoom in</TooltipContent>
-                </Tooltip>
-              </div>
-
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    type="button"
-                    variant={fitToScreen ? 'secondary' : 'outline'}
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => setFitToScreen(true)}
-                    aria-label="Fit preview to screen"
-                  >
-                    <Maximize2 />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Fit to screen</TooltipContent>
+            <div className={styles.zoomControls}>
+              <Tooltip label="Zoom out">
+                <ActionIcon
+                  variant="subtle"
+                  color="gray"
+                  onClick={() => ChangeZoom(-ZOOM_STEP)}
+                  disabled={!fitToScreen && zoomPercent <= MINIMUM_ZOOM}
+                  aria-label="Zoom out"
+                >
+                  <Minus size={16} />
+                </ActionIcon>
               </Tooltip>
-
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={RefreshPreviewFrame}
-                    disabled={phase !== 'ready'}
-                    aria-label="Refresh preview page"
-                  >
-                    <RotateCw />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Refresh preview page</TooltipContent>
+              <Slider
+                value={fitToScreen ? Math.round(fitScale * 100) : zoomPercent}
+                min={MINIMUM_ZOOM}
+                max={MAXIMUM_ZOOM}
+                step={ZOOM_STEP}
+                onChange={(value) => {
+                  setFitToScreen(false);
+                  setZoomPercent(value);
+                }}
+                className={styles.zoomSlider}
+                aria-label="Preview zoom"
+              />
+              <span className={styles.zoomValue}>{Math.round(scale * 100)}%</span>
+              <Tooltip label="Zoom in">
+                <ActionIcon
+                  variant="subtle"
+                  color="gray"
+                  onClick={() => ChangeZoom(ZOOM_STEP)}
+                  disabled={!fitToScreen && zoomPercent >= MAXIMUM_ZOOM}
+                  aria-label="Zoom in"
+                >
+                  <Plus size={16} />
+                </ActionIcon>
               </Tooltip>
-
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={RestartPreviewServer}
-                    disabled={
-                      phase === 'saving' ||
-                      phase === 'generating' ||
-                      phase === 'launching' ||
-                      phase === 'stopping'
-                    }
-                    aria-label="Regenerate and restart preview"
-                  >
-                    <RefreshCcw />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Regenerate and restart server</TooltipContent>
-              </Tooltip>
-
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-8 gap-2"
-                onClick={onClose}
-              >
-                <Square className="h-3.5 w-3.5 fill-current" />
-                Stop
-              </Button>
             </div>
-          </TooltipProvider>
+
+            <Tooltip label="Fit to screen">
+              <ActionIcon
+                variant={fitToScreen ? 'light' : 'default'}
+                onClick={() => setFitToScreen(true)}
+                aria-label="Fit preview to screen"
+              >
+                <Maximize2 size={16} />
+              </ActionIcon>
+            </Tooltip>
+            <Tooltip label="Refresh preview page">
+              <ActionIcon
+                variant="default"
+                onClick={RefreshPreviewFrame}
+                disabled={phase !== 'ready'}
+                aria-label="Refresh preview page"
+              >
+                <RotateCw size={16} />
+              </ActionIcon>
+            </Tooltip>
+            <Tooltip label="Regenerate and restart server">
+              <ActionIcon
+                variant="default"
+                onClick={RestartPreviewServer}
+                disabled={
+                  phase === 'saving' ||
+                  phase === 'generating' ||
+                  phase === 'launching' ||
+                  phase === 'stopping'
+                }
+                aria-label="Regenerate and restart preview"
+              >
+                <RefreshCcw size={16} />
+              </ActionIcon>
+            </Tooltip>
+            <Button
+              variant="default"
+              size="sm"
+              leftSection={<Square size={14} fill="currentColor" />}
+              onClick={onClose}
+            >
+              Stop
+            </Button>
+          </div>
         </div>
       </div>
 
       {updateErrorMessage && (
-        <div
-          className="flex shrink-0 items-center gap-2 border-b border-destructive/25 bg-destructive/8 px-5 py-2 text-xs text-destructive"
-          role="alert"
-        >
-          <AlertTriangle className="h-4 w-4 shrink-0" />
-          <span className="min-w-0 flex-1">{updateErrorMessage}</span>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="h-7 shrink-0"
-            onClick={RestartPreviewServer}
-          >
+        <div className={styles.updateError} role="alert">
+          <AlertTriangle size={16} />
+          <span>{updateErrorMessage}</span>
+          <Button variant="light" color="red" size="sm" onClick={RestartPreviewServer}>
             Restart
           </Button>
         </div>
       )}
 
-      <div
-        ref={previewAreaRef}
-        className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-muted/35 p-6"
-      >
+      <div ref={previewAreaRef} className={styles.previewArea}>
         <div
-          className="relative shrink-0"
+          className={styles.scaledPhone}
           style={{
             height: scaledPhoneSize.height,
             width: scaledPhoneSize.width,
           }}
         >
           <div
-            className="absolute left-0 top-0 origin-top-left rounded-[48px] bg-[#111316] p-[10px] shadow-[0_24px_70px_rgba(0,0,0,0.35)] ring-1 ring-white/10"
+            className={styles.phoneFrame}
             style={{
               height: phoneHeight,
               transform: `scale(${scale})`,
@@ -469,32 +403,28 @@ const LivePreviewPanel = ({ open, onClose }: ILivePreviewPanelProps) => {
             }}
           >
             <div
-              className="relative overflow-hidden rounded-[38px] bg-white"
+              className={styles.phoneViewport}
               style={{
                 height: device.height,
                 width: device.width,
               }}
             >
               <div
-                className="pointer-events-none absolute left-0 right-0 top-0 z-10 bg-white"
+                className={styles.safeArea}
                 style={{ height: device.safeAreaTop }}
                 aria-hidden="true"
                 data-preview-safe-area={deviceId}
               />
 
               {device.cutout === 'notch' && (
-                <div
-                  className="pointer-events-none absolute left-1/2 top-0 z-20 flex h-[30px] w-[120px] -translate-x-1/2 items-center justify-center rounded-b-[18px] bg-[#111316]"
-                  aria-hidden="true"
-                  data-preview-cutout="notch"
-                >
-                  <div className="h-1 w-10 rounded-full bg-white/20" />
+                <div className={styles.notch} aria-hidden="true" data-preview-cutout="notch">
+                  <div className={styles.notchSpeaker} />
                 </div>
               )}
 
               {device.cutout === 'punch-hole' && (
                 <div
-                  className="pointer-events-none absolute left-1/2 top-[9px] z-20 h-[14px] w-[14px] -translate-x-1/2 rounded-full bg-[#111316] ring-1 ring-black/30"
+                  className={styles.punchHole}
                   aria-hidden="true"
                   data-preview-cutout="punch-hole"
                 />
@@ -505,7 +435,7 @@ const LivePreviewPanel = ({ open, onClose }: ILivePreviewPanelProps) => {
                   key={frameKey}
                   src={previewUrl}
                   title={`${device.label} Flutter live preview`}
-                  className="absolute left-0 w-full border-0 bg-white"
+                  className={styles.previewFrame}
                   style={{
                     height: applicationViewportHeight,
                     top: device.safeAreaTop,
@@ -521,41 +451,40 @@ const LivePreviewPanel = ({ open, onClose }: ILivePreviewPanelProps) => {
 
               {(phase !== 'ready' || !previewUrl) && (
                 <div
-                  className="absolute left-0 z-10 flex w-full items-center justify-center bg-background p-8"
+                  className={styles.previewState}
                   style={{
                     height: applicationViewportHeight,
                     top: device.safeAreaTop,
                   }}
                 >
                   {phase === 'error' ? (
-                    <div className="w-full max-w-xs text-center">
-                      <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10 text-destructive">
-                        <AlertTriangle className="h-6 w-6" />
+                    <div className={styles.stateCard}>
+                      <div className={styles.errorIcon}>
+                        <AlertTriangle size={24} />
                       </div>
-                      <h3 className="text-base font-semibold">Preview unavailable</h3>
-                      <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                      <h3>Preview unavailable</h3>
+                      <p className={styles.stateDescription}>
                         {errorMessage || phaseDetails.description}
                       </p>
-                      <Button type="button" className="mt-5" onClick={() => void launchPreview()}>
-                        <RefreshCcw />
+                      <Button
+                        className={styles.stateAction}
+                        leftSection={<RefreshCcw size={16} />}
+                        onClick={() => void launchPreview()}
+                      >
                         Try again
                       </Button>
                     </div>
                   ) : (
-                    <div className="w-full max-w-xs">
-                      <div className="mb-5 flex items-center gap-3">
-                        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                    <div className={styles.stateCard}>
+                      <div className={styles.loadingHeader}>
+                        <Loader2 size={24} className={styles.spinning} />
                         <div>
-                          <p className="text-sm font-semibold">{phaseDetails.label}</p>
-                          <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                            {phaseDetails.description}
-                          </p>
+                          <p className={styles.loadingTitle}>{phaseDetails.label}</p>
+                          <p className={styles.loadingDescription}>{phaseDetails.description}</p>
                         </div>
                       </div>
-                      <Progress value={phaseDetails.progress} className="h-1.5" />
-                      <p className="mt-2 text-right text-xs tabular-nums text-muted-foreground">
-                        {phaseDetails.progress}%
-                      </p>
+                      <Progress value={phaseDetails.progress} className={styles.progress} />
+                      <p className={styles.progressValue}>{phaseDetails.progress}%</p>
                     </div>
                   )}
                 </div>
@@ -563,41 +492,40 @@ const LivePreviewPanel = ({ open, onClose }: ILivePreviewPanelProps) => {
 
               {isFrameLoading && (
                 <div
-                  className="absolute left-0 z-10 flex w-full items-center justify-center bg-background"
+                  className={styles.previewState}
                   style={{
                     height: applicationViewportHeight,
                     top: device.safeAreaTop,
                   }}
                 >
-                  <div className="text-center">
-                    <Loader2 className="mx-auto h-6 w-6 animate-spin text-primary" />
-                    <p className="mt-3 text-sm font-medium">Loading Flutter view</p>
+                  <div className={styles.loadingFrameState}>
+                    <Loader2 size={24} className={styles.spinning} />
+                    <p>Loading Flutter view</p>
                   </div>
                 </div>
               )}
 
               {hasFrameError && (
                 <div
-                  className="absolute left-0 z-10 flex w-full items-center justify-center bg-background p-8"
+                  className={styles.previewState}
                   style={{
                     height: applicationViewportHeight,
                     top: device.safeAreaTop,
                   }}
                 >
-                  <div className="text-center">
-                    <AlertTriangle className="mx-auto h-7 w-7 text-destructive" />
-                    <p className="mt-3 text-sm font-semibold">Preview page failed to load</p>
-                    <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                  <div className={styles.stateCard}>
+                    <AlertTriangle size={28} className={styles.frameErrorIcon} />
+                    <p className={styles.frameErrorTitle}>Preview page failed to load</p>
+                    <p className={styles.loadingDescription}>
                       The Flutter server may still be starting or may no longer be reachable.
                     </p>
                     <Button
-                      type="button"
-                      variant="outline"
+                      variant="default"
                       size="sm"
-                      className="mt-4"
+                      className={styles.stateAction}
+                      leftSection={<RotateCw size={16} />}
                       onClick={RefreshPreviewFrame}
                     >
-                      <RotateCw />
                       Reload
                     </Button>
                   </div>

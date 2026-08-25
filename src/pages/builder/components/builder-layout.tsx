@@ -21,6 +21,12 @@ import { Button, Group, Paper, Text } from '@mantine/core';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import styles from '@/pages/builder/components/builder-layout.module.css';
 
+const isLucideIcon = (value: unknown): value is LucideIcon =>
+  typeof value === 'object' &&
+  value !== null &&
+  '$$typeof' in value &&
+  typeof value.$$typeof === 'symbol';
+
 export const BuilderLayout = () => {
   const [activeType, setActiveType] = useState<WidgetType | null>(null);
   const [livePreviewOpen, setLivePreviewOpen] = useState(false);
@@ -54,10 +60,7 @@ export const BuilderLayout = () => {
   const resolvedIcon = definition
     ? LucideIcons[definition.icon as keyof typeof LucideIcons]
     : undefined;
-  const IconComponent: LucideIcon =
-    typeof resolvedIcon === 'object' && resolvedIcon !== null && '$$typeof' in resolvedIcon
-      ? resolvedIcon
-      : LucideIcons.Box;
+  const IconComponent = isLucideIcon(resolvedIcon) ? resolvedIcon : LucideIcons.Box;
 
   return (
     <>
@@ -112,14 +115,12 @@ export const BuilderLayout = () => {
       </DndContext>
 
       {confirmationDialog && (
-        <div className="fixed inset-0 z-50 pointer-events-none">
+        <div className={styles.confirmationLayer}>
           <div
-            className="pointer-events-auto"
+            className={styles.confirmationAnchor}
             style={{
-              position: 'absolute',
               top: confirmationDialog.anchor?.y ?? 24,
               left: confirmationDialog.anchor?.x ?? 24,
-              transform: 'translate(-50%, 0)',
             }}
             role="dialog"
             aria-live="polite"

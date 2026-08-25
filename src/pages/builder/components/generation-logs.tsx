@@ -1,45 +1,36 @@
-import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useCallback, useEffect, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
-  FileText,
-  RefreshCw,
-  Loader2,
   AlertCircle,
-  Info,
   AlertTriangle,
   CheckCircle,
-  Play,
-  Package,
+  FileText,
+  Info,
+  Loader2,
   Monitor,
+  Package,
+  Play,
+  RefreshCw,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/ui/dialog';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Badge } from '@/components/ui/badge';
-import { PROJECT_SERVICE } from '@/api/projects';
-import type { IProjectGenerationLog } from '@/types/api/project-types';
-import { useBuilderStore } from '@/stores/builder/use-builder-store';
+import { Alert, Badge, Button, Group, Modal, ScrollArea, Stack, Text } from '@mantine/core';
 import { format, isValid } from 'date-fns';
+import { PROJECT_SERVICE } from '@/api/projects';
+import { useBuilderStore } from '@/stores/builder/use-builder-store';
+import type { IProjectGenerationLog } from '@/types/api/project-types';
+import styles from '@/pages/builder/components/generation-logs.module.css';
 
-interface GenerationLogsProps {
-  open: boolean;
+interface IGenerationLogsProps {
   onOpenChange: (open: boolean) => void;
+  open: boolean;
 }
 
-export const GenerationLogs = ({ open, onOpenChange }: GenerationLogsProps) => {
+export const GenerationLogs = ({ onOpenChange, open }: IGenerationLogsProps) => {
   const { serverProjectId } = useBuilderStore();
-
   const [logs, setLogs] = useState<IProjectGenerationLog[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchLogs = async () => {
+  const fetchLogs = useCallback(async () => {
     if (!serverProjectId) return;
 
     setIsLoading(true);
@@ -47,152 +38,210 @@ export const GenerationLogs = ({ open, onOpenChange }: GenerationLogsProps) => {
     try {
       const data = await PROJECT_SERVICE.getGenerationLogs(serverProjectId);
       setLogs(Array.isArray(data) ? data : []);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to load logs';
+    } catch (requestError) {
+      const message = requestError instanceof Error ? requestError.message : 'Failed to load logs';
       setError(message);
-      console.error('Failed to fetch logs:', err);
+      console.error('Failed to fetch logs:', requestError);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [serverProjectId]);
 
   useEffect(() => {
     if (open && serverProjectId) {
-      fetchLogs();
+      void fetchLogs();
     }
-  }, [open, serverProjectId]);
+  }, [fetchLogs, open, serverProjectId]);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>Generation Logs</DialogTitle>
-          <DialogDescription>
-            View the generation history and logs for this project.
-          </DialogDescription>
-        </DialogHeader>
+    <Modal
+      centered
+      classNames={{
+        body: styles.modalBody,
+        content: styles.modalContent,
+        header: styles.modalHeader,
+        title: styles.modalTitle,
+      }}
+      opened={open}
+      size="xl"
+      title="Generation logs"
+      onClose={() => onOpenChange(false)}
+    >
+      <div className={styles.dialogLayout}>
+        <Text className={styles.modalDescription} size="sm">
+          Review generation, preview, and build activity for the current project.
+        </Text>
 
         {!serverProjectId ? (
-          <div className="text-center py-12 text-muted-foreground">
-            <FileText className="w-12 h-12 mx-auto mb-2 opacity-50" />
-            <p>Save your project first to view generation logs</p>
-          </div>
+          <EmptyState message="Save your project first to view generation logs" />
         ) : (
           <>
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-sm text-muted-foreground">{logs.length} log(s) found</span>
+            <motion.div
+              animate={{ opacity: 1, y: 0 }}
+              className={styles.logToolbar}
+              initial={{ opacity: 0, y: 6 }}
+              transition={{ duration: 0.18 }}
+            >
+              <div>
+                <Text className={styles.listHeading}>Activity feed</Text>
+                <Text c="dimmed" size="xs">
+                  {logs.length} log(s) recorded for this project
+                </Text>
+              </div>
               <Button
-                variant="ghost"
-                size="sm"
-                onClick={fetchLogs}
-                disabled={isLoading}
-                className="gap-2"
+                leftSection={
+                  <RefreshCw className={isLoading ? styles.spinningIcon : undefined} size={15} />
+                }
+                loading={isLoading}
+                size="xs"
+                variant="light"
+                onClick={() => void fetchLogs()}
               >
-                <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
                 Refresh
               </Button>
-            </div>
+            </motion.div>
 
             {error && (
-              <div className="flex items-center gap-2 p-3 rounded-md bg-destructive/10 text-destructive mb-4">
-                <AlertCircle className="w-4 h-4" />
-                <span className="text-sm">{error}</span>
-              </div>
+              <Alert className={styles.errorAlert} color="red" icon={<AlertCircle size={16} />}>
+                {error}
+              </Alert>
             )}
 
-            <ScrollArea className="h-[400px] pr-4">
+            <ScrollArea className={styles.logsScrollArea} type="auto">
               <AnimatePresence mode="popLayout">
                 {isLoading ? (
-                  <div className="flex items-center justify-center py-12">
-                    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-                  </div>
-                ) : !Array.isArray(logs) || logs.length === 0 ? (
-                  <div className="text-center py-12 text-muted-foreground">
-                    <FileText className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                    <p>No generation logs yet</p>
-                    <p className="text-xs mt-1">Generate your app to see logs here</p>
-                  </div>
+                  <LoadingState />
+                ) : logs.length === 0 ? (
+                  <EmptyState message="No generation logs yet" />
                 ) : (
-                  <div className="space-y-2">
+                  <Stack gap="xs">
                     {logs.map((log, index) => (
                       <motion.div
                         key={`${log.step || 'log'}-${log.timestamp || index}-${index}`}
-                        initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
+                        className={`${styles.logCard} ${getStatusCardClass(log.status)}`}
                         exit={{ opacity: 0, scale: 0.95 }}
-                        className="p-3 border rounded-lg"
+                        initial={{ opacity: 0, y: 10 }}
+                        transition={{ duration: 0.16 }}
+                        whileHover={{ x: 2 }}
                       >
-                        <div className="flex items-start gap-3">
+                        <Group align="flex-start" gap="sm" wrap="nowrap">
                           {getStatusIcon(log.status)}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
+                          <div className={styles.logDetails}>
+                            <Group className={styles.logMeta} gap="xs">
                               {getStatusBadge(log.status)}
-                              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                              <span className={styles.logStep}>
                                 {getStepIcon(log.step)}
                                 {log.step || 'unknown_step'}
                               </span>
-                              <span className="text-xs text-muted-foreground">
+                              <span className={styles.logTimestamp}>
                                 {formatTimestamp(log.timestamp)}
                               </span>
-                            </div>
-                            <p className="text-sm">{log.message}</p>
+                            </Group>
+                            <Text className={styles.logMessage} size="sm">
+                              {log.message}
+                            </Text>
                           </div>
-                        </div>
+                        </Group>
                       </motion.div>
                     ))}
-                  </div>
+                  </Stack>
                 )}
               </AnimatePresence>
             </ScrollArea>
           </>
         )}
-      </DialogContent>
-    </Dialog>
+      </div>
+    </Modal>
   );
 };
 
-const getStatusIcon = (status?: string) => {
+const LoadingState = () => (
+  <div className={styles.loadingState}>
+    <Loader2 className={styles.loadingIcon} />
+    <Text c="dimmed" size="sm">
+      Loading generation logs
+    </Text>
+  </div>
+);
+
+const EmptyState = ({ message }: { message: string }) => (
+  <div className={styles.emptyState}>
+    <FileText className={styles.emptyStateIcon} />
+    <Text c="dimmed" size="sm">
+      {message}
+    </Text>
+  </div>
+);
+
+const getStatusCardClass = (status?: string): string => {
   switch ((status || 'info').toLowerCase()) {
     case 'error':
-      return <AlertCircle className="w-4 h-4 text-destructive" />;
+      return styles.logCardError;
     case 'warning':
-      return <AlertTriangle className="w-4 h-4 text-amber-500" />;
+      return styles.logCardWarning;
     case 'success':
-      return <CheckCircle className="w-4 h-4 text-emerald-500" />;
+      return styles.logCardSuccess;
     default:
-      return <Info className="w-4 h-4 text-blue-500" />;
+      return styles.logCardInfo;
+  }
+};
+
+const getStatusIcon = (status?: string) => {
+  const className = styles.logStatusIcon;
+
+  switch ((status || 'info').toLowerCase()) {
+    case 'error':
+      return <AlertCircle className={`${className} ${styles.statusError}`} />;
+    case 'warning':
+      return <AlertTriangle className={`${className} ${styles.statusWarning}`} />;
+    case 'success':
+      return <CheckCircle className={`${className} ${styles.statusSuccess}`} />;
+    default:
+      return <Info className={`${className} ${styles.statusInfo}`} />;
   }
 };
 
 const getStatusBadge = (status?: string) => {
   const value = (status || 'info').toLowerCase();
+
   switch (value) {
     case 'error':
-      return <Badge variant="destructive">{value}</Badge>;
+      return (
+        <Badge color="red" size="xs" variant="light">
+          {value}
+        </Badge>
+      );
     case 'warning':
-      return <Badge className="bg-amber-500">{value}</Badge>;
+      return (
+        <Badge color="yellow" size="xs" variant="light">
+          {value}
+        </Badge>
+      );
     case 'success':
-      return <Badge className="bg-emerald-500">{value}</Badge>;
+      return (
+        <Badge color="green" size="xs" variant="light">
+          {value}
+        </Badge>
+      );
     default:
-      return <Badge variant="secondary">{value}</Badge>;
+      return (
+        <Badge color="blue" size="xs" variant="light">
+          {value}
+        </Badge>
+      );
   }
 };
 
 const getStepIcon = (step?: string) => {
   const normalized = (step || '').toLowerCase();
-  if (normalized.includes('start')) {
-    return <Play className="w-4 h-4 text-muted-foreground" />;
-  }
-  if (normalized.includes('build_apk')) {
-    return <Package className="w-4 h-4 text-muted-foreground" />;
-  }
-  if (normalized.includes('preview')) {
-    return <Monitor className="w-4 h-4 text-muted-foreground" />;
-  }
-  if (normalized.includes('generate')) {
-    return <FileText className="w-4 h-4 text-muted-foreground" />;
-  }
-  return <Info className="w-4 h-4 text-muted-foreground" />;
+  const className = styles.logStepIcon;
+
+  if (normalized.includes('start')) return <Play className={className} />;
+  if (normalized.includes('build_apk')) return <Package className={className} />;
+  if (normalized.includes('preview')) return <Monitor className={className} />;
+  if (normalized.includes('generate')) return <FileText className={className} />;
+  return <Info className={className} />;
 };
 
 const formatTimestamp = (timestamp?: string) => {

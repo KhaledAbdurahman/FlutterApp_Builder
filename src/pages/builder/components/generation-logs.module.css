@@ -1,0 +1,224 @@
+.modalContent {
+  display: flex;
+  width: min(52rem, calc(100vw - 2rem));
+  height: min(42rem, calc(100dvh - 2rem));
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-surface);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-elevated);
+}
+
+.modalHeader {
+  flex: 0 0 auto;
+  padding: var(--space-5) var(--space-6) 0;
+  background: transparent;
+}
+
+.modalTitle {
+  color: var(--color-text);
+  font-weight: 700;
+}
+
+.modalBody {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0 var(--space-6) var(--space-6);
+}
+
+.dialogLayout {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+}
+
+.modalDescription {
+  margin-bottom: var(--space-4);
+  color: var(--color-text-muted);
+}
+
+.logToolbar {
+  display: flex;
+  min-height: 3.5rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 24%, var(--color-border));
+  border-radius: var(--radius-surface);
+  background: var(--color-surface-muted);
+}
+
+.listHeading {
+  color: var(--color-text);
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.errorAlert {
+  flex: 0 0 auto;
+  margin-bottom: var(--space-3);
+}
+
+.logsScrollArea {
+  min-height: 0;
+  flex: 1;
+}
+
+.logCard {
+  position: relative;
+  padding: var(--space-3);
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-surface);
+  background: var(--color-surface-muted);
+  transition:
+    border-color 150ms ease,
+    background-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.logCard:hover {
+  border-color: color-mix(in srgb, var(--color-accent) 34%, var(--color-border));
+  background: color-mix(in srgb, var(--color-accent) 5%, var(--color-surface));
+  box-shadow: var(--shadow-card);
+}
+
+.logCard::before {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 0.1875rem;
+  background: var(--color-accent);
+  content: '';
+}
+
+.logCardError::before {
+  background: var(--color-danger);
+}
+
+.logCardWarning::before {
+  background: var(--color-warning);
+}
+
+.logCardSuccess::before {
+  background: var(--color-success);
+}
+
+.logCardInfo::before {
+  background: var(--color-accent);
+}
+
+.logDetails {
+  min-width: 0;
+  flex: 1;
+}
+
+.logStatusIcon {
+  width: 1rem;
+  height: 1rem;
+  flex: 0 0 auto;
+  margin-top: 0.125rem;
+}
+
+.statusError {
+  color: var(--color-danger);
+}
+
+.statusWarning {
+  color: var(--color-warning);
+}
+
+.statusSuccess {
+  color: var(--color-success);
+}
+
+.statusInfo {
+  color: var(--color-accent);
+}
+
+.logMeta,
+.logStep {
+  display: flex;
+  align-items: center;
+}
+
+.logMeta {
+  flex-wrap: wrap;
+  margin-bottom: 0.25rem;
+}
+
+.logStep,
+.logTimestamp {
+  gap: 0.25rem;
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+}
+
+.logStepIcon {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+.logMessage {
+  color: var(--color-text);
+}
+
+.loadingState,
+.emptyState {
+  display: grid;
+  min-height: 14rem;
+  place-content: center;
+  gap: var(--space-2);
+  text-align: center;
+}
+
+.loadingIcon,
+.emptyStateIcon {
+  width: 2rem;
+  height: 2rem;
+  justify-self: center;
+  color: var(--color-text-muted);
+}
+
+.loadingIcon,
+.spinningIcon {
+  animation: spin 900ms linear infinite;
+}
+
+.emptyStateIcon {
+  opacity: 0.65;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 40rem) {
+  .modalContent {
+    width: calc(100vw - 1rem);
+    height: min(42rem, calc(100dvh - 1rem));
+  }
+
+  .modalHeader {
+    padding-inline: var(--space-4);
+  }
+
+  .modalBody {
+    padding-inline: var(--space-4);
+  }
+
+  .logToolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}

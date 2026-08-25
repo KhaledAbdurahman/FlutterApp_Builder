@@ -85,14 +85,6 @@
   color: hsl(var(--secondary-foreground));
 }
 
-.settingsButton {
-  color: hsl(var(--foreground));
-}
-
-.settingsButton:hover {
-  background: hsl(var(--accent) / 0.12);
-}
-
 .outlineButton {
   gap: 0.5rem;
   border-color: hsl(var(--border));

@@ -3,7 +3,6 @@ import { motion } from 'framer-motion';
 import {
   Play,
   Download,
-  Settings,
   ChevronDown,
   Plus,
   X,
@@ -18,7 +17,6 @@ import {
   MonitorPlay,
 } from 'lucide-react';
 import {
-  ActionIcon,
   Button,
   Divider,
   Group,
@@ -208,8 +206,6 @@ export const TopBar = ({ isPreviewOpen, onLaunchPreview }: ITopBarProps) => {
     setActiveScreen,
     addScreen,
     deleteScreen,
-    setProjectName,
-    setPackageName,
     exportProject,
     serverProjectId,
     importProjectData,
@@ -219,9 +215,6 @@ export const TopBar = ({ isPreviewOpen, onLaunchPreview }: ITopBarProps) => {
   const [newScreenName, setNewScreenName] = useState('');
   const [screenMenuOpen, setScreenMenuOpen] = useState(false);
   const [addScreenDialogOpen, setAddScreenDialogOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [tempProjectName, setTempProjectName] = useState(project.app_name);
-  const [tempPackageName, setTempPackageName] = useState(project.package_name);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isBuildingApk, setIsBuildingApk] = useState(false);
   const [projectManagerOpen, setProjectManagerOpen] = useState(false);
@@ -333,13 +326,6 @@ export const TopBar = ({ isPreviewOpen, onLaunchPreview }: ITopBarProps) => {
     a.click();
     URL.revokeObjectURL(url);
     ChooseNotification.success({ message: 'Project exported' });
-  };
-
-  const handleSaveSettings = () => {
-    setProjectName(tempProjectName);
-    setPackageName(tempPackageName);
-    setSettingsOpen(false);
-    ChooseNotification.success({ message: 'Settings saved' });
   };
 
   const validateImportedScreens = useCallback(() => {
@@ -1043,50 +1029,6 @@ export const TopBar = ({ isPreviewOpen, onLaunchPreview }: ITopBarProps) => {
               Logs
             </Button>
           )}
-          <Tooltip label="Project settings">
-            <ActionIcon
-              variant="subtle"
-              color="gray"
-              size="lg"
-              className={styles.settingsButton}
-              onClick={() => setSettingsOpen(true)}
-              aria-label="Project settings"
-            >
-              <Settings size={17} />
-            </ActionIcon>
-          </Tooltip>
-          <Modal
-            opened={settingsOpen}
-            onClose={() => setSettingsOpen(false)}
-            title="Project settings"
-            centered
-            radius="md"
-            classNames={{ content: styles.modalContent, header: styles.modalHeader }}
-          >
-            <Stack gap="md">
-              <TextInput
-                label="App name"
-                value={tempProjectName}
-                onChange={(event) => setTempProjectName(event.target.value)}
-                placeholder="my_flutter_app"
-              />
-              <TextInput
-                label="Package name"
-                value={tempPackageName}
-                onChange={(event) => setTempPackageName(event.target.value)}
-                placeholder="com.example.myapp"
-              />
-              <Button
-                variant="light"
-                color="indigo"
-                radius="md"
-                className={styles.modalPrimaryButton}
-                onClick={handleSaveSettings}
-              >
-                Save settings
-              </Button>
-            </Stack>
-          </Modal>
           <Button
             variant="default"
             size="sm"

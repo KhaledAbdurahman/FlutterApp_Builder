@@ -7,6 +7,7 @@ import { useBuilderStore } from '@/stores/builder/use-builder-store';
 import { cn } from '@/lib/utils';
 import * as LucideIcons from 'lucide-react';
 import { useEffect, useState } from 'react';
+import styles from '@/pages/builder/components/phone-canvas.module.css';
 
 interface IWidgetRendererProps {
   widget: FlutterWidget;
@@ -33,10 +34,7 @@ const DrawerContent = ({ drawer, depth, isDragging, onSelect }: IDrawerContentPr
   return (
     <div
       ref={setNodeRef}
-      className={cn(
-        'flex-1 overflow-auto p-3',
-        isOver && isDragging && 'ring-2 ring-accent ring-dashed',
-      )}
+      className={cn(styles.drawerContent, isOver && isDragging && styles.dropTarget)}
       onClick={(e) => {
         e.stopPropagation();
         onSelect(drawer.id);
@@ -157,10 +155,9 @@ const WidgetRenderer = ({ widget, depth = 0, renderContext }: IWidgetRendererPro
   };
 
   const baseClasses = cn(
-    'relative shrink-0 cursor-pointer transition-all duration-150',
-    isSelected && 'ring-2 ring-primary ring-offset-1 ring-offset-background',
-    isOver && isDragging && 'ring-2 ring-accent ring-dashed',
-    'hover:ring-1 hover:ring-primary/50',
+    styles.widget,
+    isSelected && styles.widgetSelected,
+    isOver && isDragging && styles.dropTarget,
   );
 
   const renderChildren = (parentFlexDirection?: 'row' | 'column') => {
@@ -194,7 +191,7 @@ const WidgetRenderer = ({ widget, depth = 0, renderContext }: IWidgetRendererPro
       child.type === 'Positioned' ? (
         <WidgetRenderer key={child.id} widget={child} depth={depth + 1} />
       ) : (
-        <div key={child.id} className="col-start-1 row-start-1 self-start justify-self-start">
+        <div key={child.id} className={styles.stackChild}>
           <WidgetRenderer widget={child} depth={depth + 1} />
         </div>
       ),
@@ -216,17 +213,14 @@ const WidgetRenderer = ({ widget, depth = 0, renderContext }: IWidgetRendererPro
         <div
           ref={setNodeRef}
           onClick={handleClick}
-          className={cn(baseClasses, 'flex flex-col h-full text-gray-900 relative')}
+          className={cn(baseClasses, styles.scaffold)}
           style={{ backgroundColor: widget.props.backgroundColor || '#FFFFFF' }}
         >
           {/* AppBar slot */}
           <div
             ref={setAppBarSlotRef}
             style={{ height: appBarHeight + safeAreaTop }}
-            className={cn(
-              'shrink-0',
-              isOverAppBarSlot && isDragging && 'ring-2 ring-accent ring-dashed',
-            )}
+            className={cn(styles.scaffoldSlot, isOverAppBarSlot && isDragging && styles.dropTarget)}
           >
             {appBar && (
               <div
@@ -235,8 +229,8 @@ const WidgetRenderer = ({ widget, depth = 0, renderContext }: IWidgetRendererPro
                   setSelectedWidget(appBar.id);
                 }}
                 className={cn(
-                  'flex items-center px-4 gap-2',
-                  selectedWidgetId === appBar.id && 'ring-2 ring-primary',
+                  styles.scaffoldAppBar,
+                  selectedWidgetId === appBar.id && styles.scaffoldAppBarSelected,
                 )}
                 style={{
                   height: appBar.props.height ?? 56,
@@ -254,10 +248,10 @@ const WidgetRenderer = ({ widget, depth = 0, renderContext }: IWidgetRendererPro
                       e.stopPropagation();
                       setIsDrawerOpen(!isDrawerOpen);
                     }}
-                    className="flex items-center justify-center w-8 h-8 rounded hover:bg-white/20"
+                    className={styles.appBarIconButton}
                     aria-label="Open navigation drawer"
                   >
-                    <MenuIcon className="w-5 h-5 text-white" />
+                    <MenuIcon className={styles.appBarIcon} />
                   </button>
                 )}
                 {!drawer && appBar.props.showBackButton && (
@@ -266,17 +260,20 @@ const WidgetRenderer = ({ widget, depth = 0, renderContext }: IWidgetRendererPro
                     onClick={(e) => {
                       e.stopPropagation();
                     }}
-                    className="flex items-center justify-center w-8 h-8 rounded hover:bg-white/20"
+                    className={styles.appBarIconButton}
                     aria-label="Back"
                   >
-                    <LucideIcons.ArrowLeft className="w-5 h-5 text-white" />
+                    <LucideIcons.ArrowLeft className={styles.appBarIcon} />
                   </button>
                 )}
                 <div
-                  className={cn('flex-1', appBar.props.centerTitle ? 'text-center' : 'text-left')}
+                  className={cn(
+                    styles.appBarTitle,
+                    appBar.props.centerTitle ? styles.textCentered : styles.textLeft,
+                  )}
                 >
                   <span
-                    className="font-medium text-lg"
+                    className={styles.appBarTitleText}
                     style={{ color: appBar.props.color || '#FFFFFF' }}
                   >
                     {appBar.props.title || 'App Bar'}
@@ -290,9 +287,9 @@ const WidgetRenderer = ({ widget, depth = 0, renderContext }: IWidgetRendererPro
           <div
             ref={setBodySlotRef}
             className={cn(
-              'min-h-0 flex-1',
-              bodyControlsOverflow ? 'overflow-hidden' : 'overflow-auto',
-              isOverBodySlot && isDragging && 'ring-2 ring-accent ring-dashed',
+              styles.scaffoldBody,
+              bodyControlsOverflow ? styles.scaffoldBodyHidden : styles.scaffoldBodyScrollable,
+              isOverBodySlot && isDragging && styles.dropTarget,
             )}
           >
             {body ? (
@@ -302,7 +299,7 @@ const WidgetRenderer = ({ widget, depth = 0, renderContext }: IWidgetRendererPro
                 renderContext={{ isScaffoldBody: true }}
               />
             ) : (
-              <div className="h-full flex items-center justify-center">
+              <div className={styles.scaffoldEmptyBody}>
                 <DropZoneIndicator />
               </div>
             )}
@@ -313,8 +310,8 @@ const WidgetRenderer = ({ widget, depth = 0, renderContext }: IWidgetRendererPro
             ref={setBottomNavSlotRef}
             style={{ height: bottomNavHeight + safeAreaBottom }}
             className={cn(
-              'shrink-0',
-              isOverBottomNavSlot && isDragging && 'ring-2 ring-accent ring-dashed',
+              styles.scaffoldSlot,
+              isOverBottomNavSlot && isDragging && styles.dropTarget,
             )}
           >
             {bottomNavigationBar && (
@@ -323,19 +320,16 @@ const WidgetRenderer = ({ widget, depth = 0, renderContext }: IWidgetRendererPro
                   e.stopPropagation();
                   setSelectedWidget(bottomNavigationBar.id);
                 }}
-                className="h-full border-t border-gray-200 bg-white flex items-center justify-around px-4"
+                className={styles.scaffoldBottomNavigation}
               >
                 {bottomNavigationBar.props.items && bottomNavigationBar.props.items.length > 0 ? (
                   bottomNavigationBar.props.items.map((item, index) => {
                     const IconComponent = resolveLucideIcon(item.icon);
                     const isActive = (bottomNavigationBar.props.currentIndex ?? 0) === index;
                     return (
-                      <div
-                        key={`${item.label}-${index}`}
-                        className="flex flex-col items-center text-xs"
-                      >
+                      <div key={`${item.label}-${index}`} className={styles.bottomNavigationItem}>
                         <IconComponent
-                          className="w-5 h-5"
+                          className={styles.bottomNavigationIcon}
                           style={{
                             color: isActive
                               ? bottomNavigationBar.props.selectedItemColor || '#6200EE'
@@ -355,11 +349,11 @@ const WidgetRenderer = ({ widget, depth = 0, renderContext }: IWidgetRendererPro
                     );
                   })
                 ) : (
-                  <div className="flex-1 flex items-center justify-center">
-                    <div className="flex flex-col items-center text-xs text-muted-foreground">
+                  <div className={styles.bottomNavigationEmpty}>
+                    <div className={styles.bottomNavigationMutedItem}>
                       {(() => {
                         const HomeIcon = resolveLucideIcon('home');
-                        return <HomeIcon className="w-5 h-5" />;
+                        return <HomeIcon className={styles.bottomNavigationIcon} />;
                       })()}
                       <span>Home</span>
                     </div>
@@ -373,13 +367,10 @@ const WidgetRenderer = ({ widget, depth = 0, renderContext }: IWidgetRendererPro
           {drawer && (
             <>
               {isDrawerOpen && (
-                <div
-                  className="absolute inset-0 bg-black/40 z-20"
-                  onClick={() => setIsDrawerOpen(false)}
-                />
+                <div className={styles.drawerScrim} onClick={() => setIsDrawerOpen(false)} />
               )}
               <motion.div
-                className="absolute top-0 left-0 h-full w-64 bg-white shadow-lg z-30"
+                className={styles.drawerPanel}
                 initial={{ x: -260 }}
                 animate={{ x: isDrawerOpen ? 0 : -260 }}
                 transition={{ type: 'spring', stiffness: 260, damping: 26 }}
@@ -387,12 +378,12 @@ const WidgetRenderer = ({ widget, depth = 0, renderContext }: IWidgetRendererPro
                 <div
                   ref={setDrawerSlotRef}
                   className={cn(
-                    'h-full flex flex-col',
-                    isOverDrawerSlot && isDragging && 'ring-2 ring-accent ring-dashed',
+                    styles.drawerPanelContent,
+                    isOverDrawerSlot && isDragging && styles.dropTarget,
                   )}
                 >
                   <div
-                    className="p-4 text-white"
+                    className={styles.drawerHeader}
                     style={{
                       backgroundColor: drawer.props.header?.backgroundColor || '#6200EE',
                     }}
@@ -401,9 +392,11 @@ const WidgetRenderer = ({ widget, depth = 0, renderContext }: IWidgetRendererPro
                       setSelectedWidget(drawer.id);
                     }}
                   >
-                    <p className="font-semibold">{drawer.props.header?.title || 'Menu'}</p>
+                    <p className={styles.drawerHeaderTitle}>
+                      {drawer.props.header?.title || 'Menu'}
+                    </p>
                     {drawer.props.header?.subtitle && (
-                      <p className="text-xs opacity-80">{drawer.props.header.subtitle}</p>
+                      <p className={styles.drawerHeaderSubtitle}>{drawer.props.header.subtitle}</p>
                     )}
                   </div>
                   <DrawerContent
@@ -424,7 +417,7 @@ const WidgetRenderer = ({ widget, depth = 0, renderContext }: IWidgetRendererPro
       return (
         <div
           onClick={handleClick}
-          className={cn(baseClasses, 'flex items-center px-4')}
+          className={cn(baseClasses, styles.standaloneAppBar)}
           style={{
             height: widget.props.height ?? 56,
             backgroundColor: widget.props.backgroundColor || '#6200EE',
@@ -435,9 +428,12 @@ const WidgetRenderer = ({ widget, depth = 0, renderContext }: IWidgetRendererPro
           }}
         >
           {widget.props.showBackButton && (
-            <LucideIcons.ArrowLeft className="w-5 h-5 text-white mr-2" />
+            <LucideIcons.ArrowLeft className={styles.appBarBackIcon} />
           )}
-          <span className="font-medium text-lg" style={{ color: widget.props.color || '#FFFFFF' }}>
+          <span
+            className={styles.appBarTitleText}
+            style={{ color: widget.props.color || '#FFFFFF' }}
+          >
             {widget.props.title || 'App Bar'}
           </span>
         </div>
@@ -451,7 +447,7 @@ const WidgetRenderer = ({ widget, depth = 0, renderContext }: IWidgetRendererPro
         <div
           ref={setNodeRef}
           onClick={handleClick}
-          className={cn(baseClasses, 'min-h-[40px] min-w-0')}
+          className={cn(baseClasses, styles.container)}
           style={{
             backgroundColor: widget.props.backgroundColor || 'transparent',
             padding: widget.props.padding ?? 0,
@@ -482,8 +478,8 @@ const WidgetRenderer = ({ widget, depth = 0, renderContext }: IWidgetRendererPro
           onClick={handleClick}
           className={cn(
             baseClasses,
-            'flex min-h-[60px] min-w-0 items-center justify-center',
-            renderContext?.isScaffoldBody && 'h-full w-full',
+            styles.center,
+            renderContext?.isScaffoldBody && styles.scaffoldBodyFill,
           )}
         >
           {renderSingleChild(renderContext?.isScaffoldBody ? { isScaffoldBody: true } : undefined)}
@@ -498,7 +494,7 @@ const WidgetRenderer = ({ widget, depth = 0, renderContext }: IWidgetRendererPro
         <div
           ref={setNodeRef}
           onClick={handleClick}
-          className={cn(baseClasses, 'flex min-h-[40px] min-w-0 flex-row')}
+          className={cn(baseClasses, styles.row)}
           style={{
             justifyContent: alignmentToFlex(widget.props.mainAxisAlignment),
             alignItems: alignmentToFlex(widget.props.crossAxisAlignment),
@@ -517,10 +513,10 @@ const WidgetRenderer = ({ widget, depth = 0, renderContext }: IWidgetRendererPro
           onClick={handleClick}
           className={cn(
             baseClasses,
-            'flex min-h-[40px] min-w-0 flex-col',
+            styles.column,
             renderContext?.isScaffoldBody &&
               widget.props.mainAxisSize !== 'min' &&
-              'h-full overflow-auto',
+              styles.scaffoldColumn,
           )}
           style={{
             justifyContent: alignmentToFlex(widget.props.mainAxisAlignment),
@@ -544,8 +540,8 @@ const WidgetRenderer = ({ widget, depth = 0, renderContext }: IWidgetRendererPro
           onClick={handleClick}
           className={cn(
             baseClasses,
-            'relative grid min-h-[120px] w-full overflow-hidden',
-            renderContext?.isScaffoldBody && 'h-full',
+            styles.stack,
+            renderContext?.isScaffoldBody && styles.scaffoldStack,
           )}
         >
           {renderStackChildren()}
@@ -559,7 +555,7 @@ const WidgetRenderer = ({ widget, depth = 0, renderContext }: IWidgetRendererPro
       return (
         <span
           onClick={handleClick}
-          className={cn(baseClasses, 'inline-block')}
+          className={cn(baseClasses, styles.textWidget)}
           style={{
             fontSize: widget.props.fontSize || 16,
             color: widget.props.color || '#000000',
@@ -583,7 +579,7 @@ const WidgetRenderer = ({ widget, depth = 0, renderContext }: IWidgetRendererPro
       return (
         <button
           onClick={handleClick}
-          className={cn(baseClasses, 'px-6 py-2 rounded-md text-white font-medium')}
+          className={cn(baseClasses, styles.buttonWidget)}
           style={{
             backgroundColor: widget.props.backgroundColor || '#6200EE',
             color: widget.props.color || '#FFFFFF',
@@ -604,7 +600,7 @@ const WidgetRenderer = ({ widget, depth = 0, renderContext }: IWidgetRendererPro
           onClick={handleClick}
           type={widget.props.obscureText ? 'password' : 'text'}
           placeholder={widget.props.hintText || 'Enter text...'}
-          className={cn(baseClasses, 'border border-gray-300 rounded-md px-3 py-2 w-full')}
+          className={cn(baseClasses, styles.textFieldWidget)}
           style={{
             border: widget.props.border === false ? 'none' : undefined,
           }}
@@ -629,14 +625,14 @@ const WidgetRenderer = ({ widget, depth = 0, renderContext }: IWidgetRendererPro
       return (
         <div
           onClick={handleClick}
-          className={cn(baseClasses, 'flex items-center justify-center')}
+          className={cn(baseClasses, styles.iconWidget)}
           style={{
             width: widget.props.size || 24,
             height: widget.props.size || 24,
             color: widget.props.color || '#000000',
           }}
         >
-          <IconComponent className="w-full h-full" />
+          <IconComponent className={styles.iconWidgetGraphic} />
         </div>
       );
     }
@@ -645,20 +641,20 @@ const WidgetRenderer = ({ widget, depth = 0, renderContext }: IWidgetRendererPro
         <div
           ref={setNodeRef}
           onClick={handleClick}
-          className={cn(baseClasses, 'bg-white border border-gray-200 rounded-md')}
+          className={cn(baseClasses, styles.drawerWidget)}
         >
           <div
-            className="p-3 text-white"
+            className={styles.drawerWidgetHeader}
             style={{
               backgroundColor: widget.props.header?.backgroundColor || '#6200EE',
             }}
           >
-            <p className="font-semibold">{widget.props.header?.title || 'Menu'}</p>
+            <p className={styles.drawerHeaderTitle}>{widget.props.header?.title || 'Menu'}</p>
             {widget.props.header?.subtitle && (
-              <p className="text-xs opacity-80">{widget.props.header.subtitle}</p>
+              <p className={styles.drawerHeaderSubtitle}>{widget.props.header.subtitle}</p>
             )}
           </div>
-          <div className="p-3">
+          <div className={styles.drawerWidgetContent}>
             {renderSingleChild()}
             {(!widget.children || widget.children.length === 0) && (
               <DropZoneIndicator label="Drop one Drawer child" />
@@ -670,20 +666,17 @@ const WidgetRenderer = ({ widget, depth = 0, renderContext }: IWidgetRendererPro
     case 'ListTile': {
       const IconComponent = resolveLucideIcon(widget.props.icon);
       return (
-        <div
-          onClick={handleClick}
-          className={cn(baseClasses, 'flex items-center gap-3 px-3 py-2 rounded-md hover:bg-muted')}
-        >
-          <div className="w-8 h-8 rounded-md bg-muted flex items-center justify-center">
-            <IconComponent className="w-4 h-4 text-muted-foreground" />
+        <div onClick={handleClick} className={cn(baseClasses, styles.listTile)}>
+          <div className={styles.listTileIconContainer}>
+            <IconComponent className={styles.listTileIcon} />
           </div>
-          <div className="flex-1">
-            <p className="text-sm font-medium">{widget.props.title || 'List Item'}</p>
+          <div className={styles.listTileContent}>
+            <p className={styles.listTileTitle}>{widget.props.title || 'List Item'}</p>
             {widget.props.actions?.route && (
-              <p className="text-xs text-muted-foreground">{widget.props.actions.route}</p>
+              <p className={styles.listTileRoute}>{widget.props.actions.route}</p>
             )}
           </div>
-          <LucideIcons.ChevronRight className="w-4 h-4 text-muted-foreground" />
+          <LucideIcons.ChevronRight className={styles.listTileChevron} />
         </div>
       );
     }
@@ -691,10 +684,7 @@ const WidgetRenderer = ({ widget, depth = 0, renderContext }: IWidgetRendererPro
       return (
         <div
           onClick={handleClick}
-          className={cn(
-            baseClasses,
-            'border-t border-gray-200 bg-white flex items-center justify-around px-4',
-          )}
+          className={cn(baseClasses, styles.bottomNavigation)}
           style={{ height: widget.props.height ?? 56 }}
         >
           {widget.props.items && widget.props.items.length > 0 ? (
@@ -705,18 +695,18 @@ const WidgetRenderer = ({ widget, depth = 0, renderContext }: IWidgetRendererPro
                 ? widget.props.selectedItemColor || '#6200EE'
                 : widget.props.unselectedItemColor || '#757575';
               return (
-                <div key={`${item.label}-${index}`} className="flex flex-col items-center text-xs">
-                  <IconComponent className="w-5 h-5" style={{ color }} />
+                <div key={`${item.label}-${index}`} className={styles.bottomNavigationItem}>
+                  <IconComponent className={styles.bottomNavigationIcon} style={{ color }} />
                   <span style={{ color }}>{item.label}</span>
                 </div>
               );
             })
           ) : (
-            <div className="flex-1 flex items-center justify-center">
-              <div className="flex flex-col items-center text-xs text-muted-foreground">
+            <div className={styles.bottomNavigationEmpty}>
+              <div className={styles.bottomNavigationMutedItem}>
                 {(() => {
                   const HomeIcon = resolveLucideIcon('home');
-                  return <HomeIcon className="w-5 h-5" />;
+                  return <HomeIcon className={styles.bottomNavigationIcon} />;
                 })()}
                 <span>Home</span>
               </div>
@@ -731,7 +721,7 @@ const WidgetRenderer = ({ widget, depth = 0, renderContext }: IWidgetRendererPro
           onClick={handleClick}
           src={widget.props.src || 'https://via.placeholder.com/150'}
           alt="Widget"
-          className={cn(baseClasses, 'max-w-full h-auto')}
+          className={cn(baseClasses, styles.imageWidget)}
           style={{
             objectFit: FlutterImageFitToCssObjectFit[widget.props.fit || 'cover'],
             width: widget.props.width,
@@ -747,8 +737,8 @@ const WidgetRenderer = ({ widget, depth = 0, renderContext }: IWidgetRendererPro
           onClick={handleClick}
           className={cn(
             baseClasses,
-            'min-h-0 min-w-0 overflow-hidden',
-            (!widget.children || widget.children.length === 0) && 'bg-gray-100',
+            styles.sizedBox,
+            (!widget.children || widget.children.length === 0) && styles.sizedBoxEmpty,
           )}
           style={{
             width: widget.props.width ?? 'auto',
@@ -782,7 +772,7 @@ const WidgetRenderer = ({ widget, depth = 0, renderContext }: IWidgetRendererPro
         <div
           ref={setNodeRef}
           onClick={handleClick}
-          className={cn(baseClasses, 'min-h-[60px] bg-white')}
+          className={cn(baseClasses, styles.card)}
           style={{
             backgroundColor: widget.props.color || '#FFFFFF',
             margin: widget.props.margin || 0,
@@ -802,7 +792,7 @@ const WidgetRenderer = ({ widget, depth = 0, renderContext }: IWidgetRendererPro
         <div
           ref={setNodeRef}
           onClick={handleClick}
-          className={cn(baseClasses, 'min-h-0 min-w-0')}
+          className={cn(baseClasses, styles.expanded)}
           style={{
             flexGrow: widget.props.flex ?? 1,
             flexShrink: 1,
@@ -835,8 +825,8 @@ const WidgetRenderer = ({ widget, depth = 0, renderContext }: IWidgetRendererPro
           onClick={handleClick}
           className={cn(
             baseClasses,
-            'min-h-0 min-w-0 overflow-auto',
-            renderContext?.isScaffoldBody && !widget.props.shrinkWrap && 'h-full w-full',
+            styles.listView,
+            renderContext?.isScaffoldBody && !widget.props.shrinkWrap && styles.scaffoldBodyFill,
           )}
           style={{
             padding: widget.props.padding ?? 0,
@@ -846,13 +836,15 @@ const WidgetRenderer = ({ widget, depth = 0, renderContext }: IWidgetRendererPro
             const explicitCount = widget.props.itemCount ?? 0;
             const count = explicitCount > 0 ? explicitCount : 3;
 
-            if (widget.itemTemplate) {
+            const itemTemplate = widget.itemTemplate;
+
+            if (itemTemplate) {
               return Array.from({ length: count }).map((_, i) => (
                 <WidgetRenderer
-                  key={`${widget.itemTemplate.id}-${i}`}
+                  key={`${itemTemplate.id}-${i}`}
                   widget={{
-                    ...widget.itemTemplate,
-                    id: `${widget.itemTemplate.id}-${i}`,
+                    ...itemTemplate,
+                    id: `${itemTemplate.id}-${i}`,
                   }}
                   depth={(depth ?? 0) + 1}
                 />
@@ -872,7 +864,7 @@ const WidgetRenderer = ({ widget, depth = 0, renderContext }: IWidgetRendererPro
         <div
           ref={setNodeRef}
           onClick={handleClick}
-          className={cn(baseClasses, 'min-h-[40px]')}
+          className={cn(baseClasses, styles.positioned)}
           style={{
             position: 'absolute',
             top: widget.props.top,
@@ -906,14 +898,11 @@ const DropZoneIndicator = ({
   compact = false,
 }: IDropZoneIndicatorProps) => (
   <div
-    className={cn(
-      'box-border flex w-full items-center justify-center overflow-hidden border border-dashed border-slate-300 bg-slate-50/70 text-slate-400',
-      compact ? 'h-full min-h-0 min-w-0' : 'min-h-10 min-w-10',
-    )}
+    className={cn(styles.dropZone, compact ? styles.dropZoneCompact : styles.dropZoneDefault)}
     aria-label={label}
     title={label}
   >
-    <LucideIcons.Plus className={compact ? 'h-3 w-3 shrink-0' : 'h-4 w-4 shrink-0'} />
+    <LucideIcons.Plus size={compact ? 12 : 16} className={styles.dropZoneIcon} />
   </div>
 );
 
@@ -1028,59 +1017,57 @@ export const PhoneCanvas = () => {
   };
 
   return (
-    <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden bg-[#f1f3f6]">
-      <div className="sticky top-0 z-20 flex h-12 shrink-0 items-center justify-between border-b border-slate-200 bg-white/90 px-4 backdrop-blur">
-        <div className="flex items-center gap-2 text-xs text-slate-500">
-          <LucideIcons.Smartphone className="h-4 w-4 text-slate-700" />
-          <span className="font-medium text-slate-700">Pixel 8</span>
+    <div className={styles.canvas}>
+      <div className={styles.canvasToolbar}>
+        <div className={styles.deviceSummary}>
+          <LucideIcons.Smartphone size={16} />
+          <span className={styles.deviceName}>Pixel 8</span>
           <span>6.2 in</span>
-          <span className="hidden xl:inline">1080 x 2400</span>
+          <span className={styles.deviceResolution}>1080 x 2400</span>
         </div>
 
-        <div className="flex h-8 items-center border border-slate-200 bg-white shadow-sm">
+        <div className={styles.zoomControls}>
           <button
             type="button"
-            className="grid h-full w-8 place-items-center text-slate-500 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+            className={styles.zoomButton}
             onClick={() =>
               setZoom((currentZoom) => Math.max(MINIMUM_ZOOM, currentZoom - ZOOM_STEP))
             }
             disabled={zoom <= MINIMUM_ZOOM}
             aria-label="Zoom out"
           >
-            <LucideIcons.Minus className="h-4 w-4" />
+            <LucideIcons.Minus size={16} />
           </button>
-          <span className="min-w-12 border-x border-slate-200 px-2 text-center text-xs font-medium leading-8 text-slate-700">
-            {zoom}%
-          </span>
+          <span className={styles.zoomValue}>{zoom}%</span>
           <button
             type="button"
-            className="grid h-full w-8 place-items-center text-slate-500 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+            className={styles.zoomButton}
             onClick={() =>
               setZoom((currentZoom) => Math.min(MAXIMUM_ZOOM, currentZoom + ZOOM_STEP))
             }
             disabled={zoom >= MAXIMUM_ZOOM}
             aria-label="Zoom in"
           >
-            <LucideIcons.Plus className="h-4 w-4" />
+            <LucideIcons.Plus size={16} />
           </button>
           <button
             type="button"
-            className="grid h-full w-8 place-items-center text-slate-500 hover:bg-slate-50"
+            className={styles.zoomButton}
             onClick={() => setZoom(DEFAULT_ZOOM)}
             aria-label="Reset zoom"
           >
-            <LucideIcons.RotateCcw className="h-3.5 w-3.5" />
+            <LucideIcons.RotateCcw size={14} />
           </button>
         </div>
 
-        <div className="max-w-40 truncate text-xs text-slate-500">
+        <div className={styles.selectedWidget}>
           {selectedWidget ? selectedWidget.type : 'Select a widget'}
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-auto">
+      <div className={styles.canvasViewport}>
         <div
-          className="grid min-h-full min-w-full place-items-center bg-[linear-gradient(90deg,rgba(148,163,184,0.12)_1px,transparent_1px),linear-gradient(rgba(148,163,184,0.12)_1px,transparent_1px)] bg-[size:24px_24px] p-10"
+          className={styles.canvasGrid}
           style={{
             minWidth: scaledFrameWidth + 80,
             minHeight: scaledFrameHeight + 80,
@@ -1090,11 +1077,11 @@ export const PhoneCanvas = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.2 }}
-            className="shrink-0"
+            className={styles.scaledFrame}
             style={{ width: scaledFrameWidth, height: scaledFrameHeight }}
           >
             <div
-              className="origin-top-left"
+              className={styles.frameScaler}
               style={{
                 width: PIXEL_FRAME_WIDTH,
                 height: PIXEL_FRAME_HEIGHT,
@@ -1102,44 +1089,45 @@ export const PhoneCanvas = () => {
               }}
             >
               <div
-                className="relative rounded-[38px] border-[7px] border-[#202124] bg-[#202124] shadow-[0_28px_70px_rgba(15,23,42,0.28)]"
+                className={styles.deviceFrame}
                 style={{ width: PIXEL_FRAME_WIDTH, height: PIXEL_FRAME_HEIGHT }}
               >
-                <div className="pointer-events-none absolute left-1/2 top-[16px] z-30 h-3 w-3 -translate-x-1/2 rounded-full bg-[#111318] ring-1 ring-black/50" />
+                <div className={styles.deviceCamera} />
                 <div
                   ref={setNodeRef}
                   onClick={handleCanvasClick}
                   className={cn(
-                    'relative h-full w-full overflow-hidden rounded-[30px] bg-white',
-                    isOver && isDragging && 'ring-4 ring-primary/50 ring-inset',
+                    styles.deviceViewport,
+                    isOver && isDragging && styles.deviceViewportOver,
                   )}
                 >
-                  <div className="flex h-9 items-center justify-between bg-white px-7 pt-1 text-[10px] font-semibold text-slate-900">
+                  <div className={styles.deviceStatusBar}>
                     <span>9:41</span>
-                    <div className="flex items-center gap-1.5">
-                      <LucideIcons.Signal className="h-3 w-3" />
-                      <LucideIcons.Wifi className="h-3 w-3" />
-                      <LucideIcons.BatteryMedium className="h-3.5 w-3.5" />
+                    <div className={styles.statusIcons}>
+                      <LucideIcons.Signal size={12} />
+                      <LucideIcons.Wifi size={12} />
+                      <LucideIcons.BatteryMedium size={14} />
                     </div>
                   </div>
 
-                  <div className="h-[calc(100%-2.25rem)] overflow-y-auto pb-5">
+                  <div className={styles.deviceContent}>
                     {screen?.components.map((widget) => (
                       <WidgetRenderer key={widget.id} widget={widget} />
                     ))}
                     {(!screen?.components || screen.components.length === 0) && (
-                      <div className="flex h-full items-center justify-center p-8 text-center">
-                        <div className="border border-dashed border-slate-300 bg-slate-50 px-8 py-10 text-slate-500">
-                          <LucideIcons.LayoutTemplate className="mx-auto mb-3 h-6 w-6 text-slate-400" />
-                          <p className="text-sm font-semibold text-slate-700">
-                            Start with a layout widget
-                          </p>
+                      <div className={styles.emptyCanvas}>
+                        <div className={styles.emptyCanvasCard}>
+                          <LucideIcons.LayoutTemplate
+                            size={24}
+                            className={styles.emptyCanvasIcon}
+                          />
+                          <p>Start with a layout widget</p>
                         </div>
                       </div>
                     )}
                   </div>
 
-                  <div className="pointer-events-none absolute bottom-2 left-1/2 h-1 w-28 -translate-x-1/2 rounded-full bg-slate-900" />
+                  <div className={styles.deviceHomeIndicator} />
                 </div>
               </div>
             </div>

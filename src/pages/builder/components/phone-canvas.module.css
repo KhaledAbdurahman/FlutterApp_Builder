@@ -1,0 +1,625 @@
+.canvas {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--color-page-background);
+}
+
+.canvasToolbar {
+  position: sticky;
+  z-index: 20;
+  top: 0;
+  display: flex;
+  height: 3rem;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  padding-inline: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+}
+
+.deviceSummary,
+.statusIcons {
+  display: flex;
+  align-items: center;
+}
+
+.deviceSummary {
+  gap: var(--space-2);
+  font-size: 0.75rem;
+}
+
+.deviceName {
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.deviceResolution {
+  display: inline;
+}
+
+.zoomControls {
+  display: flex;
+  height: 2rem;
+  align-items: center;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-muted);
+  box-shadow: var(--shadow-card);
+}
+
+.zoomButton {
+  display: grid;
+  width: 2rem;
+  height: 100%;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.zoomButton:hover {
+  background: hsl(var(--primary) / 0.12);
+  color: var(--color-text);
+}
+
+.zoomButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.zoomValue {
+  min-width: 3rem;
+  height: 100%;
+  padding-inline: var(--space-2);
+  border-inline: 1px solid var(--color-border);
+  color: var(--color-text);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 2rem;
+  text-align: center;
+}
+
+.selectedWidget {
+  max-width: 10rem;
+  overflow: hidden;
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.canvasViewport {
+  min-height: 0;
+  flex: 1;
+  overflow: auto;
+}
+
+.canvasGrid {
+  display: grid;
+  min-width: 100%;
+  min-height: 100%;
+  place-items: center;
+  padding: 2.5rem;
+  background-color: var(--color-page-background);
+  background-image:
+    linear-gradient(90deg, hsl(var(--primary) / 0.1) 1px, transparent 1px),
+    linear-gradient(hsl(var(--primary) / 0.1) 1px, transparent 1px);
+  background-size: 1.5rem 1.5rem;
+}
+
+.scaledFrame {
+  flex: 0 0 auto;
+}
+
+.frameScaler {
+  transform-origin: top left;
+}
+
+.deviceFrame {
+  position: relative;
+  border: 0.4375rem solid #202124;
+  border-radius: 2.375rem;
+  background: #202124;
+  box-shadow: 0 1.75rem 4.375rem rgb(15 23 42 / 0.28);
+}
+
+.deviceCamera {
+  position: absolute;
+  z-index: 30;
+  top: 1rem;
+  left: 50%;
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 50%;
+  background: #111318;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.5);
+  pointer-events: none;
+  transform: translateX(-50%);
+}
+
+.deviceViewport {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 1.875rem;
+  background: #fff;
+}
+
+.deviceViewportOver {
+  box-shadow: inset 0 0 0 0.25rem hsl(var(--primary) / 0.5);
+}
+
+.deviceStatusBar {
+  display: flex;
+  height: 2.25rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.25rem 1.75rem 0;
+  background: #fff;
+  color: #0f172a;
+  font-size: 0.625rem;
+  font-weight: 600;
+}
+
+.statusIcons {
+  gap: 0.375rem;
+}
+
+.deviceContent {
+  height: calc(100% - 2.25rem);
+  overflow-y: auto;
+  padding-bottom: 1.25rem;
+}
+
+.deviceHomeIndicator {
+  position: absolute;
+  bottom: 0.5rem;
+  left: 50%;
+  width: 7rem;
+  height: 0.25rem;
+  border-radius: 999px;
+  background: #0f172a;
+  pointer-events: none;
+  transform: translateX(-50%);
+}
+
+.emptyCanvas {
+  display: flex;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-8);
+  text-align: center;
+}
+
+.emptyCanvasCard {
+  padding: var(--space-8) 2rem;
+  border: 1px dashed #cbd5e1;
+  background: #f8fafc;
+  color: #64748b;
+}
+
+.emptyCanvasCard p {
+  margin: 0;
+  color: #334155;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.emptyCanvasIcon {
+  display: block;
+  margin: 0 auto 0.75rem;
+  color: #94a3b8;
+}
+
+.dropZone {
+  box-sizing: border-box;
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 1px dashed #cbd5e1;
+  background: rgb(248 250 252 / 0.7);
+  color: #94a3b8;
+}
+
+.dropZoneDefault {
+  min-width: 2.5rem;
+  min-height: 2.5rem;
+}
+
+.dropZoneCompact {
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+}
+
+.dropZoneIcon {
+  flex: 0 0 auto;
+}
+
+.widget {
+  position: relative;
+  flex-shrink: 0;
+  cursor: pointer;
+  outline: 1px solid transparent;
+  outline-offset: 1px;
+  transition: outline-color 150ms ease;
+}
+
+.widget:hover {
+  outline-color: hsl(var(--primary) / 0.5);
+}
+
+.widgetSelected,
+.scaffoldAppBarSelected {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 1px;
+}
+
+.dropTarget {
+  outline: 2px dashed hsl(var(--primary));
+  outline-offset: -2px;
+}
+
+.scaffold {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  color: #111827;
+}
+
+.scaffoldSlot {
+  flex: 0 0 auto;
+}
+
+.scaffoldAppBar,
+.standaloneAppBar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-inline: 1rem;
+}
+
+.appBarIconButton {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  cursor: pointer;
+}
+
+.appBarIconButton:hover {
+  background: rgb(255 255 255 / 0.2);
+}
+
+.appBarIcon,
+.appBarBackIcon {
+  width: 1.25rem;
+  height: 1.25rem;
+  color: #fff;
+}
+
+.appBarBackIcon {
+  margin-right: 0.5rem;
+}
+
+.appBarTitle {
+  flex: 1;
+}
+
+.textCentered {
+  text-align: center;
+}
+
+.textLeft {
+  text-align: left;
+}
+
+.appBarTitleText {
+  font-size: 1.125rem;
+  font-weight: 500;
+}
+
+.scaffoldBody {
+  min-height: 0;
+  flex: 1;
+}
+
+.scaffoldBodyHidden {
+  overflow: hidden;
+}
+
+.scaffoldBodyScrollable {
+  overflow: auto;
+}
+
+.scaffoldBodyFill {
+  width: 100%;
+  height: 100%;
+}
+
+.scaffoldEmptyBody,
+.bottomNavigationEmpty {
+  display: flex;
+  height: 100%;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+}
+
+.scaffoldBottomNavigation,
+.bottomNavigation {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding-inline: 1rem;
+  border-top: 1px solid #e5e7eb;
+  background: #fff;
+}
+
+.scaffoldBottomNavigation {
+  height: 100%;
+}
+
+.bottomNavigationItem,
+.bottomNavigationMutedItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 0.75rem;
+}
+
+.bottomNavigationMutedItem {
+  color: #6b7280;
+}
+
+.bottomNavigationIcon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.drawerScrim {
+  position: absolute;
+  z-index: 20;
+  inset: 0;
+  background: rgb(0 0 0 / 0.4);
+}
+
+.drawerPanel {
+  position: absolute;
+  z-index: 30;
+  top: 0;
+  left: 0;
+  width: 16rem;
+  height: 100%;
+  background: #fff;
+  box-shadow: var(--shadow-surface);
+}
+
+.drawerPanelContent {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+}
+
+.drawerHeader,
+.drawerWidgetHeader {
+  padding: 1rem;
+  color: #fff;
+}
+
+.drawerHeaderTitle {
+  margin: 0;
+  font-weight: 600;
+}
+
+.drawerHeaderSubtitle {
+  margin: 0;
+  font-size: 0.75rem;
+  opacity: 0.8;
+}
+
+.drawerContent {
+  flex: 1;
+  overflow: auto;
+  padding: 0.75rem;
+}
+
+.container,
+.row,
+.column,
+.expanded,
+.listView {
+  min-width: 0;
+}
+
+.container,
+.row,
+.positioned {
+  min-height: 2.5rem;
+}
+
+.center {
+  display: flex;
+  min-width: 0;
+  min-height: 3.75rem;
+  align-items: center;
+  justify-content: center;
+}
+
+.row {
+  display: flex;
+  min-height: 2.5rem;
+  flex-direction: row;
+}
+
+.column {
+  display: flex;
+  min-height: 2.5rem;
+  flex-direction: column;
+}
+
+.scaffoldColumn {
+  height: 100%;
+  overflow: auto;
+}
+
+.stack {
+  position: relative;
+  display: grid;
+  width: 100%;
+  min-height: 7.5rem;
+  overflow: hidden;
+}
+
+.scaffoldStack {
+  height: 100%;
+}
+
+.stackChild {
+  grid-row: 1;
+  grid-column: 1;
+  align-self: start;
+  justify-self: start;
+}
+
+.textWidget {
+  display: inline-block;
+}
+
+.buttonWidget {
+  padding: 0.5rem 1.5rem;
+  border: 0;
+  color: #fff;
+  font-weight: 500;
+}
+
+.textFieldWidget {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: var(--radius-control);
+  background: #fff;
+}
+
+.iconWidget,
+.listTileIconContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.iconWidgetGraphic {
+  width: 100%;
+  height: 100%;
+}
+
+.drawerWidget {
+  border: 1px solid #e5e7eb;
+  border-radius: var(--radius-control);
+  background: #fff;
+}
+
+.drawerWidgetHeader,
+.drawerWidgetContent {
+  padding: 0.75rem;
+}
+
+.listTile {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-control);
+}
+
+.listTile:hover {
+  background: #f3f4f6;
+}
+
+.listTileIconContainer {
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--radius-control);
+  background: #f3f4f6;
+}
+
+.listTileIcon,
+.listTileChevron {
+  width: 1rem;
+  height: 1rem;
+  color: #6b7280;
+}
+
+.listTileContent {
+  flex: 1;
+}
+
+.listTileTitle {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.listTileRoute {
+  margin: 0;
+  color: #6b7280;
+  font-size: 0.75rem;
+}
+
+.imageWidget {
+  max-width: 100%;
+  height: auto;
+}
+
+.sizedBox {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.sizedBoxEmpty {
+  background: #f3f4f6;
+}
+
+.card {
+  min-height: 3.75rem;
+  background: #fff;
+}
+
+.expanded {
+  min-height: 0;
+}
+
+.listView {
+  min-height: 0;
+  overflow: auto;
+}
+
+.positioned {
+  min-height: 2.5rem;
+}
+
+@media (max-width: 48rem) {
+  .deviceResolution,
+  .selectedWidget {
+    display: none;
+  }
+
+  .canvasToolbar {
+    padding-inline: var(--space-3);
+  }
+}

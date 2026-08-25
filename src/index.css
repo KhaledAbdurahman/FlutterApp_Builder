@@ -15,6 +15,9 @@
     --color-border: #d7d7d1;
     --color-accent: #312c85;
     --color-accent-strong: #211d63;
+    --color-scrollbar-track: #e7e8eb;
+    --color-scrollbar-thumb: #b7bbc3;
+    --color-scrollbar-thumb-hover: #777d88;
     --color-danger: #dc2626;
     --color-success: #16a34a;
     --color-warning: #d97706;
@@ -101,6 +104,9 @@
     --color-border: #2a3d59;
     --color-accent: #78a9ff;
     --color-accent-strong: #afcbff;
+    --color-scrollbar-track: #0e1a2b;
+    --color-scrollbar-thumb: #2a3d59;
+    --color-scrollbar-thumb-hover: #42658e;
     --color-danger: #f87171;
     --color-success: #4ade80;
     --color-warning: #fbbf24;
@@ -174,6 +180,35 @@
     font-family: var(--font-sans);
   }
 
+  html {
+    scrollbar-color: var(--color-scrollbar-thumb) var(--color-scrollbar-track);
+    scrollbar-width: thin;
+  }
+
+  * {
+    scrollbar-color: var(--color-scrollbar-thumb) var(--color-scrollbar-track);
+    scrollbar-width: thin;
+  }
+
+  *::-webkit-scrollbar {
+    width: 0.625rem;
+    height: 0.625rem;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: var(--color-scrollbar-track);
+  }
+
+  *::-webkit-scrollbar-thumb {
+    border: 0.125rem solid var(--color-scrollbar-track);
+    border-radius: 999px;
+    background: var(--color-scrollbar-thumb);
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background: var(--color-scrollbar-thumb-hover);
+  }
+
   code,
   pre {
     font-family: var(--font-mono);
@@ -206,16 +241,16 @@
   }
 
   .scrollbar-thin::-webkit-scrollbar-track {
-    background: hsl(var(--muted));
+    background: var(--color-scrollbar-track);
     border-radius: 3px;
   }
 
   .scrollbar-thin::-webkit-scrollbar-thumb {
-    background: hsl(var(--border));
+    background: var(--color-scrollbar-thumb);
     border-radius: 3px;
   }
 
   .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--muted-foreground));
+    background: var(--color-scrollbar-thumb-hover);
   }
 }

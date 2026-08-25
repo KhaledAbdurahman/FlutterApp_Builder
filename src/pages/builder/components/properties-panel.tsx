@@ -1,21 +1,26 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { Trash2, Plus, X } from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
+import { Children, isValidElement, type ComponentProps, type ReactNode } from 'react';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
-import { Switch } from '@/components/ui/switch';
+  ActionIcon,
+  Button,
+  Divider,
+  Select as MantineSelect,
+  Switch as MantineSwitch,
+  Text,
+  TextInput,
+} from '@mantine/core';
 import { useBuilderStore } from '@/stores/builder/use-builder-store';
 import { getWidgetDefinition } from '@/types/screen-types';
-import type { ActionBase, BottomNavItem, ComponentPropsByType } from '@/types/screen-types';
-import { toast } from 'sonner';
+import type {
+  ActionBase,
+  BottomNavItem,
+  ComponentPropsByType,
+  ComponentType,
+  DrawerHeader,
+} from '@/types/screen-types';
+import { ChooseNotification } from '@/lib/choose-notification';
+import styles from '@/pages/builder/components/properties-panel.module.css';
 
 const CreateActionForType = (actionType: ActionBase['type'], defaultRoute: string): ActionBase => {
   switch (actionType) {
@@ -30,16 +35,123 @@ const CreateActionForType = (actionType: ActionBase['type'], defaultRoute: strin
   }
 };
 
+const DEFAULT_DRAWER_HEADER: DrawerHeader = {
+  title: 'Menu',
+  subtitle: 'Welcome',
+  backgroundColor: '#6200EE',
+};
+
+// Drawer headers are edited field by field, so complete the required Flutter values before merging one field.
+const getDrawerHeader = (header?: DrawerHeader): DrawerHeader => ({
+  ...DEFAULT_DRAWER_HEADER,
+  ...header,
+});
+
+interface IPropertySwitchProps extends Omit<ComponentProps<typeof MantineSwitch>, 'onChange'> {
+  onCheckedChange: (checked: boolean) => void;
+}
+
+interface IPropertySelectProps {
+  children: ReactNode;
+  onValueChange: (value: string) => void;
+  value: string;
+}
+
+interface IPropertySelectItemProps {
+  children: ReactNode;
+  value: string;
+}
+
+interface IPropertySelectTriggerProps {
+  children: ReactNode;
+  className?: string;
+}
+
+interface IPropertySelectValueProps {
+  placeholder?: string;
+}
+
+interface IPropertySelectDefinition {
+  className?: string;
+  data: Array<{ label: string; value: string }>;
+  placeholder?: string;
+}
+
+const PropertySwitch = ({ onCheckedChange, ...props }: IPropertySwitchProps) => (
+  <MantineSwitch {...props} onChange={(event) => onCheckedChange(event.currentTarget.checked)} />
+);
+
+const PropertySelectItem = (_props: IPropertySelectItemProps) => null;
+const PropertySelectContent = (_props: { children: ReactNode }) => null;
+const PropertySelectTrigger = (_props: IPropertySelectTriggerProps) => null;
+const PropertySelectValue = (_props: IPropertySelectValueProps) => null;
+
+const getTextContent = (children: ReactNode): string =>
+  Children.toArray(children)
+    .map((child) => (typeof child === 'string' || typeof child === 'number' ? child : ''))
+    .join('');
+
+const getPropertySelectDefinition = (children: ReactNode): IPropertySelectDefinition => {
+  const definition: IPropertySelectDefinition = { data: [] };
+
+  const visit = (nodes: ReactNode) => {
+    Children.forEach(nodes, (child) => {
+      if (!isValidElement(child)) return;
+
+      if (child.type === PropertySelectItem) {
+        const { children: itemChildren, value } = child.props as IPropertySelectItemProps;
+        definition.data.push({ label: getTextContent(itemChildren), value });
+      }
+
+      if (child.type === PropertySelectTrigger) {
+        const { className } = child.props as IPropertySelectTriggerProps;
+        definition.className = className;
+      }
+
+      if (child.type === PropertySelectValue) {
+        const { placeholder } = child.props as IPropertySelectValueProps;
+        definition.placeholder = placeholder;
+      }
+
+      const { children: nestedChildren } = child.props as { children?: ReactNode };
+      if (nestedChildren) visit(nestedChildren);
+    });
+  };
+
+  visit(children);
+  return definition;
+};
+
+// Widget-specific options stay beside their fields; this adapter keeps that schema readable while Mantine owns the control.
+const PropertySelect = ({ children, onValueChange, value }: IPropertySelectProps) => {
+  const { className, data, placeholder } = getPropertySelectDefinition(children);
+
+  return (
+    <MantineSelect
+      allowDeselect={false}
+      className={className}
+      data={data}
+      placeholder={placeholder}
+      value={value || null}
+      onChange={(nextValue) => {
+        if (nextValue) onValueChange(nextValue);
+      }}
+    />
+  );
+};
+
 export const PropertiesPanel = () => {
   const { selectedWidgetId, getWidgetById, updateWidgetProps, deleteWidget, project } =
     useBuilderStore();
   const widget = selectedWidgetId ? getWidgetById(selectedWidgetId) : null;
   const definition = widget ? getWidgetDefinition(widget.type) : null;
+  const drawerHeader =
+    widget?.type === 'Drawer' ? getDrawerHeader(widget.props.header) : DEFAULT_DRAWER_HEADER;
 
   const handleDelete = () => {
     if (selectedWidgetId) {
       deleteWidget(selectedWidgetId);
-      toast.success('Widget deleted');
+      ChooseNotification.success({ message: 'Widget deleted' });
     }
   };
 
@@ -104,6 +216,19 @@ export const PropertiesPanel = () => {
     updateWidgetProps(widget.id, { items: currentItems });
   };
 
+  const updateContainerLayout = (dimension: 'w' | 'h', rawValue: string): void => {
+    if (!widget || widget.type !== 'Container') return;
+
+    const layout: NonNullable<ComponentPropsByType['Container']['layout']> = {
+      w: widget.props.layout?.w ?? 0,
+      h: widget.props.layout?.h ?? 0,
+      [dimension]: rawValue ? Number.parseInt(rawValue, 10) : 0,
+    };
+    const containerProps = { layout } satisfies Partial<ComponentPropsByType['Container']>;
+
+    updateWidgetProps(widget.id, containerProps as Partial<ComponentPropsByType[ComponentType]>);
+  };
+
   const removeNavItem = (index: number) => {
     if (!widget || widget.type !== 'BottomNavigationBar') return;
     const currentItems = [...(widget.props.items || [])];
@@ -112,11 +237,9 @@ export const PropertiesPanel = () => {
   };
 
   return (
-    <div className="w-72 border-l border-border bg-card flex flex-col h-full overflow-hidden">
-      <div className="p-4 border-b border-border flex items-center justify-between">
-        <h2 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">
-          Properties
-        </h2>
+    <div className={styles.panel}>
+      <div className={styles.header}>
+        <h2 className={styles.headerTitle}>Properties</h2>
       </div>
 
       <AnimatePresence mode="wait">
@@ -126,45 +249,44 @@ export const PropertiesPanel = () => {
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
-            className="flex-1 overflow-y-auto scrollbar-thin"
+            className={styles.content}
           >
-            <div className="p-4 space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
-                    <span className="text-xs font-bold text-primary-foreground">
-                      {widget.type.charAt(0)}
-                    </span>
+            <div className={styles.contentInner}>
+              <div className={styles.row}>
+                <div className={styles.inlineControl}>
+                  <div className={styles.widgetBadge}>
+                    <span className={styles.widgetBadgeText}>{widget.type.charAt(0)}</span>
                   </div>
                   <div>
-                    <p className="font-semibold text-sm">{widget.type}</p>
-                    <p className="text-xs text-muted-foreground">Widget</p>
+                    <p className={styles.widgetName}>{widget.type}</p>
+                    <p className={styles.mutedText}>Widget</p>
                   </div>
                 </div>
-                <Button
-                  size="icon"
-                  variant="ghost"
+                <ActionIcon
+                  aria-label="Delete selected widget"
+                  size="lg"
+                  variant="subtle"
                   onClick={handleDelete}
-                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                  className={styles.deleteButton}
                 >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
+                  <Trash2 className={styles.deleteIcon} />
+                </ActionIcon>
               </div>
 
-              <Separator />
+              <Divider />
 
               {/* Text Widget Props */}
               {widget.type === 'Text' && (
-                <div className="space-y-4">
+                <div className={styles.section}>
                   <PropertyField label="Text">
-                    <Input
+                    <TextInput
                       value={widget.props.text || ''}
                       onChange={(e) => updateWidgetProps(widget.id, { text: e.target.value })}
                       placeholder="Enter text..."
                     />
                   </PropertyField>
                   <PropertyField label="Font Size">
-                    <Input
+                    <TextInput
                       type="number"
                       value={widget.props.fontSize || 16}
                       onChange={(e) =>
@@ -175,7 +297,7 @@ export const PropertiesPanel = () => {
                     />
                   </PropertyField>
                   <PropertyField label="Font Weight">
-                    <Select
+                    <PropertySelect
                       value={widget.props.fontWeight || 'normal'}
                       onValueChange={(v) =>
                         updateWidgetProps(widget.id, {
@@ -183,17 +305,17 @@ export const PropertiesPanel = () => {
                         })
                       }
                     >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="normal">Normal</SelectItem>
-                        <SelectItem value="bold">Bold</SelectItem>
-                      </SelectContent>
-                    </Select>
+                      <PropertySelectTrigger>
+                        <PropertySelectValue />
+                      </PropertySelectTrigger>
+                      <PropertySelectContent>
+                        <PropertySelectItem value="normal">Normal</PropertySelectItem>
+                        <PropertySelectItem value="bold">Bold</PropertySelectItem>
+                      </PropertySelectContent>
+                    </PropertySelect>
                   </PropertyField>
                   <PropertyField label="Font Style">
-                    <Select
+                    <PropertySelect
                       value={widget.props.fontStyle || 'normal'}
                       onValueChange={(v) =>
                         updateWidgetProps(widget.id, {
@@ -201,17 +323,17 @@ export const PropertiesPanel = () => {
                         })
                       }
                     >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="normal">Normal</SelectItem>
-                        <SelectItem value="italic">Italic</SelectItem>
-                      </SelectContent>
-                    </Select>
+                      <PropertySelectTrigger>
+                        <PropertySelectValue />
+                      </PropertySelectTrigger>
+                      <PropertySelectContent>
+                        <PropertySelectItem value="normal">Normal</PropertySelectItem>
+                        <PropertySelectItem value="italic">Italic</PropertySelectItem>
+                      </PropertySelectContent>
+                    </PropertySelect>
                   </PropertyField>
                   <PropertyField label="Text Decoration">
-                    <Select
+                    <PropertySelect
                       value={widget.props.decoration || 'none'}
                       onValueChange={(v) =>
                         updateWidgetProps(widget.id, {
@@ -219,19 +341,19 @@ export const PropertiesPanel = () => {
                         })
                       }
                     >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">None</SelectItem>
-                        <SelectItem value="underline">Underline</SelectItem>
-                        <SelectItem value="overline">Overline</SelectItem>
-                        <SelectItem value="lineThrough">Line Through</SelectItem>
-                      </SelectContent>
-                    </Select>
+                      <PropertySelectTrigger>
+                        <PropertySelectValue />
+                      </PropertySelectTrigger>
+                      <PropertySelectContent>
+                        <PropertySelectItem value="none">None</PropertySelectItem>
+                        <PropertySelectItem value="underline">Underline</PropertySelectItem>
+                        <PropertySelectItem value="overline">Overline</PropertySelectItem>
+                        <PropertySelectItem value="lineThrough">Line Through</PropertySelectItem>
+                      </PropertySelectContent>
+                    </PropertySelect>
                   </PropertyField>
                   <PropertyField label="Letter Spacing">
-                    <Input
+                    <TextInput
                       type="number"
                       step="0.1"
                       value={widget.props.letterSpacing ?? ''}
@@ -244,7 +366,7 @@ export const PropertiesPanel = () => {
                     />
                   </PropertyField>
                   <PropertyField label="Max Lines">
-                    <Input
+                    <TextInput
                       type="number"
                       value={widget.props.maxLines ?? ''}
                       onChange={(e) =>
@@ -256,7 +378,7 @@ export const PropertiesPanel = () => {
                     />
                   </PropertyField>
                   <PropertyField label="Overflow">
-                    <Select
+                    <PropertySelect
                       value={widget.props.overflow || 'visible'}
                       onValueChange={(v) =>
                         updateWidgetProps(widget.id, {
@@ -264,19 +386,19 @@ export const PropertiesPanel = () => {
                         })
                       }
                     >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="visible">Visible</SelectItem>
-                        <SelectItem value="clip">Clip</SelectItem>
-                        <SelectItem value="fade">Fade</SelectItem>
-                        <SelectItem value="ellipsis">Ellipsis</SelectItem>
-                      </SelectContent>
-                    </Select>
+                      <PropertySelectTrigger>
+                        <PropertySelectValue />
+                      </PropertySelectTrigger>
+                      <PropertySelectContent>
+                        <PropertySelectItem value="visible">Visible</PropertySelectItem>
+                        <PropertySelectItem value="clip">Clip</PropertySelectItem>
+                        <PropertySelectItem value="fade">Fade</PropertySelectItem>
+                        <PropertySelectItem value="ellipsis">Ellipsis</PropertySelectItem>
+                      </PropertySelectContent>
+                    </PropertySelect>
                   </PropertyField>
                   <PropertyField label="Alignment">
-                    <Select
+                    <PropertySelect
                       value={widget.props.alignment || 'left'}
                       onValueChange={(v) =>
                         updateWidgetProps(widget.id, {
@@ -284,25 +406,25 @@ export const PropertiesPanel = () => {
                         })
                       }
                     >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="left">Left</SelectItem>
-                        <SelectItem value="center">Center</SelectItem>
-                        <SelectItem value="right">Right</SelectItem>
-                        <SelectItem value="justify">Justify</SelectItem>
-                        <SelectItem value="start">Start</SelectItem>
-                        <SelectItem value="end">End</SelectItem>
-                      </SelectContent>
-                    </Select>
+                      <PropertySelectTrigger>
+                        <PropertySelectValue />
+                      </PropertySelectTrigger>
+                      <PropertySelectContent>
+                        <PropertySelectItem value="left">Left</PropertySelectItem>
+                        <PropertySelectItem value="center">Center</PropertySelectItem>
+                        <PropertySelectItem value="right">Right</PropertySelectItem>
+                        <PropertySelectItem value="justify">Justify</PropertySelectItem>
+                        <PropertySelectItem value="start">Start</PropertySelectItem>
+                        <PropertySelectItem value="end">End</PropertySelectItem>
+                      </PropertySelectContent>
+                    </PropertySelect>
                   </PropertyField>
                   <PropertyField label="Color">
-                    <Input
+                    <TextInput
                       type="color"
                       value={widget.props.color || '#000000'}
                       onChange={(e) => updateWidgetProps(widget.id, { color: e.target.value })}
-                      className="h-10 p-1"
+                      className={styles.colorInput}
                     />
                   </PropertyField>
                 </div>
@@ -310,15 +432,15 @@ export const PropertiesPanel = () => {
 
               {/* Button Widget Props */}
               {widget.type === 'Button' && (
-                <div className="space-y-4">
+                <div className={styles.section}>
                   <PropertyField label="Button Text">
-                    <Input
+                    <TextInput
                       value={widget.props.text || ''}
                       onChange={(e) => updateWidgetProps(widget.id, { text: e.target.value })}
                     />
                   </PropertyField>
                   <PropertyField label="Background Color">
-                    <Input
+                    <TextInput
                       type="color"
                       value={widget.props.backgroundColor || '#6200EE'}
                       onChange={(e) =>
@@ -326,19 +448,19 @@ export const PropertiesPanel = () => {
                           backgroundColor: e.target.value,
                         })
                       }
-                      className="h-10 p-1"
+                      className={styles.colorInput}
                     />
                   </PropertyField>
                   <PropertyField label="Text Color">
-                    <Input
+                    <TextInput
                       type="color"
                       value={widget.props.color || '#FFFFFF'}
                       onChange={(e) => updateWidgetProps(widget.id, { color: e.target.value })}
-                      className="h-10 p-1"
+                      className={styles.colorInput}
                     />
                   </PropertyField>
                   <PropertyField label="Elevation">
-                    <Input
+                    <TextInput
                       type="number"
                       value={widget.props.elevation ?? 2}
                       onChange={(e) =>
@@ -349,7 +471,7 @@ export const PropertiesPanel = () => {
                     />
                   </PropertyField>
                   <PropertyField label="Border Radius">
-                    <Input
+                    <TextInput
                       type="number"
                       value={widget.props.borderRadius ?? ''}
                       onChange={(e) =>
@@ -361,103 +483,101 @@ export const PropertiesPanel = () => {
                     />
                   </PropertyField>
 
-                  <Separator />
+                  <Divider />
 
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-xs text-muted-foreground">Actions</Label>
+                  <div className={styles.stackCompact}>
+                    <div className={styles.row}>
+                      <Text component="span" className={styles.mutedText}>
+                        Actions
+                      </Text>
                       <Button
-                        size="sm"
-                        variant="outline"
+                        size="xs"
+                        variant="default"
                         onClick={addAction}
-                        className="h-7 text-xs"
+                        className={styles.addButton}
                       >
-                        <Plus className="w-3 h-3 mr-1" /> Add
+                        <Plus className={styles.addIcon} /> Add
                       </Button>
                     </div>
 
                     {(widget.props.actions || []).map((action, index) => (
-                      <div
-                        key={index}
-                        className="p-3 border border-border rounded-lg space-y-2 bg-muted/30"
-                      >
-                        <div className="flex items-center justify-between">
-                          <Select
+                      <div key={index} className={styles.itemCard}>
+                        <div className={styles.row}>
+                          <PropertySelect
                             value={action.type}
                             onValueChange={(value) =>
                               replaceActionType(index, value as ActionBase['type'])
                             }
                           >
-                            <SelectTrigger className="h-8 text-xs">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="snackbar">Snackbar</SelectItem>
-                              <SelectItem value="dialog">Dialog</SelectItem>
-                              <SelectItem value="navigate">Navigate</SelectItem>
-                              <SelectItem value="goBack">Go Back</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <Button
-                            size="icon"
-                            variant="ghost"
+                            <PropertySelectTrigger className={styles.compactField}>
+                              <PropertySelectValue />
+                            </PropertySelectTrigger>
+                            <PropertySelectContent>
+                              <PropertySelectItem value="snackbar">Snackbar</PropertySelectItem>
+                              <PropertySelectItem value="dialog">Dialog</PropertySelectItem>
+                              <PropertySelectItem value="navigate">Navigate</PropertySelectItem>
+                              <PropertySelectItem value="goBack">Go Back</PropertySelectItem>
+                            </PropertySelectContent>
+                          </PropertySelect>
+                          <ActionIcon
+                            aria-label={`Remove action ${index + 1}`}
+                            size="sm"
+                            variant="subtle"
                             onClick={() => removeAction(index)}
-                            className="h-7 w-7"
+                            className={styles.removeButton}
                           >
-                            <X className="w-3 h-3" />
-                          </Button>
+                            <X className={styles.removeIcon} />
+                          </ActionIcon>
                         </div>
 
                         {action.type === 'snackbar' && (
-                          <Input
+                          <TextInput
                             value={action.message || ''}
                             onChange={(e) => updateAction(index, { message: e.target.value })}
                             placeholder="Message..."
-                            className="h-8 text-xs"
+                            className={styles.compactField}
                           />
                         )}
 
                         {action.type === 'dialog' && (
                           <>
-                            <Input
+                            <TextInput
                               value={action.title || ''}
                               onChange={(e) => updateAction(index, { title: e.target.value })}
                               placeholder="Dialog Title..."
-                              className="h-8 text-xs"
+                              className={styles.compactField}
                             />
-                            <Input
+                            <TextInput
                               value={action.message || ''}
                               onChange={(e) => updateAction(index, { message: e.target.value })}
                               placeholder="Dialog Message..."
-                              className="h-8 text-xs"
+                              className={styles.compactField}
                             />
                           </>
                         )}
 
                         {action.type === 'navigate' && (
-                          <Select
+                          <PropertySelect
                             value={action.route || ''}
                             onValueChange={(v) => updateAction(index, { route: v })}
                           >
-                            <SelectTrigger className="h-8 text-xs">
-                              <SelectValue placeholder="Select route..." />
-                            </SelectTrigger>
-                            <SelectContent>
+                            <PropertySelectTrigger className={styles.compactField}>
+                              <PropertySelectValue placeholder="Select route..." />
+                            </PropertySelectTrigger>
+                            <PropertySelectContent>
                               {screenOptions.map((screen) => (
-                                <SelectItem key={screen.id} value={screen.route}>
+                                <PropertySelectItem key={screen.id} value={screen.route}>
                                   {screen.name} ({screen.route})
-                                </SelectItem>
+                                </PropertySelectItem>
                               ))}
-                            </SelectContent>
-                          </Select>
+                            </PropertySelectContent>
+                          </PropertySelect>
                         )}
                       </div>
                     ))}
 
                     {(!widget.props.actions || widget.props.actions.length === 0) && (
-                      <p className="text-xs text-muted-foreground text-center py-2">
-                        No actions added yet
-                      </p>
+                      <p className={styles.emptyCollection}>No actions added yet</p>
                     )}
                   </div>
                 </div>
@@ -465,15 +585,15 @@ export const PropertiesPanel = () => {
 
               {/* AppBar Widget Props */}
               {widget.type === 'AppBar' && (
-                <div className="space-y-4">
+                <div className={styles.section}>
                   <PropertyField label="Title">
-                    <Input
+                    <TextInput
                       value={widget.props.title || ''}
                       onChange={(e) => updateWidgetProps(widget.id, { title: e.target.value })}
                     />
                   </PropertyField>
                   <PropertyField label="Title Color">
-                    <Input
+                    <TextInput
                       type="color"
                       value={widget.props.color || '#FFFFFF'}
                       onChange={(e) =>
@@ -481,11 +601,11 @@ export const PropertiesPanel = () => {
                           color: e.target.value,
                         })
                       }
-                      className="h-10 p-1"
+                      className={styles.colorInput}
                     />
                   </PropertyField>
                   <PropertyField label="Background Color">
-                    <Input
+                    <TextInput
                       type="color"
                       value={widget.props.backgroundColor || '#6200EE'}
                       onChange={(e) =>
@@ -493,11 +613,11 @@ export const PropertiesPanel = () => {
                           backgroundColor: e.target.value,
                         })
                       }
-                      className="h-10 p-1"
+                      className={styles.colorInput}
                     />
                   </PropertyField>
                   <PropertyField label="Elevation">
-                    <Input
+                    <TextInput
                       type="number"
                       value={widget.props.elevation || 4}
                       onChange={(e) =>
@@ -508,21 +628,21 @@ export const PropertiesPanel = () => {
                     />
                   </PropertyField>
                   <PropertyField label="Center Title">
-                    <div className="flex items-center gap-2">
-                      <Switch
+                    <div className={styles.inlineControl}>
+                      <PropertySwitch
                         checked={widget.props.centerTitle ?? true}
                         onCheckedChange={(checked) =>
                           updateWidgetProps(widget.id, { centerTitle: checked })
                         }
                       />
-                      <span className="text-xs text-muted-foreground">
+                      <span className={styles.mutedText}>
                         {widget.props.centerTitle !== false ? 'Centered' : 'Left-aligned'}
                       </span>
                     </div>
                   </PropertyField>
                   <PropertyField label="Show Back Button">
-                    <div className="flex items-center gap-2">
-                      <Switch
+                    <div className={styles.inlineControl}>
+                      <PropertySwitch
                         checked={widget.props.showBackButton || false}
                         onCheckedChange={(checked) =>
                           updateWidgetProps(widget.id, {
@@ -530,14 +650,14 @@ export const PropertiesPanel = () => {
                           })
                         }
                       />
-                      <span className="text-xs text-muted-foreground">
+                      <span className={styles.mutedText}>
                         {widget.props.showBackButton ? 'Visible' : 'Hidden'}
                       </span>
                     </div>
                   </PropertyField>
                   <PropertyField label="Auto Imply Leading">
-                    <div className="flex items-center gap-2">
-                      <Switch
+                    <div className={styles.inlineControl}>
+                      <PropertySwitch
                         checked={widget.props.automaticallyImplyLeading !== false}
                         onCheckedChange={(checked) =>
                           updateWidgetProps(widget.id, {
@@ -545,7 +665,7 @@ export const PropertiesPanel = () => {
                           })
                         }
                       />
-                      <span className="text-xs text-muted-foreground">
+                      <span className={styles.mutedText}>
                         {widget.props.automaticallyImplyLeading !== false ? 'Auto' : 'Manual'}
                       </span>
                     </div>
@@ -555,39 +675,25 @@ export const PropertiesPanel = () => {
 
               {/* Container Widget Props */}
               {widget.type === 'Container' && (
-                <div className="space-y-4">
+                <div className={styles.section}>
                   <PropertyField label="Width">
-                    <Input
+                    <TextInput
                       type="number"
                       value={widget.props.layout?.w || ''}
-                      onChange={(e) =>
-                        updateWidgetProps(widget.id, {
-                          layout: {
-                            ...(widget.props.layout || { w: 0, h: 0 }),
-                            w: e.target.value ? parseInt(e.target.value) : undefined,
-                          },
-                        })
-                      }
+                      onChange={(e) => updateContainerLayout('w', e.target.value)}
                       placeholder="Auto"
                     />
                   </PropertyField>
                   <PropertyField label="Height">
-                    <Input
+                    <TextInput
                       type="number"
                       value={widget.props.layout?.h || ''}
-                      onChange={(e) =>
-                        updateWidgetProps(widget.id, {
-                          layout: {
-                            ...(widget.props.layout || { w: 0, h: 0 }),
-                            h: e.target.value ? parseInt(e.target.value) : undefined,
-                          },
-                        })
-                      }
+                      onChange={(e) => updateContainerLayout('h', e.target.value)}
                       placeholder="Auto"
                     />
                   </PropertyField>
                   <PropertyField label="Padding">
-                    <Input
+                    <TextInput
                       type="number"
                       value={widget.props.padding || 0}
                       onChange={(e) =>
@@ -598,7 +704,7 @@ export const PropertiesPanel = () => {
                     />
                   </PropertyField>
                   <PropertyField label="Margin">
-                    <Input
+                    <TextInput
                       type="number"
                       value={widget.props.margin || 0}
                       onChange={(e) =>
@@ -609,7 +715,7 @@ export const PropertiesPanel = () => {
                     />
                   </PropertyField>
                   <PropertyField label="Border Radius">
-                    <Input
+                    <TextInput
                       type="number"
                       value={widget.props.borderRadius || 0}
                       onChange={(e) =>
@@ -620,7 +726,7 @@ export const PropertiesPanel = () => {
                     />
                   </PropertyField>
                   <PropertyField label="Background Color">
-                    <Input
+                    <TextInput
                       type="color"
                       value={widget.props.backgroundColor || '#ffffff'}
                       onChange={(e) =>
@@ -628,18 +734,18 @@ export const PropertiesPanel = () => {
                           backgroundColor: e.target.value,
                         })
                       }
-                      className="h-10 p-1"
+                      className={styles.colorInput}
                     />
                   </PropertyField>
                   <PropertyField label="Border">
-                    <div className="flex items-center gap-2">
-                      <Switch
+                    <div className={styles.inlineControl}>
+                      <PropertySwitch
                         checked={widget.props.border || false}
                         onCheckedChange={(checked) =>
                           updateWidgetProps(widget.id, { border: checked })
                         }
                       />
-                      <span className="text-xs text-muted-foreground">
+                      <span className={styles.mutedText}>
                         {widget.props.border ? 'Enabled' : 'Disabled'}
                       </span>
                     </div>
@@ -647,7 +753,7 @@ export const PropertiesPanel = () => {
                   {widget.props.border && (
                     <>
                       <PropertyField label="Border Color">
-                        <Input
+                        <TextInput
                           type="color"
                           value={widget.props.borderColor || '#000000'}
                           onChange={(e) =>
@@ -655,11 +761,11 @@ export const PropertiesPanel = () => {
                               borderColor: e.target.value,
                             })
                           }
-                          className="h-10 p-1"
+                          className={styles.colorInput}
                         />
                       </PropertyField>
                       <PropertyField label="Border Width">
-                        <Input
+                        <TextInput
                           type="number"
                           value={widget.props.borderWidth || 1}
                           onChange={(e) =>
@@ -676,9 +782,9 @@ export const PropertiesPanel = () => {
 
               {/* Row/Column Widget Props */}
               {(widget.type === 'Row' || widget.type === 'Column') && (
-                <div className="space-y-4">
+                <div className={styles.section}>
                   <PropertyField label="Main Axis Alignment">
-                    <Select
+                    <PropertySelect
                       value={widget.props.mainAxisAlignment || 'start'}
                       onValueChange={(v) =>
                         updateWidgetProps(widget.id, {
@@ -686,21 +792,21 @@ export const PropertiesPanel = () => {
                         })
                       }
                     >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="start">Start</SelectItem>
-                        <SelectItem value="end">End</SelectItem>
-                        <SelectItem value="center">Center</SelectItem>
-                        <SelectItem value="spaceBetween">Space Between</SelectItem>
-                        <SelectItem value="spaceAround">Space Around</SelectItem>
-                        <SelectItem value="spaceEvenly">Space Evenly</SelectItem>
-                      </SelectContent>
-                    </Select>
+                      <PropertySelectTrigger>
+                        <PropertySelectValue />
+                      </PropertySelectTrigger>
+                      <PropertySelectContent>
+                        <PropertySelectItem value="start">Start</PropertySelectItem>
+                        <PropertySelectItem value="end">End</PropertySelectItem>
+                        <PropertySelectItem value="center">Center</PropertySelectItem>
+                        <PropertySelectItem value="spaceBetween">Space Between</PropertySelectItem>
+                        <PropertySelectItem value="spaceAround">Space Around</PropertySelectItem>
+                        <PropertySelectItem value="spaceEvenly">Space Evenly</PropertySelectItem>
+                      </PropertySelectContent>
+                    </PropertySelect>
                   </PropertyField>
                   <PropertyField label="Cross Axis Alignment">
-                    <Select
+                    <PropertySelect
                       value={widget.props.crossAxisAlignment || 'center'}
                       onValueChange={(v) =>
                         updateWidgetProps(widget.id, {
@@ -709,20 +815,20 @@ export const PropertiesPanel = () => {
                         })
                       }
                     >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="start">Start</SelectItem>
-                        <SelectItem value="end">End</SelectItem>
-                        <SelectItem value="center">Center</SelectItem>
-                        <SelectItem value="stretch">Stretch</SelectItem>
-                        <SelectItem value="baseline">Baseline</SelectItem>
-                      </SelectContent>
-                    </Select>
+                      <PropertySelectTrigger>
+                        <PropertySelectValue />
+                      </PropertySelectTrigger>
+                      <PropertySelectContent>
+                        <PropertySelectItem value="start">Start</PropertySelectItem>
+                        <PropertySelectItem value="end">End</PropertySelectItem>
+                        <PropertySelectItem value="center">Center</PropertySelectItem>
+                        <PropertySelectItem value="stretch">Stretch</PropertySelectItem>
+                        <PropertySelectItem value="baseline">Baseline</PropertySelectItem>
+                      </PropertySelectContent>
+                    </PropertySelect>
                   </PropertyField>
                   <PropertyField label="Main Axis Size">
-                    <Select
+                    <PropertySelect
                       value={widget.props.mainAxisSize || 'max'}
                       onValueChange={(v) =>
                         updateWidgetProps(widget.id, {
@@ -730,23 +836,25 @@ export const PropertiesPanel = () => {
                         })
                       }
                     >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="max">Max (Fill available space)</SelectItem>
-                        <SelectItem value="min">Min (Fit content)</SelectItem>
-                      </SelectContent>
-                    </Select>
+                      <PropertySelectTrigger>
+                        <PropertySelectValue />
+                      </PropertySelectTrigger>
+                      <PropertySelectContent>
+                        <PropertySelectItem value="max">
+                          Max (Fill available space)
+                        </PropertySelectItem>
+                        <PropertySelectItem value="min">Min (Fit content)</PropertySelectItem>
+                      </PropertySelectContent>
+                    </PropertySelect>
                   </PropertyField>
                 </div>
               )}
 
               {/* Positioned Widget Props */}
               {widget.type === 'Positioned' && (
-                <div className="space-y-4">
+                <div className={styles.section}>
                   <PropertyField label="Top">
-                    <Input
+                    <TextInput
                       type="number"
                       value={widget.props.top ?? ''}
                       onChange={(e) =>
@@ -758,7 +866,7 @@ export const PropertiesPanel = () => {
                     />
                   </PropertyField>
                   <PropertyField label="Bottom">
-                    <Input
+                    <TextInput
                       type="number"
                       value={widget.props.bottom ?? ''}
                       onChange={(e) =>
@@ -770,7 +878,7 @@ export const PropertiesPanel = () => {
                     />
                   </PropertyField>
                   <PropertyField label="Left">
-                    <Input
+                    <TextInput
                       type="number"
                       value={widget.props.left ?? ''}
                       onChange={(e) =>
@@ -782,7 +890,7 @@ export const PropertiesPanel = () => {
                     />
                   </PropertyField>
                   <PropertyField label="Right">
-                    <Input
+                    <TextInput
                       type="number"
                       value={widget.props.right ?? ''}
                       onChange={(e) =>
@@ -794,7 +902,7 @@ export const PropertiesPanel = () => {
                     />
                   </PropertyField>
                   <PropertyField label="Width">
-                    <Input
+                    <TextInput
                       type="number"
                       value={widget.props.width ?? ''}
                       onChange={(e) =>
@@ -806,7 +914,7 @@ export const PropertiesPanel = () => {
                     />
                   </PropertyField>
                   <PropertyField label="Height">
-                    <Input
+                    <TextInput
                       type="number"
                       value={widget.props.height ?? ''}
                       onChange={(e) =>
@@ -822,9 +930,9 @@ export const PropertiesPanel = () => {
 
               {/* SizedBox Widget Props */}
               {widget.type === 'SizedBox' && (
-                <div className="space-y-4">
+                <div className={styles.section}>
                   <PropertyField label="Width">
-                    <Input
+                    <TextInput
                       type="number"
                       value={widget.props.width || 0}
                       onChange={(e) =>
@@ -835,7 +943,7 @@ export const PropertiesPanel = () => {
                     />
                   </PropertyField>
                   <PropertyField label="Height">
-                    <Input
+                    <TextInput
                       type="number"
                       value={widget.props.height || 0}
                       onChange={(e) =>
@@ -850,9 +958,9 @@ export const PropertiesPanel = () => {
 
               {/* TextField Widget Props */}
               {widget.type === 'TextField' && (
-                <div className="space-y-4">
+                <div className={styles.section}>
                   <PropertyField label="Hint Text">
-                    <Input
+                    <TextInput
                       value={widget.props.hintText || ''}
                       onChange={(e) =>
                         updateWidgetProps(widget.id, {
@@ -863,7 +971,7 @@ export const PropertiesPanel = () => {
                     />
                   </PropertyField>
                   <PropertyField label="Label Text">
-                    <Input
+                    <TextInput
                       value={widget.props.labelText || ''}
                       onChange={(e) =>
                         updateWidgetProps(widget.id, {
@@ -874,7 +982,7 @@ export const PropertiesPanel = () => {
                     />
                   </PropertyField>
                   <PropertyField label="Keyboard Type">
-                    <Select
+                    <PropertySelect
                       value={widget.props.keyboardType || 'text'}
                       onValueChange={(v) =>
                         updateWidgetProps(widget.id, {
@@ -882,47 +990,47 @@ export const PropertiesPanel = () => {
                         })
                       }
                     >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="text">Text</SelectItem>
-                        <SelectItem value="number">Number</SelectItem>
-                        <SelectItem value="email">Email</SelectItem>
-                        <SelectItem value="phone">Phone</SelectItem>
-                        <SelectItem value="url">URL</SelectItem>
-                        <SelectItem value="multiline">Multiline</SelectItem>
-                      </SelectContent>
-                    </Select>
+                      <PropertySelectTrigger>
+                        <PropertySelectValue />
+                      </PropertySelectTrigger>
+                      <PropertySelectContent>
+                        <PropertySelectItem value="text">Text</PropertySelectItem>
+                        <PropertySelectItem value="number">Number</PropertySelectItem>
+                        <PropertySelectItem value="email">Email</PropertySelectItem>
+                        <PropertySelectItem value="phone">Phone</PropertySelectItem>
+                        <PropertySelectItem value="url">URL</PropertySelectItem>
+                        <PropertySelectItem value="multiline">Multiline</PropertySelectItem>
+                      </PropertySelectContent>
+                    </PropertySelect>
                   </PropertyField>
                   <PropertyField label="Obscure Text (Password)">
-                    <div className="flex items-center gap-2">
-                      <Switch
+                    <div className={styles.inlineControl}>
+                      <PropertySwitch
                         checked={widget.props.obscureText || false}
                         onCheckedChange={(checked) =>
                           updateWidgetProps(widget.id, { obscureText: checked })
                         }
                       />
-                      <span className="text-xs text-muted-foreground">
+                      <span className={styles.mutedText}>
                         {widget.props.obscureText ? 'Hidden' : 'Visible'}
                       </span>
                     </div>
                   </PropertyField>
                   <PropertyField label="Border">
-                    <div className="flex items-center gap-2">
-                      <Switch
+                    <div className={styles.inlineControl}>
+                      <PropertySwitch
                         checked={widget.props.border !== false}
                         onCheckedChange={(checked) =>
                           updateWidgetProps(widget.id, { border: checked })
                         }
                       />
-                      <span className="text-xs text-muted-foreground">
+                      <span className={styles.mutedText}>
                         {widget.props.border !== false ? 'Enabled' : 'Disabled'}
                       </span>
                     </div>
                   </PropertyField>
                   <PropertyField label="Prefix Icon">
-                    <Input
+                    <TextInput
                       value={widget.props.prefixIcon || ''}
                       onChange={(e) =>
                         updateWidgetProps(widget.id, {
@@ -937,16 +1045,16 @@ export const PropertiesPanel = () => {
 
               {/* Icon Widget Props */}
               {widget.type === 'Icon' && (
-                <div className="space-y-4">
+                <div className={styles.section}>
                   <PropertyField label="Icon Name">
-                    <Input
+                    <TextInput
                       value={widget.props.icon || 'star'}
                       onChange={(e) => updateWidgetProps(widget.id, { icon: e.target.value })}
                       placeholder="e.g., star, home, person, arrow_forward_ios"
                     />
                   </PropertyField>
                   <PropertyField label="Size">
-                    <Input
+                    <TextInput
                       type="number"
                       value={widget.props.size || 24}
                       onChange={(e) =>
@@ -957,11 +1065,11 @@ export const PropertiesPanel = () => {
                     />
                   </PropertyField>
                   <PropertyField label="Color">
-                    <Input
+                    <TextInput
                       type="color"
                       value={widget.props.color || '#000000'}
                       onChange={(e) => updateWidgetProps(widget.id, { color: e.target.value })}
-                      className="h-10 p-1"
+                      className={styles.colorInput}
                     />
                   </PropertyField>
                 </div>
@@ -969,16 +1077,16 @@ export const PropertiesPanel = () => {
 
               {/* Image Widget Props */}
               {widget.type === 'Image' && (
-                <div className="space-y-4">
+                <div className={styles.section}>
                   <PropertyField label="Image URL">
-                    <Input
+                    <TextInput
                       value={widget.props.src || ''}
                       onChange={(e) => updateWidgetProps(widget.id, { src: e.target.value })}
                       placeholder="https://... or asset path"
                     />
                   </PropertyField>
                   <PropertyField label="Fit">
-                    <Select
+                    <PropertySelect
                       value={widget.props.fit || 'cover'}
                       onValueChange={(v) =>
                         updateWidgetProps(widget.id, {
@@ -986,21 +1094,21 @@ export const PropertiesPanel = () => {
                         })
                       }
                     >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="cover">Cover</SelectItem>
-                        <SelectItem value="contain">Contain</SelectItem>
-                        <SelectItem value="fill">Fill</SelectItem>
-                        <SelectItem value="fitWidth">Fit Width</SelectItem>
-                        <SelectItem value="fitHeight">Fit Height</SelectItem>
-                        <SelectItem value="scaleDown">Scale Down</SelectItem>
-                      </SelectContent>
-                    </Select>
+                      <PropertySelectTrigger>
+                        <PropertySelectValue />
+                      </PropertySelectTrigger>
+                      <PropertySelectContent>
+                        <PropertySelectItem value="cover">Cover</PropertySelectItem>
+                        <PropertySelectItem value="contain">Contain</PropertySelectItem>
+                        <PropertySelectItem value="fill">Fill</PropertySelectItem>
+                        <PropertySelectItem value="fitWidth">Fit Width</PropertySelectItem>
+                        <PropertySelectItem value="fitHeight">Fit Height</PropertySelectItem>
+                        <PropertySelectItem value="scaleDown">Scale Down</PropertySelectItem>
+                      </PropertySelectContent>
+                    </PropertySelect>
                   </PropertyField>
                   <PropertyField label="Width">
-                    <Input
+                    <TextInput
                       type="number"
                       value={widget.props.width ?? ''}
                       onChange={(e) =>
@@ -1012,7 +1120,7 @@ export const PropertiesPanel = () => {
                     />
                   </PropertyField>
                   <PropertyField label="Height">
-                    <Input
+                    <TextInput
                       type="number"
                       value={widget.props.height ?? ''}
                       onChange={(e) =>
@@ -1028,9 +1136,9 @@ export const PropertiesPanel = () => {
 
               {/* Padding Widget Props */}
               {widget.type === 'Padding' && (
-                <div className="space-y-4">
+                <div className={styles.section}>
                   <PropertyField label="Padding">
-                    <Input
+                    <TextInput
                       type="number"
                       value={widget.props.all || 8}
                       onChange={(e) =>
@@ -1045,9 +1153,9 @@ export const PropertiesPanel = () => {
 
               {/* Card Widget Props */}
               {widget.type === 'Card' && (
-                <div className="space-y-4">
+                <div className={styles.section}>
                   <PropertyField label="Elevation">
-                    <Input
+                    <TextInput
                       type="number"
                       value={widget.props.elevation || 1}
                       onChange={(e) =>
@@ -1058,15 +1166,15 @@ export const PropertiesPanel = () => {
                     />
                   </PropertyField>
                   <PropertyField label="Color">
-                    <Input
+                    <TextInput
                       type="color"
                       value={widget.props.color || '#ffffff'}
                       onChange={(e) => updateWidgetProps(widget.id, { color: e.target.value })}
-                      className="h-10 p-1"
+                      className={styles.colorInput}
                     />
                   </PropertyField>
                   <PropertyField label="Margin">
-                    <Input
+                    <TextInput
                       type="number"
                       value={widget.props.margin ?? ''}
                       onChange={(e) =>
@@ -1078,7 +1186,7 @@ export const PropertiesPanel = () => {
                     />
                   </PropertyField>
                   <PropertyField label="Border Radius">
-                    <Input
+                    <TextInput
                       type="number"
                       value={widget.props.borderRadius ?? ''}
                       onChange={(e) =>
@@ -1094,9 +1202,9 @@ export const PropertiesPanel = () => {
 
               {/* Expanded Widget Props */}
               {widget.type === 'Expanded' && (
-                <div className="space-y-4">
+                <div className={styles.section}>
                   <PropertyField label="Flex">
-                    <Input
+                    <TextInput
                       type="number"
                       value={widget.props.flex || 1}
                       onChange={(e) =>
@@ -1111,18 +1219,16 @@ export const PropertiesPanel = () => {
 
               {/* Center Widget Props */}
               {widget.type === 'Center' && (
-                <div className="space-y-4">
-                  <p className="text-xs text-muted-foreground">
-                    Centers its child widget within itself.
-                  </p>
+                <div className={styles.section}>
+                  <p className={styles.mutedText}>Centers its child widget within itself.</p>
                 </div>
               )}
 
               {/* Scaffold Widget Props */}
               {widget.type === 'Scaffold' && (
-                <div className="space-y-4">
+                <div className={styles.section}>
                   <PropertyField label="Background Color">
-                    <Input
+                    <TextInput
                       type="color"
                       value={widget.props.backgroundColor || '#ffffff'}
                       onChange={(e) =>
@@ -1130,10 +1236,10 @@ export const PropertiesPanel = () => {
                           backgroundColor: e.target.value,
                         })
                       }
-                      className="h-10 p-1"
+                      className={styles.colorInput}
                     />
                   </PropertyField>
-                  <p className="text-xs text-muted-foreground">
+                  <p className={styles.mutedText}>
                     The basic screen structure. Add an AppBar as first child and body content after.
                   </p>
                 </div>
@@ -1141,9 +1247,9 @@ export const PropertiesPanel = () => {
 
               {/* ListView Widget Props */}
               {widget.type === 'ListView' && (
-                <div className="space-y-4">
+                <div className={styles.section}>
                   <PropertyField label="Item Count">
-                    <Input
+                    <TextInput
                       type="number"
                       value={widget.props.itemCount ?? ''}
                       onChange={(e) =>
@@ -1155,20 +1261,20 @@ export const PropertiesPanel = () => {
                     />
                   </PropertyField>
                   <PropertyField label="Shrink Wrap">
-                    <div className="flex items-center gap-2">
-                      <Switch
+                    <div className={styles.inlineControl}>
+                      <PropertySwitch
                         checked={widget.props.shrinkWrap || false}
                         onCheckedChange={(checked) =>
                           updateWidgetProps(widget.id, { shrinkWrap: checked })
                         }
                       />
-                      <span className="text-xs text-muted-foreground">
+                      <span className={styles.mutedText}>
                         {widget.props.shrinkWrap ? 'Enabled' : 'Disabled'}
                       </span>
                     </div>
                   </PropertyField>
                   <PropertyField label="Padding">
-                    <Input
+                    <TextInput
                       type="number"
                       value={widget.props.padding ?? ''}
                       onChange={(e) =>
@@ -1179,7 +1285,7 @@ export const PropertiesPanel = () => {
                       placeholder="Default"
                     />
                   </PropertyField>
-                  <p className="text-xs text-muted-foreground">
+                  <p className={styles.mutedText}>
                     Use itemTemplate field in JSON for the repeated item structure.
                   </p>
                 </div>
@@ -1187,23 +1293,23 @@ export const PropertiesPanel = () => {
 
               {/* ListTile Widget Props */}
               {widget.type === 'ListTile' && (
-                <div className="space-y-4">
+                <div className={styles.section}>
                   <PropertyField label="Title">
-                    <Input
+                    <TextInput
                       value={widget.props.title || ''}
                       onChange={(e) => updateWidgetProps(widget.id, { title: e.target.value })}
                       placeholder="List item title..."
                     />
                   </PropertyField>
                   <PropertyField label="Leading Icon">
-                    <Input
+                    <TextInput
                       value={widget.props.icon || ''}
                       onChange={(e) => updateWidgetProps(widget.id, { icon: e.target.value })}
                       placeholder="e.g., home, settings, person"
                     />
                   </PropertyField>
                   <PropertyField label="Navigate To">
-                    <Select
+                    <PropertySelect
                       value={widget.props.actions?.route || ''}
                       onValueChange={(v) =>
                         updateWidgetProps(widget.id, {
@@ -1211,26 +1317,26 @@ export const PropertiesPanel = () => {
                         })
                       }
                     >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select route" />
-                      </SelectTrigger>
-                      <SelectContent>
+                      <PropertySelectTrigger>
+                        <PropertySelectValue placeholder="Select route" />
+                      </PropertySelectTrigger>
+                      <PropertySelectContent>
                         {screenOptions.map((screen) => (
-                          <SelectItem key={screen.id} value={screen.route}>
+                          <PropertySelectItem key={screen.id} value={screen.route}>
                             {screen.name} ({screen.route})
-                          </SelectItem>
+                          </PropertySelectItem>
                         ))}
-                      </SelectContent>
-                    </Select>
+                      </PropertySelectContent>
+                    </PropertySelect>
                   </PropertyField>
                 </div>
               )}
 
               {/* BottomNavigationBar Widget Props */}
               {widget.type === 'BottomNavigationBar' && (
-                <div className="space-y-4">
+                <div className={styles.section}>
                   <PropertyField label="Current Index">
-                    <Input
+                    <TextInput
                       type="number"
                       value={widget.props.currentIndex || 0}
                       onChange={(e) =>
@@ -1242,7 +1348,7 @@ export const PropertiesPanel = () => {
                     />
                   </PropertyField>
                   <PropertyField label="Type">
-                    <Select
+                    <PropertySelect
                       value={widget.props.type || 'fixed'}
                       onValueChange={(v) =>
                         updateWidgetProps(widget.id, {
@@ -1250,17 +1356,17 @@ export const PropertiesPanel = () => {
                         })
                       }
                     >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="fixed">Fixed</SelectItem>
-                        <SelectItem value="shifting">Shifting</SelectItem>
-                      </SelectContent>
-                    </Select>
+                      <PropertySelectTrigger>
+                        <PropertySelectValue />
+                      </PropertySelectTrigger>
+                      <PropertySelectContent>
+                        <PropertySelectItem value="fixed">Fixed</PropertySelectItem>
+                        <PropertySelectItem value="shifting">Shifting</PropertySelectItem>
+                      </PropertySelectContent>
+                    </PropertySelect>
                   </PropertyField>
                   <PropertyField label="Selected Item Color">
-                    <Input
+                    <TextInput
                       type="color"
                       value={widget.props.selectedItemColor || '#6200EE'}
                       onChange={(e) =>
@@ -1268,11 +1374,11 @@ export const PropertiesPanel = () => {
                           selectedItemColor: e.target.value,
                         })
                       }
-                      className="h-10 p-1"
+                      className={styles.colorInput}
                     />
                   </PropertyField>
                   <PropertyField label="Unselected Item Color">
-                    <Input
+                    <TextInput
                       type="color"
                       value={widget.props.unselectedItemColor || '#757575'}
                       onChange={(e) =>
@@ -1280,75 +1386,73 @@ export const PropertiesPanel = () => {
                           unselectedItemColor: e.target.value,
                         })
                       }
-                      className="h-10 p-1"
+                      className={styles.colorInput}
                     />
                   </PropertyField>
 
-                  <Separator />
+                  <Divider />
 
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-xs text-muted-foreground">Navigation Items</Label>
+                  <div className={styles.stackCompact}>
+                    <div className={styles.row}>
+                      <Text component="span" className={styles.mutedText}>
+                        Navigation Items
+                      </Text>
                       <Button
-                        size="sm"
-                        variant="outline"
+                        size="xs"
+                        variant="default"
                         onClick={addNavItem}
-                        className="h-7 text-xs"
+                        className={styles.addButton}
                       >
-                        <Plus className="w-3 h-3 mr-1" /> Add
+                        <Plus className={styles.addIcon} /> Add
                       </Button>
                     </div>
 
                     {(widget.props.items || []).map((item, index) => (
-                      <div
-                        key={index}
-                        className="p-3 border border-border rounded-lg space-y-2 bg-muted/30"
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-medium">Tab {index + 1}</span>
-                          <Button
-                            size="icon"
-                            variant="ghost"
+                      <div key={index} className={styles.itemCard}>
+                        <div className={styles.row}>
+                          <span className={styles.itemLabel}>Tab {index + 1}</span>
+                          <ActionIcon
+                            aria-label={`Remove navigation item ${index + 1}`}
+                            size="sm"
+                            variant="subtle"
                             onClick={() => removeNavItem(index)}
-                            className="h-7 w-7"
+                            className={styles.removeButton}
                           >
-                            <X className="w-3 h-3" />
-                          </Button>
+                            <X className={styles.removeIcon} />
+                          </ActionIcon>
                         </div>
-                        <Input
+                        <TextInput
                           value={item.label || ''}
                           onChange={(e) => updateNavItem(index, { label: e.target.value })}
                           placeholder="Label..."
-                          className="h-8 text-xs"
+                          className={styles.compactField}
                         />
-                        <Input
+                        <TextInput
                           value={item.icon || ''}
                           onChange={(e) => updateNavItem(index, { icon: e.target.value })}
                           placeholder="Icon (e.g., home, search)..."
-                          className="h-8 text-xs"
+                          className={styles.compactField}
                         />
-                        <Select
+                        <PropertySelect
                           value={item.route || ''}
                           onValueChange={(v) => updateNavItem(index, { route: v })}
                         >
-                          <SelectTrigger className="h-8 text-xs">
-                            <SelectValue placeholder="Select route..." />
-                          </SelectTrigger>
-                          <SelectContent>
+                          <PropertySelectTrigger className={styles.compactField}>
+                            <PropertySelectValue placeholder="Select route..." />
+                          </PropertySelectTrigger>
+                          <PropertySelectContent>
                             {screenOptions.map((screen) => (
-                              <SelectItem key={screen.id} value={screen.route}>
+                              <PropertySelectItem key={screen.id} value={screen.route}>
                                 {screen.name} ({screen.route})
-                              </SelectItem>
+                              </PropertySelectItem>
                             ))}
-                          </SelectContent>
-                        </Select>
+                          </PropertySelectContent>
+                        </PropertySelect>
                       </div>
                     ))}
 
                     {(!widget.props.items || widget.props.items.length === 0) && (
-                      <p className="text-xs text-muted-foreground text-center py-2">
-                        No navigation items added yet
-                      </p>
+                      <p className={styles.emptyCollection}>No navigation items added yet</p>
                     )}
                   </div>
                 </div>
@@ -1356,14 +1460,14 @@ export const PropertiesPanel = () => {
 
               {/* Drawer Widget Props */}
               {widget.type === 'Drawer' && (
-                <div className="space-y-4">
+                <div className={styles.section}>
                   <PropertyField label="Header Title">
-                    <Input
+                    <TextInput
                       value={widget.props.header?.title || ''}
                       onChange={(e) =>
                         updateWidgetProps(widget.id, {
                           header: {
-                            ...widget.props.header,
+                            ...drawerHeader,
                             title: e.target.value,
                           },
                         })
@@ -1372,12 +1476,12 @@ export const PropertiesPanel = () => {
                     />
                   </PropertyField>
                   <PropertyField label="Header Subtitle">
-                    <Input
+                    <TextInput
                       value={widget.props.header?.subtitle || ''}
                       onChange={(e) =>
                         updateWidgetProps(widget.id, {
                           header: {
-                            ...widget.props.header,
+                            ...drawerHeader,
                             subtitle: e.target.value,
                           },
                         })
@@ -1386,21 +1490,21 @@ export const PropertiesPanel = () => {
                     />
                   </PropertyField>
                   <PropertyField label="Header Background">
-                    <Input
+                    <TextInput
                       type="color"
                       value={widget.props.header?.backgroundColor || '#6200EE'}
                       onChange={(e) =>
                         updateWidgetProps(widget.id, {
                           header: {
-                            ...widget.props.header,
+                            ...drawerHeader,
                             backgroundColor: e.target.value,
                           },
                         })
                       }
-                      className="h-10 p-1"
+                      className={styles.colorInput}
                     />
                   </PropertyField>
-                  <p className="text-xs text-muted-foreground">
+                  <p className={styles.mutedText}>
                     Add ListTile widgets as children for menu items.
                   </p>
                 </div>
@@ -1411,9 +1515,9 @@ export const PropertiesPanel = () => {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="flex-1 flex items-center justify-center p-8"
+            className={styles.emptyState}
           >
-            <p className="text-muted-foreground text-sm text-center">
+            <p className={styles.emptyStateText}>
               Select a widget on the canvas to edit its properties
             </p>
           </motion.div>
@@ -1424,8 +1528,10 @@ export const PropertiesPanel = () => {
 };
 
 const PropertyField = ({ label, children }: { label: string; children: React.ReactNode }) => (
-  <div className="space-y-2">
-    <Label className="text-xs text-muted-foreground">{label}</Label>
+  <div className={styles.stackCompact}>
+    <Text component="span" className={styles.mutedText}>
+      {label}
+    </Text>
     {children}
   </div>
 );

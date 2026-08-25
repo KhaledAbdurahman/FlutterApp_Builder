@@ -1,51 +1,44 @@
-import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
+  AlertCircle,
+  Clock,
+  Download,
+  FileText,
   FolderOpen,
+  Loader2,
+  RefreshCw,
   Save,
   Trash2,
-  FileText,
-  Clock,
-  Loader2,
-  AlertCircle,
-  RefreshCw,
-  Download,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { useBuilderStore } from '@/stores/builder/use-builder-store';
+  ActionIcon,
+  Alert,
+  Button,
+  Group,
+  Modal,
+  ScrollArea,
+  Stack,
+  Text,
+  Textarea,
+  TextInput,
+} from '@mantine/core';
+import { formatDistanceToNow } from 'date-fns';
 import { PROJECT_SERVICE } from '@/api/projects';
+import { ChooseNotification } from '@/lib/choose-notification';
+import { useBuilderStore } from '@/stores/builder/use-builder-store';
 import type { IProject, IProjectId, IProjectJsonData } from '@/types/api/project-types';
 import { downloadBlob } from '@/utils/download-blob';
-import { toast } from 'sonner';
-import { formatDistanceToNow } from 'date-fns';
+import styles from '@/pages/builder/components/project-manager.module.css';
 
-interface ProjectManagerProps {
-  open: boolean;
+interface IProjectManagerProps {
   onOpenChange: (open: boolean) => void;
+  open: boolean;
 }
 
-export const ProjectManager = ({ open, onOpenChange }: ProjectManagerProps) => {
+type IProjectTab = 'save' | 'load';
+
+export const ProjectManager = ({ onOpenChange, open }: IProjectManagerProps) => {
   const {
     project,
     exportProject,
@@ -62,71 +55,72 @@ export const ProjectManager = ({ open, onOpenChange }: ProjectManagerProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Delete confirmation
   const [deleteConfirmId, setDeleteConfirmId] = useState<IProjectId | null>(null);
+  const [activeTab, setActiveTab] = useState<IProjectTab>('save');
+  const projectMetadataRef = useRef({ title: projectTitle, description: projectDescription });
 
-  const fetchProjects = async () => {
+  useEffect(() => {
+    projectMetadataRef.current = { title: projectTitle, description: projectDescription };
+  }, [projectDescription, projectTitle]);
+
+  const fetchProjects = useCallback(async (): Promise<IProject[]> => {
     setIsLoading(true);
     setError(null);
+
     try {
       const data = await PROJECT_SERVICE.getAll();
       setProjects(data);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to load projects';
+      return data;
+    } catch (requestError) {
+      const message =
+        requestError instanceof Error ? requestError.message : 'Failed to load projects';
       setError(message);
-      console.error('Failed to fetch projects:', err);
+      console.error('Failed to fetch projects:', requestError);
+      return [];
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (!open) return;
+
+    const { title, description } = projectMetadataRef.current;
+    setProjectTitle(title || project.app_name);
+    if (!serverProjectId) setProjectDescription(description || '');
+
     let isActive = true;
+    void fetchProjects().then((savedProjects) => {
+      if (!isActive || !serverProjectId) return;
+      const currentProject = savedProjects.find(
+        (savedProject) => savedProject.id === serverProjectId,
+      );
+      setProjectTitle(currentProject?.name || project.app_name);
+      setProjectDescription(currentProject?.description || '');
+    });
 
-    const fetchAndPrefill = async () => {
-      setProjectTitle(projectTitle || project.app_name);
-      if (!serverProjectId) {
-        setProjectDescription(projectDescription || '');
-      }
-      setIsLoading(true);
-      setError(null);
-      try {
-        const data = await PROJECT_SERVICE.getAll();
-        if (!isActive) return;
-        setProjects(data);
-        if (serverProjectId) {
-          const current = data.find((p) => p.id === serverProjectId);
-          setProjectTitle(current?.name || project.app_name);
-          setProjectDescription(current?.description || '');
-        }
-      } catch (err) {
-        if (!isActive) return;
-        const message = err instanceof Error ? err.message : 'Failed to load projects';
-        setError(message);
-        console.error('Failed to fetch projects:', err);
-      } finally {
-        if (isActive) setIsLoading(false);
-      }
-    };
-
-    fetchAndPrefill();
     return () => {
       isActive = false;
     };
-  }, [open, project.app_name, serverProjectId, setProjectTitle, setProjectDescription]);
+  }, [
+    fetchProjects,
+    open,
+    project.app_name,
+    serverProjectId,
+    setProjectDescription,
+    setProjectTitle,
+  ]);
 
   const handleSave = async () => {
     if (!projectTitle.trim()) {
-      toast.error('Please enter a project name');
+      ChooseNotification.failure({ message: 'Please enter a project name' });
       return;
     }
 
     setIsSaving(true);
+
     try {
       const exportData = exportProject();
-      // Ensure json_data contains all required fields for generation
       const jsonData: IProjectJsonData = {
         app_name: exportData.app_name,
         package_name: exportData.package_name,
@@ -136,29 +130,28 @@ export const ProjectManager = ({ open, onOpenChange }: ProjectManagerProps) => {
       let savedProject: IProject;
 
       if (serverProjectId) {
-        // Update existing project
         savedProject = await PROJECT_SERVICE.update(serverProjectId, {
           name: projectTitle,
           description: projectDescription,
           json_data: jsonData,
         });
-        toast.success('Project updated!');
+        ChooseNotification.success({ message: 'Project updated' });
       } else {
-        // Create new project
         savedProject = await PROJECT_SERVICE.create({
           name: projectTitle,
           description: projectDescription,
           json_data: jsonData,
         });
         setServerProjectId(savedProject.id);
-        toast.success('Project saved!');
+        ChooseNotification.success({ message: 'Project saved' });
       }
 
-      fetchProjects();
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to save project';
-      toast.error(message);
-      console.error('Save error:', err);
+      void fetchProjects();
+    } catch (requestError) {
+      const message =
+        requestError instanceof Error ? requestError.message : 'Failed to save project';
+      ChooseNotification.failure({ message });
+      console.error('Save project error:', requestError);
     } finally {
       setIsSaving(false);
     }
@@ -171,25 +164,26 @@ export const ProjectManager = ({ open, onOpenChange }: ProjectManagerProps) => {
       setProjectTitle(savedProject.name);
       setProjectDescription(savedProject.description || '');
       onOpenChange(false);
-      toast.success(`Loaded "${savedProject.name}"`);
-    } catch (err) {
-      toast.error('Failed to load project');
-      console.error('Load error:', err);
+      ChooseNotification.success({ message: `Loaded "${savedProject.name}"` });
+    } catch (requestError) {
+      ChooseNotification.failure({ message: 'Failed to load project' });
+      console.error('Load project error:', requestError);
     }
   };
 
   const handleDelete = async (projectId: IProjectId) => {
     try {
       await PROJECT_SERVICE.delete(projectId);
-      setProjects((prev) => prev.filter((p) => p.id !== projectId));
-      if (serverProjectId === projectId) {
-        setServerProjectId(null);
-      }
-      toast.success('Project deleted');
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to delete project';
-      toast.error(message);
-      console.error('Delete error:', err);
+      setProjects((currentProjects) =>
+        currentProjects.filter((savedProject) => savedProject.id !== projectId),
+      );
+      if (serverProjectId === projectId) setServerProjectId(null);
+      ChooseNotification.success({ message: 'Project deleted' });
+    } catch (requestError) {
+      const message =
+        requestError instanceof Error ? requestError.message : 'Failed to delete project';
+      ChooseNotification.failure({ message });
+      console.error('Delete project error:', requestError);
     } finally {
       setDeleteConfirmId(null);
     }
@@ -199,189 +193,319 @@ export const ProjectManager = ({ open, onOpenChange }: ProjectManagerProps) => {
     try {
       const blob = await PROJECT_SERVICE.downloadFlutterApplication(projectId);
       downloadBlob(blob, `${projectName}.zip`);
-      toast.success('Download started!');
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to download project';
-      toast.error(message);
+      ChooseNotification.success({ message: 'Download started' });
+    } catch (requestError) {
+      const message =
+        requestError instanceof Error ? requestError.message : 'Failed to download project';
+      ChooseNotification.failure({ message });
+      console.error('Download project error:', requestError);
     }
   };
 
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Project Manager</DialogTitle>
-            <DialogDescription>
-              Save your project to the server or load an existing one.
-            </DialogDescription>
-          </DialogHeader>
+      <Modal
+        centered
+        classNames={{
+          body: styles.modalBody,
+          content: styles.modalContent,
+          header: styles.modalHeader,
+          title: styles.modalTitle,
+        }}
+        opened={open}
+        size="xl"
+        title="Projects"
+        onClose={() => onOpenChange(false)}
+      >
+        <div className={styles.dialogLayout}>
+          <Text className={styles.modalDescription} size="sm">
+            Save the current editor state or load a project from your workspace.
+          </Text>
 
-          <Tabs defaultValue="save" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="save" className="gap-2">
-                <Save className="w-4 h-4" />
-                Save Project
-              </TabsTrigger>
-              <TabsTrigger value="load" className="gap-2">
-                <FolderOpen className="w-4 h-4" />
-                Load Project
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="save" className="space-y-4 py-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Project Name</label>
-                <Input
-                  value={projectTitle}
-                  onChange={(e) => setProjectTitle(e.target.value)}
-                  placeholder="My Flutter App"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Description (optional)</label>
-                <Textarea
-                  value={projectDescription}
-                  onChange={(e) => setProjectDescription(e.target.value)}
-                  placeholder="A brief description of your project..."
-                  rows={3}
-                />
-              </div>
-              {serverProjectId && (
-                <p className="text-sm text-muted-foreground">
-                  This will update the existing project (ID: {serverProjectId})
-                </p>
-              )}
-              <Button onClick={handleSave} disabled={isSaving} className="w-full gap-2">
-                {isSaving ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Save className="w-4 h-4" />
-                )}
-                {serverProjectId ? 'Update Project' : 'Save Project'}
-              </Button>
-            </TabsContent>
-
-            <TabsContent value="load" className="py-4">
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-sm text-muted-foreground">
-                  {projects.length} project(s) found
-                </span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={fetchProjects}
-                  disabled={isLoading}
-                  className="gap-2"
-                >
-                  <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-                  Refresh
-                </Button>
-              </div>
-
-              {error && (
-                <div className="flex items-center gap-2 p-3 rounded-md bg-destructive/10 text-destructive mb-4">
-                  <AlertCircle className="w-4 h-4" />
-                  <span className="text-sm">{error}</span>
-                </div>
-              )}
-
-              <ScrollArea className="h-[300px] pr-4">
-                <AnimatePresence mode="popLayout">
-                  {isLoading ? (
-                    <div className="flex items-center justify-center py-12">
-                      <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-                    </div>
-                  ) : projects.length === 0 ? (
-                    <div className="text-center py-12 text-muted-foreground">
-                      <FileText className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                      <p>No saved projects yet</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {projects.map((proj) => (
-                        <motion.div
-                          key={proj.id}
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, scale: 0.95 }}
-                          className={`p-4 border rounded-lg cursor-pointer transition-colors hover:border-primary group ${
-                            serverProjectId === proj.id ? 'border-primary bg-primary/5' : ''
-                          }`}
-                          onClick={() => handleLoad(proj)}
-                        >
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1 min-w-0">
-                              <h4 className="font-medium truncate">{proj.name}</h4>
-                              {proj.description && (
-                                <p className="text-sm text-muted-foreground truncate mt-1">
-                                  {proj.description}
-                                </p>
-                              )}
-                              <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
-                                <Clock className="w-3 h-3" />
-                                <span>
-                                  {formatDistanceToNow(new Date(proj.updated_at), {
-                                    addSuffix: true,
-                                  })}
-                                </span>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDownload(proj.id, proj.name);
-                                }}
-                              >
-                                <Download className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-destructive hover:text-destructive"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setDeleteConfirmId(proj.id);
-                                }}
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        </motion.div>
-                      ))}
-                    </div>
-                  )}
-                </AnimatePresence>
-              </ScrollArea>
-            </TabsContent>
-          </Tabs>
-        </DialogContent>
-      </Dialog>
-
-      <AlertDialog open={deleteConfirmId !== null} onOpenChange={() => setDeleteConfirmId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Project?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. The project will be permanently deleted from the server.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => deleteConfirmId && handleDelete(deleteConfirmId)}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          <div aria-label="Project actions" className={styles.tabRail} role="tablist">
+            <motion.button
+              aria-controls="project-save-panel"
+              aria-selected={activeTab === 'save'}
+              className={styles.tabButton}
+              role="tab"
+              type="button"
+              onClick={() => setActiveTab('save')}
             >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+              {activeTab === 'save' && (
+                <motion.span
+                  className={styles.activeTabIndicator}
+                  layoutId="project-manager-active-tab"
+                  transition={{ type: 'spring', duration: 0.42, bounce: 0.12 }}
+                />
+              )}
+              <Save size={16} />
+              <span>Save project</span>
+            </motion.button>
+            <motion.button
+              aria-controls="project-load-panel"
+              aria-selected={activeTab === 'load'}
+              className={styles.tabButton}
+              role="tab"
+              type="button"
+              onClick={() => setActiveTab('load')}
+            >
+              {activeTab === 'load' && (
+                <motion.span
+                  className={styles.activeTabIndicator}
+                  layoutId="project-manager-active-tab"
+                  transition={{ type: 'spring', duration: 0.42, bounce: 0.12 }}
+                />
+              )}
+              <FolderOpen size={16} />
+              <span>Saved projects</span>
+            </motion.button>
+          </div>
+
+          <div className={styles.tabViewport}>
+            <AnimatePresence initial={false} mode="wait">
+              {activeTab === 'save' ? (
+                <motion.section
+                  key="save"
+                  animate={{ opacity: 1, y: 0 }}
+                  className={styles.tabPane}
+                  exit={{ opacity: 0, y: -8 }}
+                  id="project-save-panel"
+                  initial={{ opacity: 0, y: 8 }}
+                  role="tabpanel"
+                  transition={{ duration: 0.18 }}
+                >
+                  <div className={styles.saveHeading}>
+                    <div className={styles.saveHeadingIcon}>
+                      <Save size={18} />
+                    </div>
+                    <div>
+                      <Text className={styles.saveHeadingTitle}>Current editor snapshot</Text>
+                      <Text c="dimmed" size="xs">
+                        Save the selected screen tree, widget settings, and app metadata together.
+                      </Text>
+                    </div>
+                  </div>
+                  <Stack className={styles.saveFields} gap="md">
+                    <TextInput
+                      label="Project name"
+                      placeholder="My Flutter App"
+                      value={projectTitle}
+                      onChange={(event) => setProjectTitle(event.currentTarget.value)}
+                    />
+                    <Textarea
+                      autosize
+                      label="Description"
+                      minRows={3}
+                      placeholder="A brief description of your project..."
+                      value={projectDescription}
+                      onChange={(event) => setProjectDescription(event.currentTarget.value)}
+                    />
+                  </Stack>
+                  <Group className={styles.saveFooter} justify="space-between">
+                    <Text c="dimmed" size="xs">
+                      {serverProjectId
+                        ? `Updating project ${serverProjectId}`
+                        : 'Creates a new server project'}
+                    </Text>
+                    <Button
+                      leftSection={
+                        isSaving ? <Loader2 className={styles.spinningIcon} /> : <Save size={16} />
+                      }
+                      loading={isSaving}
+                      onClick={handleSave}
+                    >
+                      {serverProjectId ? 'Update project' : 'Save project'}
+                    </Button>
+                  </Group>
+                </motion.section>
+              ) : (
+                <motion.section
+                  key="load"
+                  animate={{ opacity: 1, y: 0 }}
+                  className={styles.tabPane}
+                  exit={{ opacity: 0, y: -8 }}
+                  id="project-load-panel"
+                  initial={{ opacity: 0, y: 8 }}
+                  role="tabpanel"
+                  transition={{ duration: 0.18 }}
+                >
+                  <Group className={styles.listHeader} justify="space-between">
+                    <div>
+                      <Text className={styles.listHeading}>Saved projects</Text>
+                      <Text c="dimmed" size="xs">
+                        {projects.length} project(s) available in your workspace
+                      </Text>
+                    </div>
+                    <Button
+                      leftSection={
+                        <RefreshCw
+                          className={isLoading ? styles.spinningIcon : undefined}
+                          size={15}
+                        />
+                      }
+                      loading={isLoading}
+                      size="xs"
+                      variant="light"
+                      onClick={() => void fetchProjects()}
+                    >
+                      Refresh
+                    </Button>
+                  </Group>
+
+                  {error && (
+                    <Alert
+                      className={styles.errorAlert}
+                      color="red"
+                      icon={<AlertCircle size={16} />}
+                    >
+                      {error}
+                    </Alert>
+                  )}
+
+                  <ScrollArea className={styles.projectScrollArea} type="auto">
+                    <AnimatePresence mode="popLayout">
+                      {isLoading ? (
+                        <LoadingState label="Loading projects" />
+                      ) : projects.length === 0 ? (
+                        <EmptyState />
+                      ) : (
+                        <Stack gap="sm">
+                          {projects.map((savedProject) => (
+                            <motion.div
+                              key={savedProject.id}
+                              animate={{ opacity: 1, y: 0 }}
+                              className={
+                                serverProjectId === savedProject.id
+                                  ? `${styles.projectCard} ${styles.projectCardActive}`
+                                  : styles.projectCard
+                              }
+                              exit={{ opacity: 0, scale: 0.96 }}
+                              initial={{ opacity: 0, y: 10 }}
+                              role="button"
+                              tabIndex={0}
+                              transition={{ duration: 0.16 }}
+                              whileHover={{ y: -2 }}
+                              onClick={() => handleLoad(savedProject)}
+                              onKeyDown={(event) => {
+                                if (event.key === 'Enter' || event.key === ' ') {
+                                  event.preventDefault();
+                                  handleLoad(savedProject);
+                                }
+                              }}
+                            >
+                              <span className={styles.projectAccent} />
+                              <Group align="flex-start" justify="space-between" wrap="nowrap">
+                                <div className={styles.projectDetails}>
+                                  <Group className={styles.projectNameRow} gap="xs">
+                                    <Text className={styles.projectName} truncate>
+                                      {savedProject.name}
+                                    </Text>
+                                    {serverProjectId === savedProject.id && (
+                                      <span className={styles.activeProjectLabel}>Current</span>
+                                    )}
+                                  </Group>
+                                  {savedProject.description && (
+                                    <Text
+                                      c="dimmed"
+                                      className={styles.projectDescription}
+                                      lineClamp={2}
+                                    >
+                                      {savedProject.description}
+                                    </Text>
+                                  )}
+                                  <Group className={styles.projectMeta} gap={4}>
+                                    <Clock size={13} />
+                                    <span>
+                                      {formatDistanceToNow(new Date(savedProject.updated_at), {
+                                        addSuffix: true,
+                                      })}
+                                    </span>
+                                  </Group>
+                                </div>
+                                <Group className={styles.projectActions} gap={4}>
+                                  <ActionIcon
+                                    aria-label={`Download ${savedProject.name}`}
+                                    size="sm"
+                                    title="Download generated application"
+                                    variant="subtle"
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      void handleDownload(savedProject.id, savedProject.name);
+                                    }}
+                                  >
+                                    <Download size={15} />
+                                  </ActionIcon>
+                                  <ActionIcon
+                                    aria-label={`Delete ${savedProject.name}`}
+                                    color="red"
+                                    size="sm"
+                                    title="Delete project"
+                                    variant="subtle"
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      setDeleteConfirmId(savedProject.id);
+                                    }}
+                                  >
+                                    <Trash2 size={15} />
+                                  </ActionIcon>
+                                </Group>
+                              </Group>
+                            </motion.div>
+                          ))}
+                        </Stack>
+                      )}
+                    </AnimatePresence>
+                  </ScrollArea>
+                </motion.section>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        centered
+        classNames={{ content: styles.deleteModalContent, title: styles.modalTitle }}
+        opened={deleteConfirmId !== null}
+        size="sm"
+        title="Delete project?"
+        onClose={() => setDeleteConfirmId(null)}
+      >
+        <Stack gap="md">
+          <Text c="dimmed" size="sm">
+            This permanently deletes the project from the server and cannot be undone.
+          </Text>
+          <Group justify="flex-end">
+            <Button variant="default" onClick={() => setDeleteConfirmId(null)}>
+              Cancel
+            </Button>
+            <Button
+              color="red"
+              onClick={() => deleteConfirmId && void handleDelete(deleteConfirmId)}
+            >
+              Delete project
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
     </>
   );
 };
+
+const LoadingState = ({ label }: { label: string }) => (
+  <div className={styles.loadingState}>
+    <Loader2 className={styles.loadingIcon} />
+    <Text c="dimmed" size="sm">
+      {label}
+    </Text>
+  </div>
+);
+
+const EmptyState = () => (
+  <div className={styles.emptyState}>
+    <FileText className={styles.emptyStateIcon} />
+    <Text c="dimmed" size="sm">
+      No saved projects yet
+    </Text>
+  </div>
+);
