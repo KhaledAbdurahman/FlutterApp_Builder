@@ -24,6 +24,9 @@ const PREVIEW_AREA_PADDING = 48;
 const MINIMUM_ZOOM = 40;
 const MAXIMUM_ZOOM = 100;
 const ZOOM_STEP = 10;
+const FLUTTER_PREVIEW_READY_EVENT = 'flutter-preview-ready';
+const FLUTTER_PREVIEW_BOOT_TIMEOUT = 10_000;
+const MAXIMUM_AUTOMATIC_FRAME_RETRIES = 1;
 
 const PreviewDevices = {
   iphone14: {
@@ -56,6 +59,9 @@ interface ILivePreviewPanelProps {
   open: boolean;
   onClose: () => void;
 }
+
+const IsFlutterPreviewReadyMessage = (value: unknown): value is string =>
+  value === FLUTTER_PREVIEW_READY_EVENT;
 
 const GetPhaseDetails = (
   phase: ILivePreviewPhase,
@@ -96,6 +102,12 @@ const GetPhaseDetails = (
         description: 'The Flutter preview is connected.',
         progress: 100,
       };
+    case 'booting':
+      return {
+        label: 'Loading Flutter view',
+        description: 'Waiting for the generated application to render its first screen.',
+        progress: 96,
+      };
     case 'error':
       return {
         label: 'Preview failed',
@@ -133,11 +145,11 @@ const GetPreviewStatusDetails = (
         description: 'Flutter is compiling the web application.',
         progress: 88,
       };
-    case 'ready':
+    case 'serving':
       return {
-        label: 'Preview ready',
-        description: 'The Flutter application is ready to interact with.',
-        progress: 100,
+        label: 'Loading Flutter view',
+        description: 'The preview server is responding while Flutter starts in the browser.',
+        progress: 96,
       };
     case 'error':
       return {
@@ -162,7 +174,9 @@ const GetPreviewStatusDetails = (
 
 const LivePreviewPanel = ({ open, onClose }: ILivePreviewPanelProps) => {
   const {
+    completePreviewBoot,
     errorMessage,
+    failPreviewBoot,
     frameRevision,
     isUpdating,
     launchPreview,
@@ -175,6 +189,9 @@ const LivePreviewPanel = ({ open, onClose }: ILivePreviewPanelProps) => {
     updateErrorMessage,
   } = useLivePreview(open);
   const previewAreaRef = useRef<HTMLDivElement>(null);
+  const previewFrameRef = useRef<HTMLIFrameElement>(null);
+  const previewUrlRef = useRef<string | null>(previewUrl);
+  const automaticFrameRetryCountRef = useRef(0);
   const [deviceId, setDeviceId] = useState<IPreviewDeviceId>('iphone14');
   const [fitScale, setFitScale] = useState(1);
   const [fitToScreen, setFitToScreen] = useState(true);
@@ -188,12 +205,15 @@ const LivePreviewPanel = ({ open, onClose }: ILivePreviewPanelProps) => {
   const scale = fitToScreen ? fitScale : zoomPercent / 100;
   const phaseDetails = GetPhaseDetails(phase, previewServerStatus, previewStatusMessage);
   const frameKey = `${previewUrl ?? 'empty'}:${frameRevision}`;
+  const isPreviewFrameMounted = previewUrl !== null && (phase === 'booting' || phase === 'ready');
   const isFrameLoading =
-    phase === 'ready' &&
-    previewUrl !== null &&
+    phase === 'booting' &&
+    isPreviewFrameMounted &&
     loadedFrameKey !== frameKey &&
     failedFrameKey !== frameKey;
   const hasFrameError = failedFrameKey === frameKey;
+
+  previewUrlRef.current = previewUrl;
 
   useEffect(() => {
     const previewArea = previewAreaRef.current;
@@ -217,6 +237,58 @@ const LivePreviewPanel = ({ open, onClose }: ILivePreviewPanelProps) => {
 
     return () => resizeObserver.disconnect();
   }, [open, phoneHeight, phoneWidth]);
+
+  useEffect(() => {
+    automaticFrameRetryCountRef.current = 0;
+  }, [previewUrl]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+
+    const HandlePreviewMessage = (event: MessageEvent<unknown>): void => {
+      const currentPreviewUrl = previewUrlRef.current;
+      if (!currentPreviewUrl) return;
+
+      let previewOrigin = '';
+      try {
+        previewOrigin = new URL(currentPreviewUrl).origin;
+      } catch {
+        return;
+      }
+
+      if (
+        event.origin !== previewOrigin ||
+        event.source !== previewFrameRef.current?.contentWindow ||
+        !IsFlutterPreviewReadyMessage(event.data)
+      ) {
+        return;
+      }
+
+      completePreviewBoot();
+    };
+
+    window.addEventListener('message', HandlePreviewMessage);
+
+    return () => window.removeEventListener('message', HandlePreviewMessage);
+  }, [completePreviewBoot, open]);
+
+  useEffect(() => {
+    if (phase !== 'booting' || !previewUrl) return undefined;
+
+    const timeoutId = window.setTimeout(() => {
+      if (automaticFrameRetryCountRef.current < MAXIMUM_AUTOMATIC_FRAME_RETRIES) {
+        automaticFrameRetryCountRef.current += 1;
+        setLoadedFrameKey('');
+        setFailedFrameKey('');
+        refreshFrame();
+        return;
+      }
+
+      failPreviewBoot();
+    }, FLUTTER_PREVIEW_BOOT_TIMEOUT);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [failPreviewBoot, frameKey, phase, previewUrl, refreshFrame]);
 
   const scaledPhoneSize = useMemo(
     () => ({
@@ -343,7 +415,7 @@ const LivePreviewPanel = ({ open, onClose }: ILivePreviewPanelProps) => {
               <ActionIcon
                 variant="default"
                 onClick={RefreshPreviewFrame}
-                disabled={phase !== 'ready'}
+                disabled={!isPreviewFrameMounted}
                 aria-label="Refresh preview page"
               >
                 <RotateCw size={16} />
@@ -357,6 +429,7 @@ const LivePreviewPanel = ({ open, onClose }: ILivePreviewPanelProps) => {
                   phase === 'saving' ||
                   phase === 'generating' ||
                   phase === 'launching' ||
+                  phase === 'booting' ||
                   phase === 'stopping'
                 }
                 aria-label="Regenerate and restart preview"
@@ -430,9 +503,10 @@ const LivePreviewPanel = ({ open, onClose }: ILivePreviewPanelProps) => {
                 />
               )}
 
-              {previewUrl && phase === 'ready' && (
+              {isPreviewFrameMounted && previewUrl && (
                 <iframe
                   key={frameKey}
+                  ref={previewFrameRef}
                   src={previewUrl}
                   title={`${device.label} Flutter live preview`}
                   className={styles.previewFrame}
@@ -449,7 +523,7 @@ const LivePreviewPanel = ({ open, onClose }: ILivePreviewPanelProps) => {
                 />
               )}
 
-              {(phase !== 'ready' || !previewUrl) && (
+              {!isPreviewFrameMounted && (
                 <div
                   className={styles.previewState}
                   style={{

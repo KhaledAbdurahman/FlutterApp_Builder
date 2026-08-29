@@ -2,6 +2,8 @@ import type { Screen } from '@/types/screen-types';
 
 type IProjectStatus = 'draft' | 'generating' | 'completed' | 'failed';
 type IProjectId = number | string;
+type IGenerationJobType = 'generate' | 'build_apk' | 'start_preview';
+type IGenerationJobStatus = 'queued' | 'running' | 'completed' | 'failed';
 
 interface IProjectJsonData {
   app_name: string;
@@ -45,18 +47,21 @@ interface IProjectCreateRequest {
 
 type IProjectUpdateRequest = Partial<IProjectCreateRequest>;
 
-// These action responses are retained from the established backend integration because OpenAPI currently describes them as Project.
-interface IProjectGenerationResponse {
-  status: 'success' | 'error';
-  message: string;
+interface IGenerationJobResult {
   download_url?: string;
+  preview_url?: string;
+  [key: string]: unknown;
 }
 
-interface IProjectAndroidApplicationPackageBuildResponse {
-  status: 'success' | 'error' | 'building';
-  message: string;
-  build_id?: string;
-  download_url?: string;
+interface IGenerationJob {
+  id: string;
+  job_type: IGenerationJobType;
+  status: IGenerationJobStatus;
+  error_message: string;
+  result: IGenerationJobResult | null;
+  created_at: string;
+  started_at: string | null;
+  completed_at: string | null;
 }
 
 interface IProjectGenerationLog {
@@ -66,12 +71,19 @@ interface IProjectGenerationLog {
   timestamp: string;
 }
 
+interface IProjectGenerationLogsResponse {
+  logs: IProjectGenerationLog[];
+}
+
 export type {
+  IGenerationJob,
+  IGenerationJobResult,
+  IGenerationJobStatus,
+  IGenerationJobType,
   IProject,
-  IProjectAndroidApplicationPackageBuildResponse,
   IProjectCreateRequest,
   IProjectGenerationLog,
-  IProjectGenerationResponse,
+  IProjectGenerationLogsResponse,
   IProjectId,
   IProjectJsonData,
   IProjectScreen,

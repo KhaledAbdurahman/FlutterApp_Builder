@@ -36,6 +36,9 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import { UserProfileMenu } from '@/components/UserProfileMenu';
 import BrandLogo from '@/components/BrandLogo';
 import { PROJECT_SERVICE } from '@/api/projects';
+import { useComponentCatalog } from '@/pages/builder/hooks/use-component-catalog';
+import { waitForProjectJob } from '@/pages/builder/utils/project-job-utils';
+import type { IAvailableComponent, IComponentCatalogCategory } from '@/types/api/component-types';
 import type { IProjectJsonData } from '@/types/api/project-types';
 import { downloadBlob } from '@/utils/download-blob';
 import {
@@ -64,16 +67,26 @@ interface ITopBarProps {
   onLaunchPreview: () => void;
 }
 
-const buildSchemaDocument = (): string => {
-  const widgetSchemas = WIDGET_DEFINITIONS.filter(
-    (definition) => definition.type !== 'ListView',
-  ).map((definition) => ({
-    type: definition.type,
-    label: definition.label,
-    category: definition.category,
-    childConfig: definition.childConfig,
-    defaultProps: DEFAULT_COMPONENT_PROPS[definition.type],
-  }));
+const buildSchemaDocument = (
+  availableComponents?: IAvailableComponent[],
+  categories?: IComponentCatalogCategory[],
+): string => {
+  const widgetSchemas =
+    availableComponents ??
+    WIDGET_DEFINITIONS.map((definition) => ({
+      type: definition.type,
+      category: definition.category,
+      child_rule: definition.childConfig.mode,
+      props: Object.entries(DEFAULT_COMPONENT_PROPS[definition.type]).map(([name, value]) => ({
+        name,
+        type: typeof value,
+        required: false,
+        default: value,
+      })),
+    }));
+  const catalogCategories = categories ?? [
+    ...new Set(widgetSchemas.map(({ category }) => category)),
+  ];
 
   return [
     'Flutter Builder Specification (AI-ready)',
@@ -82,6 +95,9 @@ const buildSchemaDocument = (): string => {
     '- Each Scaffold is wrapped with SingleChildScrollView in the backend.',
     '- Screen overflow is handled automatically; no manual overflow widgets needed.',
     '- Button actions are REQUIRED when using the Button widget.',
+    '',
+    'Available Categories:',
+    JSON.stringify(catalogCategories, null, 2),
     '',
     'Screen Schema:',
     JSON.stringify(
@@ -137,7 +153,7 @@ const buildSchemaDocument = (): string => {
       2,
     ),
     '',
-    'Component Definitions (excluding ListView):',
+    'Available Component Catalog:',
     JSON.stringify(widgetSchemas, null, 2),
     '',
     'Rules:',
@@ -198,6 +214,7 @@ const normalizeProps = (type: ComponentType, rawProps: Record<string, unknown> |
 };
 
 export const TopBar = ({ isPreviewOpen, onLaunchPreview }: ITopBarProps) => {
+  const { availableComponents, categories } = useComponentCatalog();
   const {
     project,
     projectTitle,
@@ -232,7 +249,10 @@ export const TopBar = ({ isPreviewOpen, onLaunchPreview }: ITopBarProps) => {
   const [importPackageName, setImportPackageName] = useState(project.package_name);
   const [autoSaveState, setAutoSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
-  const schemaDocument = useMemo(() => buildSchemaDocument(), []);
+  const schemaDocument = useMemo(
+    () => buildSchemaDocument(availableComponents, categories),
+    [availableComponents, categories],
+  );
 
   const activeScreen = project.screens.find((s) => s.id === activeScreenId);
 
@@ -584,16 +604,8 @@ export const TopBar = ({ isPreviewOpen, onLaunchPreview }: ITopBarProps) => {
         throw new Error('Please save the project before generating.');
       }
 
-      // Generate from saved project (no download here)
-      const result = await PROJECT_SERVICE.generateFlutterApplication(serverProjectId);
-
-      if (typeof result === 'object' && result && 'status' in result) {
-        const status = (result as { status?: string; message?: string }).status;
-        const message = (result as { status?: string; message?: string }).message;
-        if (status && status !== 'success') {
-          throw new Error(message || 'Failed to generate project');
-        }
-      }
+      const generationJob = await PROJECT_SERVICE.generateFlutterApplication(serverProjectId);
+      await waitForProjectJob(serverProjectId, generationJob);
 
       const blob = await PROJECT_SERVICE.downloadFlutterApplication(serverProjectId);
       downloadBlob(blob, `${project.app_name}.zip`);
@@ -626,39 +638,13 @@ export const TopBar = ({ isPreviewOpen, onLaunchPreview }: ITopBarProps) => {
         throw new Error('Please save the project before building APK.');
       }
 
-      // Always generate before building
-      const generateResult = await PROJECT_SERVICE.generateFlutterApplication(serverProjectId);
-
-      if (typeof generateResult === 'object' && generateResult && 'status' in generateResult) {
-        const status = (generateResult as { status?: string; message?: string }).status;
-        const message = (generateResult as { status?: string; message?: string }).message;
-        if (status && status !== 'success') {
-          throw new Error(message || 'Failed to generate project');
-        }
-      }
+      const generationJob = await PROJECT_SERVICE.generateFlutterApplication(serverProjectId);
+      await waitForProjectJob(serverProjectId, generationJob);
 
       ChooseNotification.loading({ id: notificationId, message: 'Building APK...' });
 
-      const result = await PROJECT_SERVICE.buildAndroidApplicationPackage(serverProjectId);
-
-      if (typeof result === 'object' && result && 'status' in result) {
-        const status = result.status;
-        const message = result.message;
-
-        if (status === 'building') {
-          ChooseNotification.loadingToSuccess({
-            id: notificationId,
-            message: message || 'APK build started. This may take a few minutes...',
-          });
-          // Poll or wait for completion - for now show message
-          setIsBuildingApk(false);
-          return;
-        }
-
-        if (status !== 'success') {
-          throw new Error(message || 'Failed to build APK');
-        }
-      }
+      const buildJob = await PROJECT_SERVICE.buildAndroidApplicationPackage(serverProjectId);
+      await waitForProjectJob(serverProjectId, buildJob);
 
       const blob = await PROJECT_SERVICE.downloadAndroidApplicationPackage(serverProjectId);
 

@@ -232,6 +232,18 @@ snapshot. The separate Screens API is reserved for a future standalone-screen
 feature and must not become a second write target until its ownership model is
 designed.
 
+The backend component catalog is authoritative for which widgets are available
+and for their categories, child rules, and supported properties. Local widget
+definitions remain the renderer compatibility layer because they contain
+frontend-only concerns such as icons and canvas defaults. When the catalog is
+temporarily unreachable, the editor falls back to those local definitions so a
+backend outage does not turn the builder palette into an empty toolbox.
+
+Project generation, APK builds, and preview startup are asynchronous jobs. The
+frontend must poll the project job endpoint before downloading generated
+artifacts. A completed preview-start job is not proof that Flutter web assets are
+servable, so the live-preview iframe remains gated by `preview_status.ready`.
+
 Page-specific API calls can live inside `src/pages/<page-name>/api/` when they
 only belong to one page. The duplication rule is disabled for APIs: if two pages
 use the same API, move it to `src/api/` with its tests and interfaces.

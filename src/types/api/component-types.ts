@@ -1,4 +1,6 @@
 type IComponentType = 'widget' | 'component' | 'custom';
+type IComponentCatalogCategory = 'content' | 'input' | 'layout' | 'screen';
+type IComponentChildRule = 'none' | 'child' | 'children' | 'special';
 
 interface IComponent {
   id: string;
@@ -22,4 +24,39 @@ interface IComponentCreateRequest {
 
 type IComponentUpdateRequest = Partial<IComponentCreateRequest>;
 
-export type { IComponent, IComponentCreateRequest, IComponentType, IComponentUpdateRequest };
+interface IComponentPropertyDefinition {
+  name: string;
+  type: string;
+  required: boolean;
+  default?: unknown;
+  values?: unknown[];
+  description?: string;
+}
+
+interface IAvailableComponent {
+  type: string;
+  category: IComponentCatalogCategory;
+  child_rule: IComponentChildRule;
+  props: IComponentPropertyDefinition[];
+}
+
+interface IAvailableComponentsResponse {
+  components: IAvailableComponent[];
+}
+
+interface IComponentCategoriesResponse {
+  categories: IComponentCatalogCategory[];
+}
+
+export type {
+  IAvailableComponent,
+  IAvailableComponentsResponse,
+  IComponent,
+  IComponentCatalogCategory,
+  IComponentCategoriesResponse,
+  IComponentChildRule,
+  IComponentCreateRequest,
+  IComponentPropertyDefinition,
+  IComponentType,
+  IComponentUpdateRequest,
+};

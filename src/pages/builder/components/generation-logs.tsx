@@ -37,7 +37,7 @@ export const GenerationLogs = ({ onOpenChange, open }: IGenerationLogsProps) => 
     setError(null);
     try {
       const data = await PROJECT_SERVICE.getGenerationLogs(serverProjectId);
-      setLogs(Array.isArray(data) ? data : []);
+      setLogs(data.logs);
     } catch (requestError) {
       const message = requestError instanceof Error ? requestError.message : 'Failed to load logs';
       setError(message);

@@ -7,6 +7,7 @@ paths:
   /api/auth/login/:
     post:
       operationId: auth_login_create
+      summary: Authenticate and receive the account token.
       tags:
       - auth
       requestBody:
@@ -24,21 +25,40 @@ paths:
       - {}
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
   /api/auth/logout/:
     post:
       operationId: auth_logout_create
+      summary: Delete the current authentication token.
       tags:
       - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/User'
+        required: true
       security:
       - tokenAuth: []
       - cookieAuth: []
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
   /api/auth/register/:
     post:
       operationId: auth_register_create
+      summary: Register an account and receive its authentication token.
       tags:
       - auth
       requestBody:
@@ -56,10 +76,15 @@ paths:
       - {}
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
   /api/components/:
     get:
       operationId: components_list
+      summary: List user private custom components.
       tags:
       - components
       security:
@@ -76,6 +101,7 @@ paths:
           description: ''
     post:
       operationId: components_create
+      summary: Save a private reusable custom component.
       tags:
       - components
       requestBody:
@@ -100,6 +126,7 @@ paths:
   /api/components/{id}/:
     get:
       operationId: components_retrieve
+      summary: Get a single component template.
       parameters:
       - in: path
         name: id
@@ -122,6 +149,7 @@ paths:
           description: ''
     put:
       operationId: components_update
+      summary: Replace one of user custom component templates.
       parameters:
       - in: path
         name: id
@@ -153,6 +181,7 @@ paths:
           description: ''
     patch:
       operationId: components_partial_update
+      summary: Update one of user custom component templates.
       parameters:
       - in: path
         name: id
@@ -183,6 +212,7 @@ paths:
           description: ''
     delete:
       operationId: components_destroy
+      summary: Delete one of user custom component templates.
       parameters:
       - in: path
         name: id
@@ -199,9 +229,27 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/components/available/:
+    get:
+      operationId: components_available_retrieve
+      description: Return every building block the Flutter generator can emit.
+      summary: List every Flutter building block supported by the generator.
+      tags:
+      - components
+      security:
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Component'
+          description: ''
   /api/components/categories/:
     get:
       operationId: components_categories_retrieve
+      summary: List categories for supported building blocks.
       tags:
       - components
       security:
@@ -217,8 +265,8 @@ paths:
   /api/generate/quick_generate/:
     post:
       operationId: generate_quick_generate_create
-      description: Generate a Flutter project directly from a JSON configuration without
-        saving it to the database.
+      description: Provide validated JSON or an existing project_id that you own.
+      summary: Generate and download a Flutter ZIP without saving a project.
       tags:
       - generate
       requestBody:
@@ -242,6 +290,7 @@ paths:
   /api/projects/:
     get:
       operationId: projects_list
+      summary: List user projects.
       tags:
       - projects
       security:
@@ -258,6 +307,7 @@ paths:
           description: ''
     post:
       operationId: projects_create
+      summary: Create a project from validated builder JSON.
       tags:
       - projects
       requestBody:
@@ -282,11 +332,14 @@ paths:
   /api/projects/{id}/:
     get:
       operationId: projects_retrieve
+      summary: Get one of user projects.
       parameters:
       - in: path
         name: id
         schema:
           type: string
+          format: uuid
+        description: A UUID string identifying this project.
         required: true
       tags:
       - projects
@@ -302,11 +355,14 @@ paths:
           description: ''
     put:
       operationId: projects_update
+      summary: Replace a project and its builder JSON.
       parameters:
       - in: path
         name: id
         schema:
           type: string
+          format: uuid
+        description: A UUID string identifying this project.
         required: true
       tags:
       - projects
@@ -331,11 +387,14 @@ paths:
           description: ''
     patch:
       operationId: projects_partial_update
+      summary: Update selected project fields.
       parameters:
       - in: path
         name: id
         schema:
           type: string
+          format: uuid
+        description: A UUID string identifying this project.
         required: true
       tags:
       - projects
@@ -359,11 +418,14 @@ paths:
           description: ''
     delete:
       operationId: projects_destroy
+      summary: Delete a project and its generated files.
       parameters:
       - in: path
         name: id
         schema:
           type: string
+          format: uuid
+        description: A UUID string identifying this project.
         required: true
       tags:
       - projects
@@ -376,11 +438,14 @@ paths:
   /api/projects/{id}/build_apk/:
     post:
       operationId: projects_build_apk_create
+      summary: Queue a release APK build from the generated ZIP.
       parameters:
       - in: path
         name: id
         schema:
           type: string
+          format: uuid
+        description: A UUID string identifying this project.
         required: true
       tags:
       - projects
@@ -397,20 +462,23 @@ paths:
       - tokenAuth: []
       - cookieAuth: []
       responses:
-        '200':
+        '202':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Project'
+                $ref: '#/components/schemas/GenerationJob'
           description: ''
   /api/projects/{id}/download/:
     get:
       operationId: projects_download_retrieve
+      summary: Download the latest generated Flutter ZIP.
       parameters:
       - in: path
         name: id
         schema:
           type: string
+          format: uuid
+        description: A UUID string identifying this project.
         required: true
       tags:
       - projects
@@ -428,11 +496,14 @@ paths:
     get:
       operationId: projects_download_apk_retrieve
       description: Download the built APK file.
+      summary: Download the latest built release APK.
       parameters:
       - in: path
         name: id
         schema:
           type: string
+          format: uuid
+        description: A UUID string identifying this project.
         required: true
       tags:
       - projects
@@ -449,11 +520,127 @@ paths:
   /api/projects/{id}/generate/:
     post:
       operationId: projects_generate_create
+      summary: Queue Flutter ZIP generation.
       parameters:
       - in: path
         name: id
         schema:
           type: string
+          format: uuid
+        description: A UUID string identifying this project.
+        required: true
+      tags:
+      - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Project'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Project'
+        required: true
+      security:
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '202':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerationJob'
+          description: ''
+  /api/projects/{id}/jobs/:
+    get:
+      operationId: project_jobs_list
+      summary: List this project’s background jobs.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this project.
+        required: true
+      tags:
+      - projects
+      security:
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GenerationJob'
+          description: ''
+  /api/projects/{id}/jobs/{job_id}/:
+    get:
+      operationId: project_job_status_retrieve
+      summary: Get one background job’s current status.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this project.
+        required: true
+      - in: path
+        name: job_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - projects
+      security:
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerationJob'
+          description: ''
+  /api/projects/{id}/logs/:
+    get:
+      operationId: projects_logs_retrieve
+      summary: List generation and preview logs for this project.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this project.
+        required: true
+      tags:
+      - projects
+      security:
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+          description: ''
+  /api/projects/{id}/preview_heartbeat/:
+    post:
+      operationId: projects_preview_heartbeat_create
+      summary: Keep an active preview from being reaped for idleness.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this project.
         required: true
       tags:
       - projects
@@ -476,14 +663,18 @@ paths:
               schema:
                 $ref: '#/components/schemas/Project'
           description: ''
-  /api/projects/{id}/logs/:
+  /api/projects/{id}/preview_status/:
     get:
-      operationId: projects_logs_retrieve
+      operationId: projects_preview_status_retrieve
+      description: Return the current launch state for one live preview.
+      summary: Get the current live-preview readiness state.
       parameters:
       - in: path
         name: id
         schema:
           type: string
+          format: uuid
+        description: A UUID string identifying this project.
         required: true
       tags:
       - projects
@@ -500,12 +691,49 @@ paths:
   /api/projects/{id}/start_preview/:
     post:
       operationId: projects_start_preview_create
-      description: Start a live preview server for the generated Flutter project.
+      description: Queue a live preview server start and return its pollable job.
+      summary: Queue startup of a live Flutter web preview.
       parameters:
       - in: path
         name: id
         schema:
           type: string
+          format: uuid
+        description: A UUID string identifying this project.
+        required: true
+      tags:
+      - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Project'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Project'
+        required: true
+      security:
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '202':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerationJob'
+          description: ''
+  /api/projects/{id}/stop_preview/:
+    post:
+      operationId: projects_stop_preview_create
+      description: Stop the preview server for a project.
+      summary: Stop this project’s live preview process.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this project.
         required: true
       tags:
       - projects
@@ -528,15 +756,17 @@ paths:
               schema:
                 $ref: '#/components/schemas/Project'
           description: ''
-  /api/projects/{id}/stop_preview/:
+  /api/projects/{id}/update_preview/:
     post:
-      operationId: projects_stop_preview_create
-      description: Stop the preview server for a project.
+      operationId: projects_update_preview_create
+      summary: Regenerate one preview screen and hot restart.
       parameters:
       - in: path
         name: id
         schema:
           type: string
+          format: uuid
+        description: A UUID string identifying this project.
         required: true
       tags:
       - projects
@@ -563,6 +793,7 @@ paths:
     get:
       operationId: projects_active_previews_retrieve
       description: Get list of all active preview servers.
+      summary: List active preview processes visible to this server.
       tags:
       - projects
       security:
@@ -578,6 +809,7 @@ paths:
   /api/screens/:
     get:
       operationId: screens_list
+      summary: List legacy screen records for user projects.
       tags:
       - screens
       security:
@@ -594,6 +826,7 @@ paths:
           description: ''
     post:
       operationId: screens_create
+      summary: Create a legacy screen record; project JSON remains authoritative.
       tags:
       - screens
       requestBody:
@@ -618,11 +851,14 @@ paths:
   /api/screens/{id}/:
     get:
       operationId: screens_retrieve
+      summary: Get one legacy screen record.
       parameters:
       - in: path
         name: id
         schema:
           type: string
+          format: uuid
+        description: A UUID string identifying this screen.
         required: true
       tags:
       - screens
@@ -638,11 +874,14 @@ paths:
           description: ''
     put:
       operationId: screens_update
+      summary: Replace a legacy screen record.
       parameters:
       - in: path
         name: id
         schema:
           type: string
+          format: uuid
+        description: A UUID string identifying this screen.
         required: true
       tags:
       - screens
@@ -667,11 +906,14 @@ paths:
           description: ''
     patch:
       operationId: screens_partial_update
+      summary: Update selected legacy screen fields.
       parameters:
       - in: path
         name: id
         schema:
           type: string
+          format: uuid
+        description: A UUID string identifying this screen.
         required: true
       tags:
       - screens
@@ -695,11 +937,14 @@ paths:
           description: ''
     delete:
       operationId: screens_destroy
+      summary: Delete a legacy screen record.
       parameters:
       - in: path
         name: id
         schema:
           type: string
+          format: uuid
+        description: A UUID string identifying this screen.
         required: true
       tags:
       - screens
@@ -722,7 +967,9 @@ components:
           type: string
           maxLength: 255
         type:
-          $ref: '#/components/schemas/TypeEnum'
+          allOf:
+          - $ref: '#/components/schemas/TypeEnum'
+          readOnly: true
         description:
           type: string
         thumbnail:
@@ -730,14 +977,16 @@ components:
           format: uri
           nullable: true
         template_json: {}
-        is_public:
-          type: boolean
+        created_by:
+          type: integer
+          readOnly: true
         created_at:
           type: string
           format: date-time
           readOnly: true
       required:
       - created_at
+      - created_by
       - id
       - name
       - template_json
@@ -755,6 +1004,71 @@ components:
         package_name:
           type: string
           maxLength: 255
+    GenerationJob:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        job_type:
+          allOf:
+          - $ref: '#/components/schemas/JobTypeEnum'
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/GenerationJobStatusEnum'
+          readOnly: true
+        error_message:
+          type: string
+          readOnly: true
+        result:
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        started_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        completed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+      required:
+      - completed_at
+      - created_at
+      - error_message
+      - id
+      - job_type
+      - result
+      - started_at
+      - status
+    GenerationJobStatusEnum:
+      enum:
+      - queued
+      - running
+      - completed
+      - failed
+      type: string
+      description: |-
+        * `queued` - Queued
+        * `running` - Running
+        * `completed` - Completed
+        * `failed` - Failed
+    JobTypeEnum:
+      enum:
+      - generate
+      - build_apk
+      - start_preview
+      type: string
+      description: |-
+        * `generate` - Generate Flutter project
+        * `build_apk` - Build APK
+        * `start_preview` - Start preview
     Login:
       type: object
       properties:
@@ -777,7 +1091,9 @@ components:
           type: string
           maxLength: 255
         type:
-          $ref: '#/components/schemas/TypeEnum'
+          allOf:
+          - $ref: '#/components/schemas/TypeEnum'
+          readOnly: true
         description:
           type: string
         thumbnail:
@@ -785,8 +1101,9 @@ components:
           format: uri
           nullable: true
         template_json: {}
-        is_public:
-          type: boolean
+        created_by:
+          type: integer
+          readOnly: true
         created_at:
           type: string
           format: date-time
@@ -806,7 +1123,7 @@ components:
         json_data: {}
         status:
           allOf:
-          - $ref: '#/components/schemas/StatusEnum'
+          - $ref: '#/components/schemas/ProjectStatusEnum'
           readOnly: true
         screens:
           type: array
@@ -838,6 +1155,7 @@ components:
           nullable: true
         error_message:
           type: string
+          readOnly: true
     PatchedScreen:
       type: object
       properties:
@@ -882,7 +1200,7 @@ components:
         json_data: {}
         status:
           allOf:
-          - $ref: '#/components/schemas/StatusEnum'
+          - $ref: '#/components/schemas/ProjectStatusEnum'
           readOnly: true
         screens:
           type: array
@@ -914,9 +1232,11 @@ components:
           nullable: true
         error_message:
           type: string
+          readOnly: true
       required:
       - apk_file
       - created_at
+      - error_message
       - generated_file
       - id
       - json_data
@@ -937,6 +1257,18 @@ components:
       required:
       - json_data
       - name
+    ProjectStatusEnum:
+      enum:
+      - draft
+      - generating
+      - completed
+      - failed
+      type: string
+      description: |-
+        * `draft` - Draft
+        * `generating` - Generating
+        * `completed` - Completed
+        * `failed` - Failed
     Screen:
       type: object
       properties:
@@ -973,18 +1305,6 @@ components:
       - name
       - route
       - updated_at
-    StatusEnum:
-      enum:
-      - draft
-      - generating
-      - completed
-      - failed
-      type: string
-      description: |-
-        * `draft` - Draft
-        * `generating` - Generating
-        * `completed` - Completed
-        * `failed` - Failed
     TypeEnum:
       enum:
       - widget

@@ -7,10 +7,10 @@ import { exportProject } from '@/stores/builder/builder-project-utils';
 import { selectBuilderState } from '@/stores/builder/builder-selectors';
 import type {
   ILivePreviewServerStatus,
-  ILivePreviewStartResponse,
   ILivePreviewStatusResponse,
 } from '@/types/api/live-preview-types';
 import type { IProjectId, IProjectJsonData } from '@/types/api/project-types';
+import { waitForProjectJob } from '@/pages/builder/utils/project-job-utils';
 import {
   CreateLivePreviewProjectSignature,
   ResolveLivePreviewUrl,
@@ -21,9 +21,11 @@ const LIVE_PREVIEW_UPDATE_DELAY = 900;
 const LIVE_PREVIEW_STATUS_POLL_INTERVAL = 1_000;
 const LIVE_PREVIEW_STATUS_MAX_ATTEMPTS = 300;
 const GENERATED_SIGNATURE_KEY_PREFIX = 'live-preview-generated-signature';
+// Project JSON alone cannot identify generated runtime changes such as the preview handshake.
+const GENERATED_ARTIFACT_CONTRACT_VERSION = 'first-frame-ready-v1';
 
 type ILivePreviewPhase =
-  'idle' | 'saving' | 'generating' | 'launching' | 'ready' | 'stopping' | 'error';
+  'idle' | 'saving' | 'generating' | 'launching' | 'booting' | 'ready' | 'stopping' | 'error';
 
 const IsRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null;
@@ -63,6 +65,9 @@ const GetErrorMessage = (error: unknown): string => {
 
 const GetGeneratedSignatureKey = (projectId: IProjectId): string =>
   `${GENERATED_SIGNATURE_KEY_PREFIX}:${String(projectId)}`;
+
+const CreateGeneratedArtifactSignature = (projectSignature: string): string =>
+  `${GENERATED_ARTIFACT_CONTRACT_VERSION}:${projectSignature}`;
 
 const ReadGeneratedSignature = (projectId: IProjectId): string | null => {
   try {
@@ -260,7 +265,8 @@ const useLivePreview = (isOpen: boolean) => {
             remoteProject.status !== 'completed' ||
             !remoteProject.generated_file ||
             remoteSignature !== currentSnapshot.projectSignature ||
-            knownGeneratedSignature !== currentSnapshot.projectSignature;
+            knownGeneratedSignature !==
+              CreateGeneratedArtifactSignature(currentSnapshot.projectSignature);
 
           await PROJECT_SERVICE.update(projectId, {
             name: currentSnapshot.projectName,
@@ -275,13 +281,10 @@ const useLivePreview = (isOpen: boolean) => {
 
         if (shouldGenerate) {
           SetPhase('generating');
-          const generationResult = await PROJECT_SERVICE.generateFlutterApplication(projectId);
-
-          if (generationResult.status !== 'success') {
-            throw new Error(generationResult.message || 'Flutter project generation failed.');
-          }
-
-          WriteGeneratedSignature(projectId, currentSnapshot.projectSignature);
+          const generationJob = await PROJECT_SERVICE.generateFlutterApplication(projectId);
+          await waitForProjectJob(projectId, generationJob, {
+            shouldContinue: () => operationRef.current === operationId && isOpenRef.current,
+          });
         }
 
         if (operationRef.current !== operationId || !isOpenRef.current) return;
@@ -290,8 +293,6 @@ const useLivePreview = (isOpen: boolean) => {
         setPreviewServerStatus('starting');
         setPreviewStatusMessage('Starting the Flutter preview server.');
 
-        let startResponse: ILivePreviewStartResponse | null = null;
-        let startError: unknown = null;
         let pollingCancelled = false;
 
         const ApplyPreviewStatus = (response: ILivePreviewStatusResponse): void => {
@@ -307,23 +308,10 @@ const useLivePreview = (isOpen: boolean) => {
           setPreviewStatusMessage(response.message);
         };
 
-        const observedStartRequest = PROJECT_SERVICE.startLivePreview(projectId).then(
-          (response) => {
-            startResponse = response;
-
-            if (response.status === 'error' || response.preview_status === 'error') {
-              startError = new Error(
-                response.error || response.message || 'The preview server failed to start.',
-              );
-            }
-
-            return response;
-          },
-          (error: unknown) => {
-            startError = error;
-            return null;
-          },
-        );
+        const startJob = await PROJECT_SERVICE.startLivePreview(projectId);
+        if (startJob.status === 'failed') {
+          throw new Error(startJob.error_message || 'The preview server failed to start.');
+        }
 
         const PollUntilReady = async (): Promise<ILivePreviewStatusResponse | null> => {
           for (let attempt = 0; attempt < LIVE_PREVIEW_STATUS_MAX_ATTEMPTS; attempt += 1) {
@@ -331,10 +319,6 @@ const useLivePreview = (isOpen: boolean) => {
 
             if (pollingCancelled || operationRef.current !== operationId || !isOpenRef.current) {
               return null;
-            }
-
-            if (startError) {
-              throw startError;
             }
 
             const statusResponse = await PROJECT_SERVICE.getLivePreviewStatus(projectId);
@@ -348,7 +332,10 @@ const useLivePreview = (isOpen: boolean) => {
               );
             }
 
-            if (statusResponse.ready) {
+            if (
+              statusResponse.preview_url &&
+              (statusResponse.preview_status === 'serving' || statusResponse.ready)
+            ) {
               return statusResponse;
             }
           }
@@ -362,15 +349,14 @@ const useLivePreview = (isOpen: boolean) => {
           readinessResponse = await PollUntilReady();
         } finally {
           pollingCancelled = true;
-          void observedStartRequest;
         }
 
         if (!readinessResponse) return;
 
-        const readyPreviewUrl = readinessResponse.preview_url ?? startResponse?.preview_url;
+        const readyPreviewUrl = readinessResponse.preview_url;
 
-        if (!readinessResponse.ready || !readyPreviewUrl) {
-          throw new Error(readinessResponse.message || 'The ready preview did not return a URL.');
+        if (!readyPreviewUrl) {
+          throw new Error(readinessResponse.message || 'The preview server did not return a URL.');
         }
 
         if (operationRef.current !== operationId || !isOpenRef.current) {
@@ -386,16 +372,15 @@ const useLivePreview = (isOpen: boolean) => {
 
         launchProjectIdRef.current = null;
         sessionProjectIdRef.current = projectId;
-        WriteGeneratedSignature(projectId, currentSnapshot.projectSignature);
         lastSavedProjectSignatureRef.current = currentSnapshot.projectSignature;
         lastUpdatedScreenSignatureRef.current = currentSnapshot.activeScreenSignature;
         heartbeatFailureCountRef.current = 0;
-        setPreviewServerStatus('ready');
-        setPreviewStatusMessage(readinessResponse.message);
+        setPreviewServerStatus(readinessResponse.preview_status);
+        setPreviewStatusMessage('Waiting for the Flutter application to render.');
         setActiveProjectId(projectId);
         setPreviewUrl(resolvedUrl);
         setFrameRevision((revision) => revision + 1);
-        SetPhase('ready');
+        SetPhase('booting');
       } catch (error) {
         if (operationRef.current !== operationId) return;
 
@@ -423,6 +408,30 @@ const useLivePreview = (isOpen: boolean) => {
   const RefreshFrame = useCallback((): void => {
     setFrameRevision((revision) => revision + 1);
   }, []);
+
+  const CompletePreviewBoot = useCallback((): void => {
+    if (phaseRef.current !== 'booting') return;
+
+    const projectId = sessionProjectIdRef.current;
+    if (projectId !== null) {
+      WriteGeneratedSignature(
+        projectId,
+        CreateGeneratedArtifactSignature(latestSnapshotRef.current.projectSignature),
+      );
+    }
+
+    setPreviewStatusMessage('The Flutter application is ready to interact with.');
+    SetPhase('ready');
+  }, [SetPhase]);
+
+  const FailPreviewBoot = useCallback((): void => {
+    if (phaseRef.current !== 'booting') return;
+
+    const message = 'The Flutter application did not render after two attempts.';
+    setPreviewStatusMessage(message);
+    setErrorMessage(message);
+    SetPhase('error');
+  }, [SetPhase]);
 
   useEffect(() => {
     if (isOpen) {
@@ -558,6 +567,8 @@ const useLivePreview = (isOpen: boolean) => {
 
   return {
     errorMessage,
+    completePreviewBoot: CompletePreviewBoot,
+    failPreviewBoot: FailPreviewBoot,
     frameRevision,
     isUpdating,
     launchPreview: LaunchPreview,

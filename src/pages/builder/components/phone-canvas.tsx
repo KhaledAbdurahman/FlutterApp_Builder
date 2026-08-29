@@ -93,6 +93,47 @@ const resolveLucideIcon = (icon?: string): LucideIcon => {
   return isLucideIcon(resolvedIcon) ? resolvedIcon : LucideIcons.Circle;
 };
 
+const getTextDecoration = (decoration?: ComponentPropsByType['Text']['decoration']): string =>
+  decoration === 'lineThrough' ? 'line-through' : decoration || 'none';
+
+const getTextOverflowStyles = (
+  maxLines: number | undefined,
+  overflowMode: NonNullable<ComponentPropsByType['Text']['overflow']>,
+): CSSProperties => {
+  const hasLineLimit = typeof maxLines === 'number' && maxLines > 0;
+
+  if (!hasLineLimit) return {};
+
+  // CSS line clamping requires hidden overflow, so visible deliberately renders without a clamp.
+  if (overflowMode === 'visible') {
+    return { display: 'inline-block', overflow: 'visible' };
+  }
+
+  const lineClampStyles: CSSProperties = {
+    display: '-webkit-box',
+    maxWidth: '100%',
+    minWidth: 0,
+    WebkitBoxOrient: 'vertical',
+    WebkitLineClamp: maxLines,
+    overflow: 'hidden',
+  };
+
+  if (overflowMode === 'fade') {
+    const fadeMask = 'linear-gradient(to right, #000 calc(100% - 1.5em), transparent)';
+
+    return {
+      ...lineClampStyles,
+      maskImage: fadeMask,
+      WebkitMaskImage: fadeMask,
+    };
+  }
+
+  return {
+    ...lineClampStyles,
+    textOverflow: overflowMode,
+  };
+};
+
 const WidgetRenderer = ({ widget, depth = 0, renderContext }: IWidgetRendererProps) => {
   const { selectedWidgetId, setSelectedWidget, isDragging } = useBuilderStore();
   const isSelected = selectedWidgetId === widget.id;
@@ -551,7 +592,9 @@ const WidgetRenderer = ({ widget, depth = 0, renderContext }: IWidgetRendererPro
         </div>
       );
 
-    case 'Text':
+    case 'Text': {
+      const overflowMode = widget.props.overflow ?? 'visible';
+
       return (
         <span
           onClick={handleClick}
@@ -563,17 +606,14 @@ const WidgetRenderer = ({ widget, depth = 0, renderContext }: IWidgetRendererPro
             textAlign: alignmentToTextAlign(widget.props.alignment),
             fontStyle: widget.props.fontStyle || 'normal',
             letterSpacing: widget.props.letterSpacing ?? 0,
-            textDecoration: widget.props.decoration || 'none',
-            display: widget.props.maxLines ? '-webkit-box' : 'inline-block',
-            WebkitBoxOrient: widget.props.maxLines ? 'vertical' : undefined,
-            WebkitLineClamp: widget.props.maxLines,
-            overflow: widget.props.maxLines ? 'hidden' : undefined,
-            textOverflow: widget.props.overflow === 'ellipsis' ? 'ellipsis' : undefined,
+            textDecoration: getTextDecoration(widget.props.decoration),
+            ...getTextOverflowStyles(widget.props.maxLines, overflowMode),
           }}
         >
           {widget.props.text || 'Text'}
         </span>
       );
+    }
 
     case 'Button':
       return (

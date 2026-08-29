@@ -1,19 +1,21 @@
-import { ApiEndpointPathnames, getEndpointPathname } from '@/config/api/api-endpoints';
+import {
+  ApiEndpointPathnames,
+  getEndpointPathname,
+  getProjectJobEndpointPathname,
+} from '@/config/api/api-endpoints';
 import { Get, Post } from '@/config/api/base-http-methods';
 import { ResourceHandler } from '@/config/api/resource-handler';
 import type {
   IProject,
-  IProjectAndroidApplicationPackageBuildResponse,
+  IGenerationJob,
   IProjectCreateRequest,
-  IProjectGenerationLog,
-  IProjectGenerationResponse,
+  IProjectGenerationLogsResponse,
   IProjectId,
   IProjectUpdateRequest,
 } from '@/types/api/project-types';
 import type {
   IActiveLivePreviewsResponse,
   ILivePreviewActionResponse,
-  ILivePreviewStartResponse,
   ILivePreviewStatusResponse,
   ILivePreviewStopResponse,
   ILivePreviewUpdateRequest,
@@ -28,8 +30,8 @@ class ProjectService extends ResourceHandler<
     super(ApiEndpointPathnames.PROJECTS);
   }
 
-  public generateFlutterApplication(projectId: IProjectId): Promise<IProjectGenerationResponse> {
-    return Post<IProjectGenerationResponse>({
+  public generateFlutterApplication(projectId: IProjectId): Promise<IGenerationJob> {
+    return Post<IGenerationJob>({
       endpoint: getEndpointPathname(
         ApiEndpointPathnames.PROJECT_GENERATE_FLUTTER_APPLICATION,
         projectId,
@@ -47,16 +49,26 @@ class ProjectService extends ResourceHandler<
     });
   }
 
-  public getGenerationLogs(projectId: IProjectId): Promise<IProjectGenerationLog[]> {
-    return Get<IProjectGenerationLog[]>({
+  public getGenerationLogs(projectId: IProjectId): Promise<IProjectGenerationLogsResponse> {
+    return Get<IProjectGenerationLogsResponse>({
       endpoint: getEndpointPathname(ApiEndpointPathnames.PROJECT_GENERATION_LOGS, projectId),
     });
   }
 
-  public buildAndroidApplicationPackage(
-    projectId: IProjectId,
-  ): Promise<IProjectAndroidApplicationPackageBuildResponse> {
-    return Post<IProjectAndroidApplicationPackageBuildResponse>({
+  public getGenerationJobs(projectId: IProjectId): Promise<IGenerationJob[]> {
+    return Get<IGenerationJob[]>({
+      endpoint: getEndpointPathname(ApiEndpointPathnames.PROJECT_GENERATION_JOBS, projectId),
+    });
+  }
+
+  public getGenerationJob(projectId: IProjectId, jobId: string): Promise<IGenerationJob> {
+    return Get<IGenerationJob>({
+      endpoint: getProjectJobEndpointPathname(projectId, jobId),
+    });
+  }
+
+  public buildAndroidApplicationPackage(projectId: IProjectId): Promise<IGenerationJob> {
+    return Post<IGenerationJob>({
       endpoint: getEndpointPathname(
         ApiEndpointPathnames.PROJECT_BUILD_ANDROID_APPLICATION_PACKAGE,
         projectId,
@@ -74,8 +86,8 @@ class ProjectService extends ResourceHandler<
     });
   }
 
-  public startLivePreview(projectId: IProjectId): Promise<ILivePreviewStartResponse> {
-    return Post<ILivePreviewStartResponse>({
+  public startLivePreview(projectId: IProjectId): Promise<IGenerationJob> {
+    return Post<IGenerationJob>({
       endpoint: getEndpointPathname(ApiEndpointPathnames.PROJECT_START_LIVE_PREVIEW, projectId),
     });
   }
