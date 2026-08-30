@@ -22,7 +22,7 @@ const LIVE_PREVIEW_STATUS_POLL_INTERVAL = 1_000;
 const LIVE_PREVIEW_STATUS_MAX_ATTEMPTS = 300;
 const GENERATED_SIGNATURE_KEY_PREFIX = 'live-preview-generated-signature';
 // Project JSON alone cannot identify generated runtime changes such as the preview handshake.
-const GENERATED_ARTIFACT_CONTRACT_VERSION = 'first-frame-ready-v1';
+const GENERATED_ARTIFACT_CONTRACT_VERSION = 'first-frame-ready-v2';
 
 type ILivePreviewPhase =
   'idle' | 'saving' | 'generating' | 'launching' | 'booting' | 'ready' | 'stopping' | 'error';

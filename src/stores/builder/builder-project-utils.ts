@@ -63,10 +63,9 @@ const mapWidgetNavigationRoutes = (
       ...widget,
       props: {
         ...widget.props,
-        actions: {
-          type: 'navigate',
-          route: resolveRoute(widget.props.actions?.route || '/'),
-        },
+        actions: (widget.props.actions || []).map((action) =>
+          normalizeAction(action, resolveRoute),
+        ),
       },
       children,
       itemTemplate,
@@ -125,6 +124,16 @@ const normalizeContainerLayoutValue = (value: unknown): number => {
 const normalizeWidgetsForExport = (widgets: FlutterWidget[]): FlutterWidget[] =>
   widgets.map((widget) => {
     const children = widget.children ? normalizeWidgetsForExport(widget.children) : undefined;
+
+    if (widget.type === 'BottomNavigationBar') {
+      const { items, ...props } = resolveWidgetProps('BottomNavigationBar', widget.props);
+      return {
+        ...widget,
+        props,
+        items,
+        children,
+      } as FlutterWidget;
+    }
 
     if (widget.type !== 'Container') {
       const itemTemplate =

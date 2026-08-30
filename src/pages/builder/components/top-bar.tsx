@@ -36,6 +36,7 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import { UserProfileMenu } from '@/components/UserProfileMenu';
 import BrandLogo from '@/components/BrandLogo';
 import { PROJECT_SERVICE } from '@/api/projects';
+import { exportProject as serializeProject } from '@/stores/builder/builder-project-utils';
 import { useComponentCatalog } from '@/pages/builder/hooks/use-component-catalog';
 import { waitForProjectJob } from '@/pages/builder/utils/project-job-utils';
 import type { IAvailableComponent, IComponentCatalogCategory } from '@/types/api/component-types';
@@ -45,6 +46,7 @@ import {
   ComponentType,
   DEFAULT_COMPONENT_PROPS,
   FlutterWidget,
+  MINIMUM_BOTTOM_NAVIGATION_ITEMS,
   Screen,
   WIDGET_DEFINITIONS,
   getChildConfig,
@@ -226,6 +228,7 @@ export const TopBar = ({ isPreviewOpen, onLaunchPreview }: ITopBarProps) => {
     exportProject,
     serverProjectId,
     importProjectData,
+    applyImportedScreens: applyScreensToCurrentProject,
     loadProject,
   } = useBuilderStore();
 
@@ -240,6 +243,7 @@ export const TopBar = ({ isPreviewOpen, onLaunchPreview }: ITopBarProps) => {
   const [isAutoSaving, setIsAutoSaving] = useState(false);
   const [schemaOpen, setSchemaOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [isSavingImportedProject, setIsSavingImportedProject] = useState(false);
   const [importText, setImportText] = useState('[]');
   const [importErrors, setImportErrors] = useState<string[]>([]);
   const [importWarnings, setImportWarnings] = useState<string[]>([]);
@@ -332,6 +336,12 @@ export const TopBar = ({ isPreviewOpen, onLaunchPreview }: ITopBarProps) => {
     setScreenMenuOpen(false);
 
     setAddScreenDialogOpen(true);
+  };
+
+  const handleOpenImportDialog = () => {
+    setImportAppName(project.app_name);
+    setImportPackageName(project.package_name);
+    setImportOpen(true);
   };
 
   const handleExport = () => {
@@ -440,6 +450,16 @@ export const TopBar = ({ isPreviewOpen, onLaunchPreview }: ITopBarProps) => {
       }
 
       const cleanedProps = normalizeProps(type, propsObject);
+      if (type === 'BottomNavigationBar') {
+        const rawItems = (input as { items?: unknown }).items ?? propsObject?.items;
+        if (!Array.isArray(rawItems) || rawItems.length < MINIMUM_BOTTOM_NAVIGATION_ITEMS) {
+          errors.push(
+            `${path}.items must contain at least ${MINIMUM_BOTTOM_NAVIGATION_ITEMS} entries for BottomNavigationBar.`,
+          );
+          return null;
+        }
+        cleanedProps.items = rawItems;
+      }
       const resolvedProps = resolveWidgetProps(type, cleanedProps);
 
       const childConfig = getChildConfig(type);
@@ -565,37 +585,84 @@ export const TopBar = ({ isPreviewOpen, onLaunchPreview }: ITopBarProps) => {
 
   const applyImportedScreens = useCallback(() => {
     if (!importScreens || importErrors.length > 0) return;
-    importProjectData({
-      app_name: importAppName.trim() || 'My App',
-      package_name: importPackageName.trim() || 'com.example.app',
-      screens: importScreens,
-    });
-    ChooseNotification.success({ message: 'Screens imported to canvas' });
-    setImportOpen(false);
-  }, [importScreens, importErrors.length, importProjectData, importAppName, importPackageName]);
 
-  const saveImportedProject = useCallback(async () => {
-    if (!importScreens || importErrors.length > 0) return;
-    try {
-      const name = importAppName.trim() || 'My App';
-      const payload: IProjectJsonData = {
-        app_name: name,
+    if (serverProjectId === null) {
+      importProjectData({
+        app_name: importAppName.trim() || 'My App',
         package_name: importPackageName.trim() || 'com.example.app',
         screens: importScreens,
-      };
-      const saved = await PROJECT_SERVICE.create({
-        name,
-        json_data: payload,
       });
+    } else {
+      applyScreensToCurrentProject(importScreens);
+    }
+
+    ChooseNotification.success({ message: 'Screens imported to canvas' });
+    setImportOpen(false);
+  }, [
+    importScreens,
+    importErrors.length,
+    serverProjectId,
+    importProjectData,
+    importAppName,
+    importPackageName,
+    applyScreensToCurrentProject,
+  ]);
+
+  const saveImportedProject = useCallback(async () => {
+    if (!importScreens || importErrors.length > 0 || isSavingImportedProject) return;
+    setIsSavingImportedProject(true);
+
+    try {
+      const appName = importAppName.trim() || 'My App';
+      const packageName = importPackageName.trim() || 'com.example.app';
+      const serializedProject = serializeProject({
+        app_name: appName,
+        package_name: packageName,
+        screens: importScreens,
+      });
+      const payload: IProjectJsonData = {
+        app_name: serializedProject.app_name,
+        package_name: serializedProject.package_name,
+        screens: serializedProject.screens,
+      };
+      const saved =
+        serverProjectId === null
+          ? await PROJECT_SERVICE.create({
+              name: appName,
+              json_data: payload,
+            })
+          : await PROJECT_SERVICE.update(serverProjectId, {
+              name: projectTitle.trim() || appName,
+              description: projectDescription,
+              json_data: payload,
+            });
+
       loadProject(saved);
-      ChooseNotification.success({ message: 'Project imported and saved' });
+      ChooseNotification.success({
+        message:
+          serverProjectId === null
+            ? 'Imported project created and saved'
+            : 'Imported screens saved to the current project',
+      });
       setImportOpen(false);
     } catch (error) {
       ChooseNotification.failure({
         message: error instanceof Error ? error.message : 'Failed to save imported project',
       });
+    } finally {
+      setIsSavingImportedProject(false);
     }
-  }, [importScreens, importErrors.length, importAppName, importPackageName, loadProject]);
+  }, [
+    importScreens,
+    importErrors.length,
+    isSavingImportedProject,
+    importAppName,
+    importPackageName,
+    serverProjectId,
+    projectTitle,
+    projectDescription,
+    loadProject,
+  ]);
 
   const handleGenerateApp = async () => {
     setIsGenerating(true);
@@ -809,7 +876,7 @@ export const TopBar = ({ isPreviewOpen, onLaunchPreview }: ITopBarProps) => {
               size="sm"
               className={styles.ghostButton}
               leftSection={<Upload size={16} />}
-              onClick={() => setImportOpen(true)}
+              onClick={handleOpenImportDialog}
             >
               Import Screens
             </Button>
@@ -855,7 +922,11 @@ export const TopBar = ({ isPreviewOpen, onLaunchPreview }: ITopBarProps) => {
             size="xl"
             centered
             radius="md"
-            classNames={{ content: styles.modalContent, header: styles.modalHeader }}
+            classNames={{
+              content: `${styles.modalContent} ${styles.importModalContent}`,
+              header: styles.modalHeader,
+              body: styles.importModalBody,
+            }}
           >
             <Stack gap="md">
               <Textarea
@@ -863,9 +934,8 @@ export const TopBar = ({ isPreviewOpen, onLaunchPreview }: ITopBarProps) => {
                 value={importText}
                 onChange={(event) => setImportText(event.target.value)}
                 placeholder='Paste an array of screens: [{"id":"...","name":"Home","route":"/","is_home":true,"components":[]}]'
-                autosize
-                minRows={9}
-                classNames={{ input: styles.codeArea }}
+                rows={9}
+                classNames={{ input: `${styles.codeArea} ${styles.resizableCodeArea}` }}
               />
               <Button
                 variant="light"
@@ -882,10 +952,9 @@ export const TopBar = ({ isPreviewOpen, onLaunchPreview }: ITopBarProps) => {
                     label="Validation report"
                     value={importReport}
                     readOnly
-                    autosize
-                    minRows={8}
+                    rows={8}
                     placeholder="Run validation to see errors and warnings."
-                    classNames={{ input: styles.codeArea }}
+                    classNames={{ input: `${styles.codeArea} ${styles.resizableCodeArea}` }}
                   />
                   <Button
                     variant="light"
@@ -907,10 +976,9 @@ export const TopBar = ({ isPreviewOpen, onLaunchPreview }: ITopBarProps) => {
                     label="Normalized output"
                     value={importScreens ? JSON.stringify(importScreens, null, 2) : ''}
                     readOnly
-                    autosize
-                    minRows={8}
+                    rows={8}
                     placeholder="Normalized screens will appear here."
-                    classNames={{ input: styles.codeArea }}
+                    classNames={{ input: `${styles.codeArea} ${styles.resizableCodeArea}` }}
                   />
                   <Button
                     variant="light"
@@ -963,9 +1031,10 @@ export const TopBar = ({ isPreviewOpen, onLaunchPreview }: ITopBarProps) => {
                     radius="md"
                     className={styles.modalPrimaryButton}
                     onClick={saveImportedProject}
-                    disabled={!importScreens || importErrors.length > 0}
+                    disabled={!importScreens || importErrors.length > 0 || isSavingImportedProject}
+                    loading={isSavingImportedProject}
                   >
-                    Save project
+                    {serverProjectId === null ? 'Save project' : 'Save to current project'}
                   </Button>
                 </Group>
               </Group>

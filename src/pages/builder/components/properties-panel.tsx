@@ -17,6 +17,7 @@ import type {
   BottomNavItem,
   ComponentPropsByType,
   ComponentType,
+  MINIMUM_BOTTOM_NAVIGATION_ITEMS,
   DrawerHeader,
 } from '@/types/screen-types';
 import { ChooseNotification } from '@/lib/choose-notification';
@@ -1310,10 +1311,18 @@ export const PropertiesPanel = () => {
                   </PropertyField>
                   <PropertyField label="Navigate To">
                     <PropertySelect
-                      value={widget.props.actions?.route || ''}
+                      value={
+                        widget.props.actions?.find((action) => action.type === 'navigate')?.route ||
+                        ''
+                      }
                       onValueChange={(v) =>
                         updateWidgetProps(widget.id, {
-                          actions: { type: 'navigate', route: v },
+                          actions: [
+                            ...(widget.props.actions || []).filter(
+                              (action) => action.type !== 'navigate',
+                            ),
+                            { type: 'navigate', route: v },
+                          ],
                         })
                       }
                     >
@@ -1416,6 +1425,9 @@ export const PropertiesPanel = () => {
                             size="sm"
                             variant="subtle"
                             onClick={() => removeNavItem(index)}
+                            disabled={
+                              (widget.props.items?.length || 0) <= MINIMUM_BOTTOM_NAVIGATION_ITEMS
+                            }
                             className={styles.removeButton}
                           >
                             <X className={styles.removeIcon} />

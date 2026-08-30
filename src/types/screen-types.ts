@@ -154,8 +154,10 @@ export type ComponentPropsByType = {
    */
   ListTile: {
     title: string;
+    subtitle: string;
     icon: string;
-    actions: { type: 'navigate'; route: string };
+    trailingIcon: string;
+    actions: ActionBase[];
   };
 };
 
@@ -188,6 +190,8 @@ export type Screen = Screens;
 export type WidgetProps = Partial<ComponentPropsByType[ComponentType]>;
 
 export type WidgetCategory = 'layout' | 'content' | 'input' | 'navigation';
+
+export const MINIMUM_BOTTOM_NAVIGATION_ITEMS = 2;
 
 export type ChildCardinality = 'none' | 'single' | 'multiple';
 
@@ -310,7 +314,10 @@ export const DEFAULT_COMPONENT_PROPS: ComponentPropsByType = {
     type: 'fixed',
     selectedItemColor: '#6200EE',
     unselectedItemColor: '#757575',
-    items: [{ label: 'Home', icon: 'home', route: '/' }],
+    items: [
+      { label: 'Home', icon: 'home', route: '/' },
+      { label: 'Profile', icon: 'person', route: '/' },
+    ],
     height: 56,
   },
   Drawer: {
@@ -322,8 +329,10 @@ export const DEFAULT_COMPONENT_PROPS: ComponentPropsByType = {
   },
   ListTile: {
     title: 'List Item',
+    subtitle: '',
     icon: 'circle',
-    actions: { type: 'navigate', route: '/' },
+    trailingIcon: '',
+    actions: [],
   },
 };
 
@@ -562,11 +571,39 @@ export const resolveWidgetProps = <K extends ComponentType>(
   if (type === 'BottomNavigationBar') {
     const bottomNavProps = props as
       Partial<ComponentPropsByType['BottomNavigationBar']> | undefined;
+    const defaultItems = (defaults as ComponentPropsByType['BottomNavigationBar']).items;
+    const items = [...(bottomNavProps?.items || [])];
+
+    for (const defaultItem of defaultItems) {
+      if (items.length >= MINIMUM_BOTTOM_NAVIGATION_ITEMS) break;
+      if (
+        !items.some((item) => item.label === defaultItem.label && item.icon === defaultItem.icon)
+      ) {
+        items.push(defaultItem);
+      }
+    }
+
+    const requestedIndex = bottomNavProps?.currentIndex ?? 0;
     return {
       ...defaults,
       ...(props || {}),
-      items:
-        bottomNavProps?.items ?? (defaults as ComponentPropsByType['BottomNavigationBar']).items,
+      currentIndex: Math.min(Math.max(requestedIndex, 0), items.length - 1),
+      items,
+    } as ComponentPropsByType[K];
+  }
+  if (type === 'ListTile') {
+    const listTileProps = props as Partial<ComponentPropsByType['ListTile']> | undefined;
+    const rawActions = (listTileProps as { actions?: unknown } | undefined)?.actions;
+    const actions = Array.isArray(rawActions)
+      ? rawActions
+      : rawActions && typeof rawActions === 'object'
+        ? [rawActions as ActionBase]
+        : (defaults as ComponentPropsByType['ListTile']).actions;
+
+    return {
+      ...defaults,
+      ...(props || {}),
+      actions,
     } as ComponentPropsByType[K];
   }
   return { ...defaults, ...(props || {}) } as ComponentPropsByType[K];

@@ -96,6 +96,13 @@ const builderSlice = createSlice({
         serverProjectId: null,
       };
     },
+    applyImportedScreens(state, action: PayloadAction<Screen[]>) {
+      const normalizedScreens = normalizeScreens(action.payload);
+
+      state.project.screens = normalizedScreens;
+      state.activeScreenId = normalizedScreens[0].id;
+      state.selectedWidgetId = null;
+    },
     loadProject(state, action: PayloadAction<IProject>) {
       const savedProject = action.payload;
       const jsonData = savedProject.json_data;

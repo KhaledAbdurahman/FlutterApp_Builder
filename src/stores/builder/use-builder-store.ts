@@ -54,6 +54,7 @@ const useBuilderStore = (): IBuilderStore => {
       deleteWidget: (widgetId: string) => dispatch(builderActions.deleteWidget(widgetId)),
       importProjectData: (data: IProjectJsonData) =>
         dispatch(builderActions.importProjectData(data)),
+      applyImportedScreens: (screens) => dispatch(builderActions.applyImportedScreens(screens)),
       moveWidget: (widgetId: string, newParentId: string | null, index?: number) =>
         dispatch(builderActions.moveWidget(getMoveWidgetPayload(widgetId, newParentId, index))),
       setScreenComponents: (components: FlutterWidget[]) =>

@@ -14,6 +14,7 @@ interface IBuilderStoreActions {
   updateWidgetProps: (widgetId: string, props: Partial<WidgetProps>) => void;
   deleteWidget: (widgetId: string) => void;
   importProjectData: (data: IProjectJsonData) => void;
+  applyImportedScreens: (screens: Screen[]) => void;
   moveWidget: (widgetId: string, newParentId: string | null, index?: number) => void;
   setScreenComponents: (components: FlutterWidget[]) => void;
   getActiveScreen: () => Screen | undefined;

@@ -705,6 +705,9 @@ const WidgetRenderer = ({ widget, depth = 0, renderContext }: IWidgetRendererPro
 
     case 'ListTile': {
       const IconComponent = resolveLucideIcon(widget.props.icon);
+      const navigationRoute = widget.props.actions?.find(
+        (action) => action.type === 'navigate',
+      )?.route;
       return (
         <div onClick={handleClick} className={cn(baseClasses, styles.listTile)}>
           <div className={styles.listTileIconContainer}>
@@ -712,9 +715,7 @@ const WidgetRenderer = ({ widget, depth = 0, renderContext }: IWidgetRendererPro
           </div>
           <div className={styles.listTileContent}>
             <p className={styles.listTileTitle}>{widget.props.title || 'List Item'}</p>
-            {widget.props.actions?.route && (
-              <p className={styles.listTileRoute}>{widget.props.actions.route}</p>
-            )}
+            {navigationRoute && <p className={styles.listTileRoute}>{navigationRoute}</p>}
           </div>
           <LucideIcons.ChevronRight className={styles.listTileChevron} />
         </div>
