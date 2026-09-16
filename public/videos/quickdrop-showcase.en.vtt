@@ -1,0 +1,52 @@
+WEBVTT
+
+00:00:00.000 --> 00:00:04.000
+[Soft electronic music]
+AppBuilder: from screen data to a living app.
+
+00:00:04.000 --> 00:00:10.000
+Import QuickDrop's six screens, validate the structure,
+and save the project.
+
+00:00:10.000 --> 00:00:15.000
+Open the spec sheet for supported widgets,
+screen schemas, and property contracts.
+
+00:00:15.000 --> 00:00:19.000
+Inspect the widget tree and the hierarchy
+behind every layout.
+
+00:00:19.000 --> 00:00:24.000
+Edit text, font size, and colour.
+The canvas updates as the properties change.
+
+00:00:24.000 --> 00:00:28.000
+Six connected screens: Login, Home, Restaurant,
+Cart, Order Tracking, and Profile.
+
+00:00:28.000 --> 00:00:30.600
+Click Launch Preview to run the real Flutter app.
+
+00:00:30.600 --> 00:00:33.000
+Flutter compiles the application.
+The compilation wait has been edited out.
+
+00:00:33.000 --> 00:00:37.000
+The interactive Flutter delivery app
+is running inside the builder.
+
+00:00:37.000 --> 00:00:45.000
+Open a restaurant, browse its menu,
+and tap Add to cart to see the app respond.
+
+00:00:45.000 --> 00:00:51.000
+View the cart, place the order,
+and see the order confirmation.
+
+00:00:51.000 --> 00:00:56.000
+Continue to Order Tracking for delivery status
+and rider details.
+
+00:00:56.000 --> 00:01:00.000
+AppBuilder: your next idea, ready to build.
+Visual control and a real Flutter preview.
