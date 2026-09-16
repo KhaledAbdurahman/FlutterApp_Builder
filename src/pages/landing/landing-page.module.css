@@ -65,172 +65,44 @@
   color: var(--color-text-muted);
   font-size: 0.8125rem;
 }
-.productPreview {
+.productDemo {
   overflow: hidden;
+  min-width: 0;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-surface);
   background: var(--color-surface);
   box-shadow: var(--shadow-surface);
 }
-.previewBar,
-.previewFooter {
+.demoHeading {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
   border-bottom: 1px solid var(--color-border);
   color: var(--color-text-muted);
-  font-family: var(--font-mono);
   font-size: 0.75rem;
 }
-.previewBar div {
-  display: flex;
-  gap: 5px;
-}
-.previewBar i {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--color-border);
-}
-.previewWorkspace {
-  display: grid;
-  grid-template-columns: minmax(7rem, 0.75fr) minmax(13rem, 1.25fr) minmax(8rem, 0.85fr);
-  min-height: 23rem;
-}
-.previewSidebar,
-.previewProperties {
-  display: grid;
-  align-content: start;
-  gap: var(--space-2);
-  padding: var(--space-3);
-  background: var(--color-surface-muted);
-}
-.previewSidebar {
-  border-right: 1px solid var(--color-border);
-}
-.previewProperties {
-  border-left: 1px solid var(--color-border);
-}
-.previewSidebar :global(.mantine-Text-root),
-.previewProperties :global(.mantine-Text-root) {
-  margin-bottom: var(--space-2);
-  color: var(--color-text-muted);
-  font-size: 0.625rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-}
-.previewSidebar div {
-  padding: var(--space-2);
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-  background: var(--color-surface);
-  font-size: 0.6875rem;
-}
-.previewCanvas {
-  display: grid;
-  place-items: center;
-  padding: var(--space-4);
-  background-image:
-    linear-gradient(var(--color-border) 1px, transparent 1px),
-    linear-gradient(90deg, var(--color-border) 1px, transparent 1px);
-  background-size: 20px 20px;
-}
-.phone {
-  position: relative;
-  width: 10.5rem;
-  height: 20rem;
-  padding: 8px;
-  border: 5px solid #11110f;
-  border-radius: 1.7rem;
-  background: #11110f;
-  box-shadow: 0 10px 18px rgb(0 0 0 / 0.2);
-}
-.phoneNotch {
-  position: absolute;
-  top: 0;
-  left: 50%;
-  width: 4.3rem;
-  height: 1rem;
-  border-radius: 0 0 0.75rem 0.75rem;
-  background: #11110f;
-  transform: translateX(-50%);
-}
-.phoneScreen {
-  display: flex;
-  height: 100%;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-4);
-  border-radius: 1.15rem;
-  background: #f1f0ff;
-  color: #171639;
-  text-align: center;
-}
-.phoneScreen span {
-  font-family: var(--font-display);
-  font-size: 1.05rem;
-  font-weight: 700;
-}
-.phoneScreen small {
-  margin-top: var(--space-2);
-  color: #5b5a76;
-}
-.phoneScreen button {
-  margin-top: var(--space-5);
-  padding: 8px 12px;
-  border: 0;
-  border-radius: 4px;
-  background: #312c85;
-  color: white;
-  font: inherit;
-  font-size: 0.75rem;
-}
-.phoneTabs {
-  display: flex;
-  gap: 1rem;
-  margin-top: auto;
-}
-.phoneTabs i {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: #77759a;
-}
-.previewProperties label {
-  display: grid;
-  gap: 4px;
-  color: var(--color-text-muted);
-  font-size: 0.625rem;
-}
-.previewProperties input {
-  width: 100%;
-  padding: 5px;
-  border: 1px solid var(--color-border);
-  border-radius: 3px;
-  background: var(--color-surface);
+.demoHeading span:first-child {
   color: var(--color-text);
-  font: inherit;
-  font-size: 0.625rem;
+  font-weight: 600;
 }
-.colorSwatch {
+.demoVideo {
   display: block;
-  height: 1.25rem;
-  border-radius: 3px;
-  background: #312c85;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #111b2c;
+  object-fit: contain;
 }
-.previewFooter {
-  border-top: 1px solid var(--color-border);
-  border-bottom: 0;
+.demoVideo:focus-visible {
+  outline: 3px solid var(--color-accent);
+  outline-offset: -3px;
 }
-.previewFooter span {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-}
-.previewFooter span:first-child {
-  color: var(--color-success);
+.demoCaption:global(.mantine-Text-root) {
+  padding: var(--space-3) var(--space-4);
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+  line-height: 1.5;
 }
 .proof {
   padding: var(--space-5) 0;
@@ -500,7 +372,7 @@
   .heroContent {
     max-width: 46rem;
   }
-  .productPreview {
+  .productDemo {
     max-width: 42rem;
   }
   .bentoGrid {
@@ -526,12 +398,6 @@
   .heroActions :global(.mantine-Button-root),
   .callout :global(.mantine-Button-root) {
     width: 100%;
-  }
-  .previewWorkspace {
-    grid-template-columns: 5.8rem 1fr;
-  }
-  .previewProperties {
-    display: none;
   }
   .steps {
     grid-template-columns: 1fr;

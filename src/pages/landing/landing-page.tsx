@@ -10,7 +10,6 @@ import {
   Github,
   Layers,
   Palette,
-  Play,
   Sparkles,
   Workflow,
 } from 'lucide-react';
@@ -136,68 +135,35 @@ const LandingPage = () => {
 
             <motion.div
               initial={{ opacity: 0, x: 22 }}
-              animate={
-                prefersReducedMotion ? { opacity: 1, x: 0 } : { opacity: 1, x: 0, y: [0, -5, 0] }
-              }
-              transition={
-                prefersReducedMotion
-                  ? { delay: 0.12 }
-                  : { delay: 0.12, y: { duration: 4.5, repeat: Infinity, ease: 'easeInOut' } }
-              }
-              className={styles.productPreview}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: prefersReducedMotion ? 0 : 0.12 }}
+              className={styles.productDemo}
             >
-              <div className={styles.previewBar}>
-                <span>AppBuilder workspace</span>
-                <div>
-                  <i />
-                  <i />
-                  <i />
-                </div>
+              <div className={styles.demoHeading}>
+                <span>See AppBuilder in action</span>
+                <span>1 minute</span>
               </div>
-              <div className={styles.previewWorkspace}>
-                <div className={styles.previewSidebar}>
-                  <Text>WIDGETS</Text>
-                  {['Container', 'Text', 'Button', 'Image'].map((widget) => (
-                    <div key={widget}>{widget}</div>
-                  ))}
-                </div>
-                <div className={styles.previewCanvas}>
-                  <div className={styles.phone}>
-                    <div className={styles.phoneNotch} />
-                    <div className={styles.phoneScreen}>
-                      <span>Welcome back</span>
-                      <small>Your next idea, ready to build.</small>
-                      <button type="button">Get started</button>
-                      <div className={styles.phoneTabs}>
-                        <i />
-                        <i />
-                        <i />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div className={styles.previewProperties}>
-                  <Text>PROPERTIES</Text>
-                  <label>
-                    Title
-                    <input value="Welcome back" readOnly />
-                  </label>
-                  <label>
-                    Color
-                    <span className={styles.colorSwatch} />
-                  </label>
-                  <label>
-                    Padding
-                    <input value="24" readOnly />
-                  </label>
-                </div>
-              </div>
-              <div className={styles.previewFooter}>
-                <span>
-                  <Play size={14} /> Live preview ready
-                </span>
-                <span>main.dart</span>
-              </div>
+              <video
+                className={styles.demoVideo}
+                controls
+                playsInline
+                preload="none"
+                poster="/videos/quickdrop-showcase-poster.jpg"
+                aria-label="One-minute QuickDrop delivery app showcase: screen import, properties, and live Flutter preview"
+              >
+                <source src="/videos/quickdrop-showcase.mp4" type="video/mp4" />
+                <track
+                  kind="captions"
+                  src="/videos/quickdrop-showcase.en.vtt"
+                  srcLang="en"
+                  label="English"
+                />
+                Your browser does not support video playback.{' '}
+                <a href="/videos/quickdrop-showcase.mp4">Download the demo</a>.
+              </video>
+              <Text className={styles.demoCaption}>
+                Watch QuickDrop go from imported screens to an interactive Flutter delivery app.
+              </Text>
             </motion.div>
           </Container>
         </section>
