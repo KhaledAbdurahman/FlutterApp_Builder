@@ -1,9 +1,9 @@
 import { createRoute } from '@tanstack/react-router';
-import { rootRoute } from '@/app/router/routes/root-route';
 import { LandingPage } from '@/pages/landing/landing-page';
+import { noAuthRoutes } from '@/app/router/router';
 
 const landingRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => noAuthRoutes,
   path: '/',
   component: LandingPage,
 });

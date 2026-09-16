@@ -1,3 +1,5 @@
+//This is just a fallback for the types if the endpoint is not available.
+
 export type ActionBase =
   | { type: 'snackbar'; message: string }
   | { type: 'dialog'; title: string; message: string }

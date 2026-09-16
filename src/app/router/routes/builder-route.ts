@@ -1,11 +1,11 @@
 import { createRoute } from '@tanstack/react-router';
-import { ProtectedBuilderRoute } from '@/app/router/route-components';
-import { rootRoute } from '@/app/router/routes/root-route';
+import { BuilderPage } from '@/pages/builder/builder-page';
+import { authRoutes } from '@/app/router/router';
 
 const builderRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => authRoutes,
   path: 'builder',
-  component: ProtectedBuilderRoute,
+  component: BuilderPage,
 });
 
 export { builderRoute };

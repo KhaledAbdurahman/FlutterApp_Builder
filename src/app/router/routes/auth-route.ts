@@ -1,11 +1,13 @@
 import { createRoute } from '@tanstack/react-router';
-import { rootRoute } from '@/app/router/routes/root-route';
+import { requireNoAuth } from '@/app/router/middleware';
 import { AuthPage } from '@/pages/auth/auth-page';
+import { noAuthRoutes } from '@/app/router/router';
 
 const authRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => noAuthRoutes,
   path: 'auth',
   component: AuthPage,
+  beforeLoad: requireNoAuth,
 });
 
 export { authRoute };

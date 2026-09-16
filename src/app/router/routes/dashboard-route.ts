@@ -1,11 +1,11 @@
 import { createRoute } from '@tanstack/react-router';
-import { ProtectedDashboardRoute } from '@/app/router/route-components';
-import { rootRoute } from '@/app/router/routes/root-route';
+import { DashboardPage } from '@/pages/dashboard/dashboard-page';
+import { authRoutes } from '@/app/router/router';
 
 const dashboardRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => authRoutes,
   path: 'dashboard',
-  component: ProtectedDashboardRoute,
+  component: DashboardPage,
 });
 
 export { dashboardRoute };
